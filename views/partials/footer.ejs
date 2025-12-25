@@ -36,8 +36,39 @@
                 scrollToTopBtn.style.display = window.scrollY > 400 ? "block" : "none";
             });
             scrollToTopBtn.addEventListener("click", () => {
-                window.scrollTo({ top: 0, behavior: "smooth" });
+                // If Lenis is active, use it for the scroll-to-top
+                if (window.lenis) {
+                    window.lenis.scrollTo(0);
+                } else {
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                }
             });
         }
     });
+</script>
+
+<!-- 🌊 Lenis Smooth Scroll (High Performance Config) -->
+<script src="https://unpkg.com/@studio-freight/lenis@1.0.42/dist/lenis.min.js"></script>
+<script>
+    // Optimized for ZERO jerkiness
+    const lenis = new Lenis({
+        duration: 1.2,
+        // Linear-ish easing for consistent feel, avoiding "catch-up" stutter
+        easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+        direction: 'vertical',
+        gestureDirection: 'vertical',
+        smooth: true,
+        mouseMultiplier: 1,
+        smoothTouch: false, // Critical: Disable on touch to prevent scroll fighting
+        touchMultiplier: 2,
+    });
+
+    // High-performance loop
+    function raf(time) {
+        lenis.raf(time);
+        requestAnimationFrame(raf);
+    }
+    requestAnimationFrame(raf);
+
+    window.lenis = lenis;
 </script>

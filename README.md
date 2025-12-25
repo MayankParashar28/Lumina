@@ -17,23 +17,13 @@
 
 ---
 
-## 🎥 Project Demo
-
-<div align="center">
-  <img src="lumina-demo.webp" width="100%" alt="Lumina Application Demo">
-  <br>
-  <em>Full walkthrough showing responsive Bento grid, Semantic Search, and AI integration.</em>
-</div>
-
----
-
 ## 📸 Screenshots
 
 <div align="center">
 
 | **Landing & Home** | **Feed & Content** |
 |:---:|:---:|
-| <img src="screenshots/home.png" width="400" alt="Home Page"> | <img src="screenshots/feed.png" width="400" alt="Blog Feed"> |
+| <img src="screenshots/home.png" width="200" alt="Home Page"> | <img src="screenshots/feed.png" width="200" alt="Blog Feed"> |
 | **Modern Landing Page** | **Infinite Scroll Feed** |
 
 | **Authentication** | **Admin Dashboard** |
@@ -205,7 +195,7 @@ flowchart LR
 
 ---
 
-## 🔍 Search Innovation: Our Competitive Edge
+## 🧠 Search & AI: Embeddings & Smart Recommendations
 
 ### **The Problem with Traditional Search**
 Most blogging platforms use basic keyword matching (SQL `LIKE` or MongoDB `$regex`). Searching for **"machine learning tutorials"** misses articles titled **"Introduction to AI"** or **"Deep Learning Basics"** — even though they're highly relevant.
@@ -267,6 +257,20 @@ const results = blogs.map(b => ({
 - ✅ **Technical Depth** - Vector math, ML algorithms, optimization
 
 ---
+
+## ⚡ Engineering Spotlights
+
+### **1. 🖼️ Advanced Image Optimization**
+We treat images as first-class citizens for performance:
+- **Format Selection**: Automatically serves **AVIF** or **WebP** based on the user's browser, reducing size by up to 80%.
+- **AI Compression**: Cloudinary's `quality: auto` balances visual fidelity and file size.
+- **Lazy Loading**: Native `loading="lazy"` combined with low-quality placeholders (LQIP) for instant perception of speed.
+
+### **2. 📱 Dynamic Feed & Infinite Scroll**
+A modern, app-like experience on the web:
+- **Bento Grid Architecture**: A responsive masonry layout that adapts content chunks to the viewport.
+- **Performance**: Cursor-based pagination ensures queries remain $O(1)$ fast, even with millions of posts (unlike traditional `skip/limit` which degrades to $O(n)$).
+
 
 ## 🛠️ Tech Stack
 

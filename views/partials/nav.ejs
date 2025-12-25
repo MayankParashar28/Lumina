@@ -37,17 +37,18 @@
 
         <!-- Right Actions -->
         <div class="nav-actions">
-          <!-- Search (Icon Only Trigger) -->
-          <div class="search-trigger">
-            <button id="searchToggle" class="icon-btn">
-              <i class="bi bi-search"></i>
-            </button>
-            <form class="floating-search" method="GET" action="/" id="searchForm">
-              <input id="searchInput" type="text" name="searchQuery" placeholder="Search..." autocomplete="off">
-            </form>
-          </div>
 
           <% if (locals.user) { %>
+            <!-- Search (Restricted to logged in users) -->
+            <div class="search-trigger">
+              <button id="searchToggle" class="icon-btn">
+                <i class="bi bi-search"></i>
+              </button>
+              <form class="floating-search" method="GET" action="/" id="searchForm">
+                <input id="searchInput" type="text" name="searchQuery" placeholder="Search..." autocomplete="off">
+              </form>
+            </div>
+
             <a href="/blog/add-new" class="icon-btn" title="Write">
               <i class="bi bi-plus-lg"></i>
             </a>
