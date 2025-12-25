@@ -1,0 +1,43 @@
+<footer class="site-footer-minimal">
+    <div class="footer-content-minimal">
+        <div class="footer-left">
+            <span class="footer-logo-text">Lumina</span>
+            <span class="footer-copyright">&copy; <%= new Date().getFullYear() %></span>
+        </div>
+
+        <div class="footer-center" style="flex-direction: column; gap: 0.2rem;">
+            <p class="footer-tagline" style="font-size: 0.85rem; opacity: 0.6; margin: 0;">
+                Built by Mayank Parashar · Crafted for thinkers and builders
+            </p>
+            <div class="footer-links" style="display: flex; gap: 1.5rem; justify-content: center; margin-top: 0.5rem;">
+                <a href="/about">About</a>
+                <a href="/privacy">Privacy</a>
+                <a href="/terms">Terms</a>
+            </div>
+        </div>
+
+        <div class="footer-right">
+            <!-- <a href="#" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
+            <a href="#" aria-label="GitHub"><i class="fab fa-github"></i></a> -->
+        </div>
+    </div>
+</footer>
+
+<!-- Scroll to Top Button -->
+<button id="scrollToTop" class="btn btn-sm rounded-circle">
+    <i class="bi bi-arrow-up"></i>
+</button>
+
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const scrollToTopBtn = document.getElementById("scrollToTop");
+        if (scrollToTopBtn) {
+            window.addEventListener("scroll", () => {
+                scrollToTopBtn.style.display = window.scrollY > 400 ? "block" : "none";
+            });
+            scrollToTopBtn.addEventListener("click", () => {
+                window.scrollTo({ top: 0, behavior: "smooth" });
+            });
+        }
+    });
+</script>

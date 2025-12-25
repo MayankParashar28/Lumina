@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <%- include('./partials/header') %>
+</head>
+<link rel="stylesheet" href="/css/blog.css?v=4">
+<!-- Quill Theme for matching styles -->
+<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+
+<body>
+    <%- include('./partials/nav', { searchQuery: searchQuery || '' }) %>
+
+        <div id="progress-container">
+            <div id="progress-bar"></div>
+        </div>
+
+
+
+        <!-- Professional Blog Content -->
+        <article class="blog-container">
+            <!-- Header -->
+            <header class="blog-header">
+                <div class="blog-tags">
+                    <% if (blog.category) { %>
+                        <span class="category-pill">
+                            <%= blog.category %>
+                        </span>
+                        <% } %>
+                </div>
+                <h1 class="blog-title">
+                    <%= blog.title %>
+                </h1>
+                <div class="blog-meta">
+                    <% if (blog.createdBy) { %>
+                        <a href="/user/profile/<%= blog.createdBy._id %>" class="author-info"
+                            style="text-decoration: none; color: inherit;">
+                            <img src="<%= optimizeImage(createdByProfilePic, { width: 100, height: 100 }) %>"
+                                alt="<%= createdByName %>" class="author-avatar-sm">
+                            <span class="author-name">
+                                <%= createdByName %>
+                            </span>
+                        </a>
+                        <% if (user && blog.createdBy && String(user._id) !==String(blog.createdBy._id)) { %>
+                            <form method="POST" action="/user/follow/<%= blog.createdBy._id %>"
+                                style="display: inline;">
+                                <button
+                                    class="btn-follow <%= (user.following && user.following.includes(blog.createdBy.id)) ? 'followed' : '' %>"
+                                    style="padding: 0.2rem 0.8rem; font-size: 0.75rem; min-width: auto; margin-left: 0.5rem;">
+                                    <%= (user.following && user.following.includes(blog.createdBy.id)) ? 'Following'
+                                        : 'Follow' %>
+                                </button>
+                            </form>
+                            <% } %>
+                                <% } else { %>
+                                    <div class="author-info">
+                                        <img src="<%= optimizeImage(createdByProfilePic, { width: 100, height: 100 }) %>"
+                                            alt="<%= createdByName %>" class="author-avatar-sm">
+                                        <span class="author-name">
+                                            <%= createdByName %>
+                                        </span>
+                                    </div>
+                                    <% } %>
+                                        <span class="meta-divider">·</span>
+                                        <span class="publish-date">
+                                            <%= formattedDate %>
+                                        </span>
+                                        <span class="meta-divider">·</span>
+                                        <span class="view-count">
+                                            <%= blog.views %> Views
+                                        </span>
+                </div>
+            </header>
+
+            <!-- Hero Image -->
+            <% if (blog.coverImageURL) { %>
+                <div class="hero-image-container">
+                    <img src="<%= optimizeImage(blog.coverImageURL, { width: 1200 }) %>" alt="<%= blog.title %>"
+                        class="blog-hero-image">
+                </div>
+                <% } %>
+                    <div class="content-wrapper">
+
+
+                        <!-- Editorial Content -->
+                        <div class="blog-body editorial-typography ql-snow" id="blog-content-wrapper">
+                            <div class="ql-editor" id="blog-content">
+                                <!-- Content injected via JS -->
+                            </div>
+
+                            <!-- Raw content hidden for JS to parse -->
+                            <div id="raw-content" style="display:none;">
+                                <%= blog.body %>
+                            </div>
+                        </div>
+                        <!-- Vertical Action Bar (Right-aligned at end of post) -->
+                        <div class="article-actions-bar-vertical">
+                            <div class="action-item">
+                                <button class="action-icon-btn like-btn-trigger" data-blog-id="<%= blog._id %>"
+                                    title="Like">
+                                    <i
+                                        class="<%= user && blog.likedBy.includes(user._id.toString()) ? 'fas text-red' : 'far' %> fa-heart like-icon-target"></i>
+                                    <span class="action-label like-count-target">
+                                        <%= blog.likes || 0 %>
+                                    </span>
+                                </button>
+                            </div>
+                            <div class="action-item">
+                                <button class="action-icon-btn" title="Comment"
+                                    onclick="document.getElementById('comments').scrollIntoView({ behavior: 'smooth' });">
+                                    <i class="far fa-comment"></i>
+                                    <!-- <span class="action-label">
+                                    <%= comments.length %>
+                                </span> -->
+                                </button>
+                            </div>
+                            <% if (user) { %>
+                                <div class="action-item">
+                                    <button class="action-icon-btn bookmark-btn-trigger" data-blog-id="<%= blog._id %>"
+                                        title="Bookmark">
+                                        <i
+                                            class="<%= isBookmarked ? 'fas' : 'far' %> fa-bookmark bookmark-icon-target"></i>
+                                    </button>
+                                </div>
+                                <% } %>
+                                    <div class="action-item">
+                                        <button class="action-icon-btn share-btn-trigger" title="Share Story">
+                                            <i class="fas fa-share-alt"></i>
+                                        </button>
+                                    </div>
+                                    <% if (user && blog.createdBy && String(user._id)===String(blog.createdBy.id)) { %>
+                                        <div class="action-item edit-item">
+                                            <a href="/blog/edit/<%= blog._id %>" class="action-icon-btn"
+                                                title="Edit Blog">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                        </div>
+                                        <% } %>
+                        </div>
+                    </div>
+
+                    <!-- Sanitizer -->
+                    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
+                    <script>
+                        document.addEventListener("DOMContentLoaded", function () {
+                            const rawContent = document.getElementById("raw-content").textContent; // Get escaped HTML source
+                            const blogBody = document.getElementById("blog-content");
+
+                            // Sanitize the HTML directly (Quill produces HTML)
+                            const cleanHTML = DOMPurify.sanitize(rawContent);
+                            blogBody.innerHTML = cleanHTML;
+                        });
+                    </script>
+
+        </article>
+
+        <!-- Comments -->
+        <div class="comments-section" id="comments">
+            <h3 class="input-label" style="margin-bottom: 1.5rem;">Discussion (<%= comments.length %>)</h3>
+
+            <% if (user) { %>
+                <form method="post" action="/blog/comment/<%= blog._id %>" class="comment-form">
+                    <div class="comment-input-wrapper">
+                        <img src="<%= user.profilePic %>" class="comment-avatar">
+                        <div class="input-box-wrapper">
+                            <textarea name="content" class="comment-textarea" placeholder="Add to the discussion..."
+                                required rows="1"
+                                oninput="this.style.height = ''; this.style.height = (this.scrollHeight) + 'px'"></textarea>
+                            <div class="form-actions">
+                                <button type="submit" class="btn-comment">Post Comment</button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+                <% } else { %>
+                    <div class="login-prompt">
+                        <p>Please <a href="/user/signin">sign in</a> to join the discussion.</p>
+                    </div>
+                    <% } %>
+
+                        <div class="comments-list">
+                            <% if (comments.length> 0) { %>
+                                <% comments.forEach(comment=> { %>
+                                    <div class="comment-card">
+                                        <div class="comment-avatar-col">
+                                            <img src="<%= comment.createdBy ? comment.createdBy.profilePic : 'https://api.dicebear.com/7.x/initials/svg?seed=Unknown' %>"
+                                                class="comment-avatar-small">
+                                        </div>
+                                        <div class="comment-content-col">
+                                            <div class="comment-header">
+                                                <span class="comment-author">
+                                                    <%= comment.createdBy ? comment.createdBy.fullName : "Unknown User"
+                                                        %>
+                                                </span>
+                                                <span class="comment-dot">·</span>
+                                                <span class="comment-date">
+                                                    <%= moment(comment.createdAt).fromNow() %>
+                                                </span>
+
+                                                <% const isCommentOwner=user && comment.createdBy &&
+                                                    String(user._id)===String(comment.createdBy._id); const
+                                                    isBlogOwner=user && blog.createdBy &&
+                                                    String(user._id)===String(blog.createdBy.id); const isAdmin=user &&
+                                                    user.role==="ADMIN" ; if (isCommentOwner || isBlogOwner || isAdmin)
+                                                    { %>
+                                                    <form action="/blog/comment/delete/<%= comment._id %>" method="POST"
+                                                        class="delete-form" onsubmit="return confirm('Delete?');">
+                                                        <button type="submit" class="btn-delete" title="Delete"><i
+                                                                class="fas fa-trash-alt"></i></button>
+                                                    </form>
+                                                    <% } %>
+                                            </div>
+                                            <div class="comment-body">
+                                                <p>
+                                                    <%= comment.content %>
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <% }); %>
+                                        <% } else { %>
+                                            <div class="no-comments">
+                                                <p>No comments yet. Be the first to share your thoughts!</p>
+                                            </div>
+                                            <% } %>
+                        </div>
+        </div>
+
+        <!-- Recommended Stories Section -->
+        <section class="recommendation-section" style="max-width: 900px; margin: 4rem auto; padding: 0 1.5rem;">
+            <h3
+                style="font-size: 1.2rem; font-weight: 700; margin-bottom: 2rem; text-transform: uppercase; letter-spacing: 0.05em; color: #555;">
+                Recommended For You</h3>
+            <div id="recommendation-grid"
+                style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 2rem;">
+                <!-- Content injected via JS -->
+                <p style="color: #999; font-style: italic;">Finding best matches...</p>
+            </div>
+        </section>
+
+        <script>
+            // Fetch Recommendations
+            document.addEventListener("DOMContentLoaded", async () => {
+                const blogId = "<%= blog._id %>";
+                const grid = document.getElementById("recommendation-grid");
+
+                try {
+                    const res = await fetch(`/blog/recommendations/${blogId}`);
+                    const data = await res.json();
+
+                    if (data.blogs && data.blogs.length > 0) {
+                        grid.innerHTML = data.blogs.map(blog => `
+                            <a href="/blog/${blog._id}" style="text-decoration: none; color: inherit; display: flex; flex-direction: column; gap: 0.8rem;">
+                                <div style="aspect-ratio: 16/9; border-radius: 8px; overflow: hidden; background: #eee;">
+                                    <img src="${blog.coverImageURL || '/images/default-cover.jpg'}" style="width: 100%; height: 100%; object-fit: cover;" alt="${blog.title}">
+                                </div>
+                                <div>
+                                    <h4 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 0.3rem; line-height: 1.3;">${blog.title}</h4>
+                                    <span style="font-size: 0.75rem; color: #888; text-transform: uppercase;">Based on similar content</span>
+                                </div>
+                            </a>
+                        `).join("");
+                    } else {
+                        grid.innerHTML = '<p style="color: #999;">No similar stories found.</p>';
+                    }
+                } catch (err) {
+                    console.error("Failed to load recommendations", err);
+                    grid.innerHTML = "";
+                }
+            });
+        </script>
+
+
+        <script>
+            // Progress Bar Script
+            window.onscroll = function () { myFunction() };
+            function myFunction() {
+                var winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+                var height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+                var scrolled = (winScroll / height) * 100;
+                document.getElementById("progress-bar").style.width = scrolled + "%";
+            }
+
+            // Bookmark Logic (Class-based for Mobile + Desktop)
+            document.querySelectorAll('.bookmark-btn-trigger').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const blogId = btn.dataset.blogId;
+                    try {
+                        const response = await fetch(`/blog/bookmark/${blogId}`, { method: 'POST' });
+                        const data = await response.json();
+
+                        if (data.success) {
+                            // Update ALL bookmark icons on page
+                            document.querySelectorAll('.bookmark-icon-target').forEach(icon => {
+                                if (data.bookmarked) {
+                                    icon.classList.remove('far');
+                                    icon.classList.add('fas');
+                                } else {
+                                    icon.classList.remove('fas');
+                                    icon.classList.add('far');
+                                }
+                            });
+                        }
+                    } catch (err) {
+                        console.error('Error bookmarking blog:', err);
+                    }
+                });
+            });
+
+            // Like Button Logic (Class-based)
+            document.querySelectorAll('.like-btn-trigger').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const blogId = btn.dataset.blogId;
+                    try {
+                        const response = await fetch(`/blog/like/${blogId}`, { method: 'POST' });
+                        const data = await response.json();
+
+                        if (data.likes !== undefined) {
+                            // Update ALL like counts
+                            document.querySelectorAll('.like-count-target').forEach(span => {
+                                span.innerText = data.likes;
+                            });
+
+                            // Update ALL like icons
+                            document.querySelectorAll('.like-icon-target').forEach(icon => {
+                                icon.classList.toggle('fas');
+                                icon.classList.toggle('far');
+                                icon.classList.toggle('text-red');
+                                icon.classList.add('animate-like');
+                                setTimeout(() => icon.classList.remove('animate-like'), 450);
+                            });
+                        }
+                    } catch (err) {
+                        console.error('Error liking blog:', err);
+                    }
+                });
+            });
+        </script>
+        <script>
+            // Comment Scroll (Already handled inline for mobile, keeping for desktop ID if exists)
+            const commentBtn = document.getElementById('comment-btn');
+            if (commentBtn) {
+                commentBtn.addEventListener('click', () => {
+                    const commentsSection = document.querySelector('.comments-section');
+                    if (commentsSection) {
+                        commentsSection.scrollIntoView({ behavior: 'smooth' });
+                    }
+                });
+            }
+
+            // Share Logic (Class-based)
+            document.querySelectorAll('.share-btn-trigger').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    try {
+                        await navigator.clipboard.writeText(window.location.href);
+                        alert('Link copied to clipboard!');
+                    } catch (err) {
+                        console.error('Failed to copy: ', err);
+                    }
+                });
+            });
+        </script>
+        <%- include('./partials/footer') %>
+</body>
+
+</html>

@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <%- include('./partials/header') %>
+        <title>
+            <%= user.fullName %> - Profile
+        </title>
+        <link rel="stylesheet" href="/css/profile.css?v=2">
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+    <%- include('./partials/nav', { searchQuery: searchQuery || '' }) %>
+
+        <main class="profile-container">
+
+            <!-- Hero Header -->
+            <header class="profile-header">
+                <div class="profile-avatar-wrapper">
+                    <img src="<%= optimizeImage(user.profilePic, { width: 300, height: 300 }) %>"
+                        alt="<%= user.fullName %>" class="profile-avatar">
+                </div>
+
+                <h1 class="profile-name">
+                    <%= user.fullName %>
+                </h1>
+
+                <p class="profile-bio">
+                    <%= user.bio || "Sharing stories and ideas on Lumina." %>
+                </p>
+
+                <div class="profile-meta">
+                    <span>Member since <%= new Date(user.createdAt).getFullYear() %></span>
+                    <% if (user.role==='ADMIN' ) { %>
+                        <span class="badge-admin">Admin</span>
+                        <% } %>
+                </div>
+
+                <!-- Social Links -->
+                <div class="profile-socials">
+                    <% if (user.socials) { %>
+                        <% if (user.socials.linkedin) { %> <a href="<%= user.socials.linkedin %>" target="_blank"
+                                title="LinkedIn"><i class="fab fa-linkedin"></i></a>
+                            <% } %>
+                                <% if (user.socials.twitter) { %> <a href="<%= user.socials.twitter %>" target="_blank"
+                                        title="Twitter"><i class="fab fa-twitter"></i></a>
+                                    <% } %>
+                                        <% if (user.socials.github) { %> <a href="<%= user.socials.github %>"
+                                                target="_blank" title="GitHub"><i class="fab fa-github"></i></a>
+                                            <% } %>
+                                                <% if (user.socials.instagram) { %> <a
+                                                        href="<%= user.socials.instagram %>" target="_blank"
+                                                        title="Instagram"><i class="fab fa-instagram"></i></a>
+                                                    <% } %>
+                                                        <% } %>
+                </div>
+
+                <!-- Profile Actions -->
+                <div class="profile-actions">
+                    <a href="/user/edit" class="btn-action primary">Edit Profile</a>
+                    <a href="/user/logout" class="btn-action secondary">Sign Out</a>
+                </div>
+            </header>
+
+            <!-- Stats Grid -->
+            <section class="stats-grid">
+                <div class="stat-card">
+                    <span class="stat-value">
+                        <%= blogCount || 0 %>
+                    </span>
+                    <span class="stat-label">Stories</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value">
+                        <%= totalLikes || 0 %>
+                    </span>
+                    <span class="stat-label">Total Likes</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value">
+                        <%= user.followers ? user.followers.length : 0 %>
+                    </span>
+                    <span class="stat-label">Followers</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value">
+                        <%= user.following ? user.following.length : 0 %>
+                    </span>
+                    <span class="stat-label">Following</span>
+                </div>
+            </section>
+
+            <div class="content-divider"></div>
+
+            <!-- Written Stories -->
+            <section class="content-section">
+                <h3 class="section-title">Written Stories</h3>
+                <% if (blogs && blogs.length> 0) { %>
+                    <div class="story-grid">
+                        <% blogs.forEach(blog=> { %>
+                            <a href="/blog/<%= blog._id %>" class="story-card">
+                                <div class="story-image-wrapper">
+                                    <img src="<%= blog.coverImageURL || '/images/default-cover.jpg' %>"
+                                        alt="<%= blog.title %>" loading="lazy">
+                                </div>
+                                <div class="story-content">
+                                    <span class="story-date">
+                                        <%= new Date(blog.createdAt).toLocaleDateString(undefined, { month: 'short' ,
+                                            day: 'numeric' }) %>
+                                    </span>
+                                    <h4 class="story-title">
+                                        <%= blog.title %>
+                                    </h4>
+                                    <div class="story-footer">
+                                        <span>
+                                            <%= blog.views || 0 %> views
+                                        </span>
+                                        <span>·</span>
+                                        <span>
+                                            <%= blog.likes || 0 %> likes
+                                        </span>
+                                    </div>
+                                </div>
+                            </a>
+                            <% }); %>
+                    </div>
+                    <% } else { %>
+                        <div class="empty-state">
+                            <p>No stories published yet.</p>
+                            <a href="/blog/add-new" class="btn-create">Write your first story</a>
+                        </div>
+                        <% } %>
+            </section>
+
+            <!-- Bookmarks (Horizontal Scroll if implemented, or Grid) -->
+            <% if (bookmarks && bookmarks.length> 0) { %>
+                <div class="content-divider"></div>
+                <section class="content-section">
+                    <h3 class="section-title">Reading List</h3>
+                    <div class="story-grid">
+                        <% bookmarks.forEach(blog=> { %>
+                            <a href="/blog/<%= blog._id %>" class="story-card">
+                                <div class="story-image-wrapper">
+                                    <img src="<%= blog.coverImageURL || '/images/default-cover.jpg' %>"
+                                        alt="<%= blog.title %>" loading="lazy">
+                                </div>
+                                <div class="story-content">
+                                    <span class="story-author">by <%= blog.createdBy ? blog.createdBy.fullName
+                                            : "Unknown" %></span>
+                                    <h4 class="story-title">
+                                        <%= blog.title %>
+                                    </h4>
+                                </div>
+                            </a>
+                            <% }); %>
+                    </div>
+                </section>
+                <% } %>
+
+                    <!-- Activity Chart (Clean) -->
+                    <div class="content-divider"></div>
+                    <section class="content-section">
+                        <h3 class="section-title">Analytics</h3>
+                        <div class="chart-container">
+                            <canvas id="activityChart"></canvas>
+                        </div>
+                    </section>
+
+        </main>
+
+        <%- include('./partials/footer') %>
+
+            <!-- Chart Config -->
+            <script>
+                document.addEventListener("DOMContentLoaded", function () {
+                    const ctx = document.getElementById("activityChart").getContext("2d");
+                    const data = {
+                        labels: ['Stories', 'Likes', 'Followers', 'Following'],
+                        datasets: [{
+                            label: 'Overview',
+                            data: [
+                        <%= blogCount || 0 %>,
+                        <%= totalLikes || 0 %>,
+                        <%= user.followers ? user.followers.length : 0 %>,
+                        <%= user.following ? user.following.length : 0 %>
+                    ],
+                            backgroundColor: ['rgba(0,0,0,0.8)', 'rgba(0,0,0,0.6)', 'rgba(0,0,0,0.4)', 'rgba(0,0,0,0.2)'],
+                            borderRadius: 4,
+                            borderWidth: 0
+                        }]
+                    };
+
+                    new Chart(ctx, {
+                        type: 'bar',
+                        data: data,
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false }
+                            },
+                            scales: {
+                                y: { beginAtZero: true, grid: { display: false } },
+                                x: { grid: { display: false } }
+                            }
+                        }
+                    });
+                });
+            </script>
+</body>
+
+</html>

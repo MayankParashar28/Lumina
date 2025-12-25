@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <%- include('./partials/header') %>
+        <title>Home - Lumina</title>
+        <link rel="stylesheet" href="/css/home.css?v=10">
+</head>
+
+<body>
+    <%- include('./partials/nav', { searchQuery: '' }) %>
+        <%- include('./partials/marquee') %>
+
+            <!-- Hero Section (Minimalist) -->
+            <div class="feed-hero">
+                <div class="feed-header">
+                    <h1 class="feed-title">Fresh <span class="outline-text">Perspectives</span></h1>
+                    <p class="feed-description">
+                        A minimalist sanctuary where builders share insights and shape the future of tech.
+                    </p>
+                    <p class="feed-date">
+                        <%= moment().format('dddd, MMMM Do YYYY') %>
+                    </p>
+                </div>
+                <div class="feed-filter">
+                    <button class="filter-btn active" data-category="all">All</button>
+                    <button class="filter-btn" data-category="trending">Trending</button>
+                    <button class="filter-btn" data-category="featured">Featured</button>
+                    <% categories.slice(0, 6).forEach(cat=> { %>
+                        <button class="filter-btn" data-category="<%= cat.toLowerCase() %>">
+                            <%= cat %>
+                        </button>
+                        <% }) %>
+                </div>
+            </div>
+
+            <div class="feed-divider"></div>
+
+            <!-- Bento Feed Wrapper -->
+            <div class="bento-feed-wrapper" style="margin-top: 2rem;">
+                <!-- Skeleton Loading Phase (Initial) -->
+                <div class="skeleton-container initial" id="bento-skeleton">
+                    <div class="skeleton-item item-main"></div>
+                    <div class="skeleton-item item-normal"></div>
+                    <div class="skeleton-item item-normal"></div>
+                    <div class="skeleton-item item-wide"></div>
+                    <div class="skeleton-item item-tall"></div>
+                    <div class="skeleton-item item-normal"></div>
+                    <div class="skeleton-item item-normal"></div>
+                    <div class="skeleton-item item-wide"></div>
+                </div>
+
+                <!-- Bento Grid Feed -->
+                <div class="bento-grid" id="bento-grid" style="opacity: 0; transition: opacity 0.5s ease;">
+                    <% if (blogs && blogs.length> 0) { %>
+                        <% blogs.forEach((blog, index)=> {
+                            let bentoClass = 'item-normal';
+                            const pattern = index % 8;
+                            if (pattern === 0) bentoClass = 'item-main';
+                            else if (pattern === 3) bentoClass = 'item-wide';
+                            else if (pattern === 4) bentoClass = 'item-tall';
+                            else if (pattern === 7) bentoClass = 'item-wide';
+
+                            // Determine categories for filtering
+                            let dataCats = ['all'];
+                            if (blog.category) dataCats.push(blog.category.toLowerCase());
+                            if (blog.featured) dataCats.push('featured');
+                            // We can simulate trending if needed, or use views
+                            if (blog.views > 10) dataCats.push('trending');
+                            %>
+                            <article class="bento-item <%= bentoClass %>"
+                                data-categories='<%= JSON.stringify(dataCats) %>'
+                                style="view-transition-name: item-<%= blog._id %>;">
+                                <div class="bento-glow"></div>
+                                <a href="/blog/<%= blog._id %>" class="blog-card-link">
+                                    <div class="blog-card-inner">
+                                        <div class="card-image-wrapper">
+                                            <% if (blog.coverImageURL) { %>
+                                                <img src="<%= blog.coverImageURL %>" alt="<%= blog.title %>"
+                                                    loading="lazy">
+                                                <% } else { %>
+                                                    <div class="placeholder-img"></div>
+                                                    <% } %>
+                                                        <div class="card-overlay">
+                                                            <% const words=blog.body ? blog.body.replace(/<[^>]*>/g,
+                                                                '').split(/\s+/).length : 0;
+                                                                const readTime = Math.ceil(words / 200); %>
+                                                                <span class="read-time">
+                                                                    <%= readTime %> min read
+                                                                </span>
+                                                        </div>
+                                        </div>
+                                        <div class="card-content">
+                                            <div class="card-tags">
+                                                <!-- AI Match Badge -->
+
+                                                <% if (blog.category) { %>
+                                                    <span class="tag-pill">
+                                                        <%= blog.category %>
+                                                    </span>
+                                                    <% } %>
+                                            </div>
+                                            <h2 class="card-heading">
+                                                <%= blog.title %>
+                                            </h2>
+                                            <div class="card-footer-minimal">
+                                                <% if (blog.createdBy) { %>
+                                                    <div class="author-info">
+                                                        <% if (blog.createdBy.profilePic) { %>
+                                                            <img src="<%= blog.createdBy.profilePic %>" alt="Author"
+                                                                class="author-avatar-small">
+                                                            <% } else { %>
+                                                                <div class="author-avatar-small placeholder"></div>
+                                                                <% } %>
+                                                                    <span class="author-name">
+                                                                        <%= blog.createdBy.fullName %>
+                                                                    </span>
+                                                    </div>
+                                                    <% } %>
+                                                        <div class="interaction-stats">
+                                                            <span><i class="bi bi-eye"></i>
+                                                                <%= blog.views || 0 %>
+                                                            </span>
+                                                        </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </a>
+                            </article>
+                            <% }) %>
+                                <% } else { %>
+                                    <div class="empty-feed">
+                                        <div class="empty-icon"><i class="bi bi-pen"></i></div>
+                                        <h3>The Canvas is Blank</h3>
+                                        <p>Be the first to paint a story on this timeline.</p>
+                                        <a href="/blog/add-new" class="btn-primary btn-lg mt-3">Start Writing</a>
+                                    </div>
+                                    <% } %>
+                </div>
+
+                <!-- Pagination Skeleton -->
+                <div class="skeleton-container" id="pagination-skeleton" style="display: none; opacity: 1;">
+                    <div class="skeleton-item item-normal"></div>
+                    <div class="skeleton-item item-normal"></div>
+                    <div class="skeleton-item item-normal"></div>
+                    <div class="skeleton-item item-normal"></div>
+                </div>
+
+                <!-- Sentinel for Infinite Scroll -->
+                <div id="sentinel" style="height: 20px; width: 100%;"></div>
+            </div>
+
+
+            <script>
+
+                let currentPage = 1;
+                let isLoading = false;
+                let hasMore = true;
+                let currentCategory = '<%= categoryFilter || "all" %>';
+
+                // Initial Load logic
+                window.addEventListener('load', () => {
+                    const skeleton = document.getElementById('bento-skeleton');
+                    const grid = document.getElementById('bento-grid');
+
+                    // Set active class based on URL
+                    const filterBtns = document.querySelectorAll('.filter-btn');
+                    filterBtns.forEach(btn => {
+                        btn.classList.remove('active');
+                        if (btn.getAttribute('data-category') === currentCategory) {
+                            btn.classList.add('active');
+                        }
+                    });
+
+                    if (skeleton && grid) {
+                        skeleton.style.opacity = '0';
+                        setTimeout(() => {
+                            skeleton.style.display = 'none';
+                            grid.style.opacity = '1';
+                        }, 800);
+                    }
+                });
+
+                // --- Optimized Bento Reshuffle Logic ---
+                const filterBtns = document.querySelectorAll('.filter-btn');
+                const bentoGrid = document.getElementById('bento-grid');
+
+                // ... (Keep updateBentoPattern and applyFilter if needed for seamless trans, but let's do robust URL nav first)
+
+                filterBtns.forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const category = btn.getAttribute('data-category');
+                        // Navigate to URL for server-side filtering (Robust)
+                        if (category === 'all') {
+                            window.location.href = '/';
+                        } else {
+                            window.location.href = `/?category=${category}`;
+                        }
+                    });
+                });
+
+                // --- Infinite Scroll Logic ---
+                const loadMoreBlogs = async () => {
+                    if (isLoading || !hasMore) return;
+                    isLoading = true;
+
+                    const pagSkeleton = document.getElementById('pagination-skeleton');
+                    pagSkeleton.style.display = 'grid';
+
+                    try {
+                        const response = await fetch(`/blog/api/feed?page=${currentPage + 1}&category=${currentCategory}`);
+                        const data = await response.json();
+
+                        if (data.blogs && data.blogs.length > 0) {
+                            currentPage++;
+                            hasMore = data.hasMore;
+                            renderNewBlogs(data.blogs);
+                        } else {
+                            hasMore = false;
+                        }
+                    } catch (error) {
+                        console.error('Error loading more blogs:', error);
+                    } finally {
+                        isLoading = false;
+                        pagSkeleton.style.display = 'none';
+                    }
+                };
+
+                const renderNewBlogs = (blogs) => {
+                    const fragment = document.createDocumentFragment();
+
+                    blogs.forEach(blog => {
+                        // Check if item already exists in DOM (can happen with client-side filters)
+                        if (document.querySelector(`[style*="item-${blog._id}"]`)) return;
+
+                        const article = document.createElement('article');
+                        article.className = 'bento-item item-normal'; // Default, will be recalculated
+                        article.style.viewTransitionName = `item-${blog._id}`;
+
+                        let dataCats = ['all'];
+                        if (blog.category) dataCats.push(blog.category.toLowerCase());
+                        if (blog.featured) dataCats.push('featured');
+                        if (blog.views > 10) dataCats.push('trending');
+                        article.setAttribute('data-categories', JSON.stringify(dataCats));
+
+                        article.innerHTML = `
+                            <div class="bento-glow"></div>
+                                <div class="card-image-wrapper">
+                                    ${blog.coverImageURL ? `<img src="${blog.coverImageURL}" alt="${blog.title}" loading="lazy">` : '<div class="placeholder-img"></div>'}
+                                    <div class="card-overlay">
+                                            <span class="read-time">${blog.readTime} min read</span>
+                                        </div>
+                                    </div>
+                                    <div class="card-content">
+                                        <div class="card-tags">
+                                            ${blog.category ? `<span class="tag-pill">${blog.category}</span>` : ''}
+                                        </div>
+                                        <h2 class="card-heading">${blog.title}</h2>
+                                        <div class="card-footer-minimal">
+                                            <div class="author-info">
+                                                ${blog.createdBy && blog.createdBy.profilePic ? `<img src="${blog.createdBy.profilePic}" alt="Author" class="author-avatar-small">` : '<div class="author-avatar-small placeholder"></div>'}
+                                                <span class="author-name">${blog.createdBy ? blog.createdBy.fullName : 'Unknown User'}</span>
+                                            </div>
+                                            <div class="interaction-stats">
+                                                <span><i class="bi bi-eye"></i> ${blog.views || 0}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </a>
+                        `;
+                        fragment.appendChild(article);
+                    });
+
+                    if (document.startViewTransition) {
+                        document.startViewTransition(() => {
+                            bentoGrid.appendChild(fragment);
+                            applyFilter(currentCategory); // Recalculate everything
+                        });
+                    } else {
+                        bentoGrid.appendChild(fragment);
+                        applyFilter(currentCategory);
+                    }
+                };
+
+                // Intersection Observer for Infinite Scroll
+                const sentinel = document.getElementById('sentinel');
+                const observer = new IntersectionObserver((entries) => {
+                    if (entries[0].isIntersecting) {
+                        loadMoreBlogs();
+                    }
+                }, { threshold: 0.1 });
+
+                observer.observe(sentinel);
+
+                // Spotlight Coordinate Tracking
+                const grid = document.getElementById('bento-grid');
+                if (grid) {
+                    grid.addEventListener('mousemove', e => {
+                        const items = grid.querySelectorAll('.bento-item:not([style*="display: none"])');
+                        items.forEach(item => {
+                            const rect = item.getBoundingClientRect();
+                            const x = e.clientX - rect.left;
+                            const y = e.clientY - rect.top;
+                            item.style.setProperty('--x', `${x}px`);
+                            item.style.setProperty('--y', `${y}px`);
+                        });
+                    });
+                }
+            </script>
+
+            <%- include('./partials/footer') %>
+                <%- include('./partials/script') %>
+</body>
+
+</html>

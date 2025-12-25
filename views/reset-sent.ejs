@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <%- include('./partials/header') %>
+        <title>Check Your Email - Lumina</title>
+        <link rel="stylesheet" href="/css/auth.css">
+</head>
+
+<body>
+    <%- include('./partials/nav', { searchQuery: '' }) %>
+
+        <div class="page-container">
+            <header class="header text-center mb-4">
+                <h1 class="auth-title">Password Reset</h1>
+                <p class="auth-subtitle">Check your inbox for instructions</p>
+            </header>
+
+            <div class="auth-card" style="text-align: center;">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">📨</div>
+                <h1>Email Sent!</h1>
+                <p style="margin-bottom: 20px; color: #666;">
+                    We've sent a password reset link to <strong>
+                        <%= email %>
+                    </strong>. <br>
+                    Please check your inbox (and spam folder) and click the link to create a new password.
+                </p>
+                <div class="alert alert-info" style="font-size: 0.9em; margin-bottom: 20px; color: #555;">
+                    ⏳ <strong>Note:</strong> The email may take <strong>2-3 minutes</strong> to arrive. Please be
+                    patient!
+                </div>
+
+                <a href="/user/signin" class="btn btn-primary"
+                    style="background-color: #000; border: none; padding: 10px 20px; border-radius: 5px; color: #fff; text-decoration: none;">
+                    Back to Sign In
+                </a>
+
+                <div class="auth-footer" style="margin-top: 20px;">
+                    Didn't receive it? <a href="/user/forgot-password">Try again</a>
+                </div>
+            </div>
+        </div>
+
+        <%- include('./partials/footer') %>
+</body>
+
+</html>

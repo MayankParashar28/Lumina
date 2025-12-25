@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <%- include('./partials/header') %>
+        <title>
+            <%= title %>
+        </title>
+        <link rel="stylesheet" href="/css/docs.css">
+</head>
+
+<body>
+    <%- include('./partials/nav', { searchQuery: '' }) %>
+
+        <div class="docs-wrapper">
+            <!-- Left Sidebar (Navigation) -->
+            <aside class="docs-sidebar-left">
+                <div class="docs-nav-group">
+                    <div class="docs-nav-title">Company</div>
+                    <a href="/about" class="docs-nav-link">About Lumina</a>
+                    <a href="/mission" class="docs-nav-link">Our Mission</a>
+                </div>
+                <div class="docs-nav-group">
+                    <div class="docs-nav-title">Legal</div>
+                    <a href="/privacy" class="docs-nav-link active">Privacy Policy</a>
+                    <a href="/terms" class="docs-nav-link">Terms of Service</a>
+                </div>
+                <div class="docs-nav-group">
+                    <div class="docs-nav-title">Support</div>
+                    <a href="mailto:support@lumina.com" class="docs-nav-link">Contact Us</a>
+                </div>
+            </aside>
+
+            <!-- Main Content -->
+            <main class="docs-main">
+                <div class="docs-header">
+                    <h1 class="docs-title">Privacy Policy</h1>
+                    <div class="docs-meta">Last Updated: <%= new Date().toLocaleDateString('en-US', { year: 'numeric' ,
+                            month: 'long' , day: 'numeric' }) %>
+                    </div>
+                </div>
+
+                <div class="docs-content">
+                    <p>
+                        At Lumina, we believe privacy is a fundamental human right. This policy outlines how we handle
+                        your data with the care and respect it deserves.
+                    </p>
+
+                    <h2 id="collection">1. Information We Collect</h2>
+                    <p>We believe in data minimization. We only collect what is strictly necessary to provide our
+                        service:</p>
+                    <ul>
+                        <li><strong>Account Basics:</strong> Your name and email address for authentication.</li>
+                        <li><strong>Profile Data:</strong> An optional bio and profile picture to represent you.</li>
+                        <li><strong>Content:</strong> The stories, blogs, and comments you choose to publish.</li>
+                    </ul>
+
+                    <h2 id="usage">2. How We Use Your Data</h2>
+                    <p>We use your information solely to:</p>
+                    <ul>
+                        <li>Deliver the Lumina experience (hosting your blog, notifying followers).</li>
+                        <li>Improve platform performance and security.</li>
+                        <li>Send important account updates (we don't spam).</li>
+                    </ul>
+
+                    <h2 id="security">3. Security</h2>
+                    <p>
+                        We protect your data with encryption in transit (HTTPS) and at rest. We salt and hash passwords
+                        using industry-standard algorithms (bcrypt-like methods) and employ strict rate limiting to
+                        prevent unauthorized access.
+                    </p>
+
+                    <h2 id="sharing">4. Data Sharing</h2>
+                    <p>
+                        <strong>We do not sell your data.</strong> Ever. We only share data with essential
+                        infrastructure providers (like our database host) under strict confidentiality agreements.
+                    </p>
+
+                    <h2 id="contact">5. Contact Us</h2>
+                    <p>
+                        Questions about your privacy? Email our Data Protection Officer directly at privacy@lumina.com.
+                    </p>
+                </div>
+            </main>
+
+            <!-- Right Sidebar (Table of Contents) -->
+            <aside class="docs-sidebar-right">
+                <div class="toc-title">On this page</div>
+                <nav class="toc-nav">
+                    <a href="#collection" class="toc-link">Information Collection</a>
+                    <a href="#usage" class="toc-link">Data Usage</a>
+                    <a href="#security" class="toc-link">Security Measures</a>
+                    <a href="#sharing" class="toc-link">Data Sharing</a>
+                    <a href="#contact" class="toc-link">Contact Us</a>
+                </nav>
+            </aside>
+        </div>
+
+        <%- include('./partials/footer') %>
+</body>
+
+</html>

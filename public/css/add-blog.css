@@ -1,0 +1,1123 @@
+/* Distraction-Free Professional Editor */
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: 'Inter', sans-serif;
+}
+
+.editor-container {
+    max-width: 800px;
+    margin: 10rem auto 4rem;
+    padding: 0 1.5rem;
+    position: relative;
+    /* Main container slightly wider for cover */
+}
+
+/* --- Header Actions --- */
+.editor-actions {
+    position: fixed;
+    top: 120px;
+    /* Increased from 90px */
+    right: 5%;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    z-index: 100;
+}
+
+.word-counter {
+    font-size: 0.85rem;
+    color: #999;
+    font-weight: 500;
+}
+
+.btn-publish {
+    background: #1a1a1a;
+    color: #fff;
+    border: none;
+    padding: 0.6rem 1.4rem;
+    border-radius: 99px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.btn-publish:hover {
+    transform: translateY(-2px);
+    background: #000;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+/* --- Professional Cover Section --- */
+.cover-container {
+    width: 100%;
+    height: 250px;
+    /* Short/Wide minimal look */
+    background: #f8f9fa;
+    border-radius: 12px;
+    margin-bottom: 3rem;
+    position: relative;
+    overflow: hidden;
+    border: 2px dashed #eee;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.cover-container:hover {
+    border-color: #ccc;
+    background: #f4f4f4;
+}
+
+.cover-preview {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;
+}
+
+/* Controls Overlay */
+.cover-controls {
+    text-align: center;
+    z-index: 2;
+}
+
+.cover-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    justify-content: center;
+}
+
+.btn-cover-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #fff;
+    border: 1px solid #ddd;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #555;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-cover-action:hover {
+    color: #000;
+    border-color: #999;
+    transform: translateY(-1px);
+}
+
+/* AI Specific Button Style */
+.btn-ai-glass {
+    background: linear-gradient(135deg, #fff 0%, #f0f7ff 100%);
+    border: 1px solid #cce5ff;
+    color: #0066cc;
+}
+
+.btn-ai-glass:hover {
+    box-shadow: 0 4px 12px rgba(0, 102, 204, 0.15);
+    border-color: #0066cc;
+}
+
+.divider {
+    font-size: 0.85rem;
+    color: #bbb;
+    font-weight: 500;
+}
+
+.cover-hint {
+    margin-top: 10px;
+    font-size: 0.8rem;
+    color: #999;
+}
+
+.hidden-input {
+    display: none;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* Remove Button */
+.btn-remove-cover {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: rgba(255, 255, 255, 0.9);
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    z-index: 10;
+    cursor: pointer;
+    color: #d00;
+    font-size: 1rem;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s;
+    display: flex;
+    /* Centering fix */
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-remove-cover:hover {
+    transform: scale(1.1);
+}
+
+
+/* --- Main Editor & Toolbar --- */
+
+/* Title */
+.input-title {
+    width: 100%;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-family: 'Inter', sans-serif;
+    resize: none;
+    overflow: hidden;
+    color: var(--text-color);
+    padding: 0;
+    font-size: 3.5rem;
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 20px;
+}
+
+.editor-section {
+    margin-bottom: 5rem;
+    /* More whitespace between blocks */
+}
+
+/* New Modern Editor Card */
+.editor-box {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
+    transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.editor-box:hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
+    border-color: #cbd5e1;
+}
+
+.input-title::placeholder {
+    color: #ddd;
+}
+
+/* Toolbar */
+.ai-toolbar {
+    display: inline-flex;
+    align-items: center;
+    background: #fff;
+    border: 1px solid #eee;
+    padding: 5px 8px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+    /* Floating feel */
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+}
+
+.btn-toolbar-ai {
+    background: none;
+    border: none;
+    color: #666;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    transition: background 0.2s;
+}
+
+.btn-toolbar-ai:hover {
+    background: #f5f5f5;
+    color: #000;
+}
+
+.btn-toolbar-ai i {
+    color: gold;
+}
+
+/* Magic Icon Color */
+
+.toolbar-divider {
+    width: 1px;
+    height: 20px;
+    background: #eee;
+    margin: 0 5px;
+}
+
+.tone-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    color: #888;
+}
+
+.tone-select-naked {
+    appearance: none;
+    border: none;
+    background: transparent;
+    font-size: 0.9rem;
+    color: #555;
+    font-weight: 500;
+    cursor: pointer;
+    outline: none;
+    padding-left: 5px;
+}
+
+/* Body
+.input-body {
+    width: 100%;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-family: 'Merriweather', serif;
+    resize: none;
+    overflow: hidden;
+    color: #333;
+    padding: 0;
+    font-size: 1.15rem;
+    line-height: 1.8;
+    min-height: 400px;
+}
+*/
+
+/* Fix Quill Paragraph Spacing */
+.ql-editor p {
+    margin-bottom: 24px !important;
+}
+
+.input-body::placeholder {
+    color: #ccc;
+    font-style: italic;
+}
+
+
+/* --- Meta Footer (Categories/Tags) --- */
+.meta-footer {
+    margin-top: 4rem;
+    padding-top: 2rem;
+    border-top: 1px solid #f0f0f0;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.meta-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+}
+
+.meta-row label {
+    font-weight: 600;
+    color: #999;
+    font-size: 0.85rem;
+    margin-top: 6px;
+    min-width: 80px;
+}
+
+.cat-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.cat-item {
+    cursor: pointer;
+}
+
+.cat-item input {
+    display: none;
+}
+
+.cat-item span {
+    display: block;
+    padding: 6px 14px;
+    background: #f8f9fa;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    color: #555;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+}
+
+.cat-item input:checked+span {
+    background: #000;
+    color: #fff;
+}
+
+.cat-item:hover span {
+    background: #eee;
+}
+
+.tag-input-wrapper {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 5px;
+    transition: border-color 0.2s;
+}
+
+.tag-input-wrapper:focus-within {
+    border-color: #000;
+}
+
+.tag-input-wrapper i {
+    color: #bbb;
+    margin-right: 10px;
+}
+
+.tag-input-wrapper input {
+    border: none;
+    outline: none;
+    flex: 1;
+    font-size: 1rem;
+    background: transparent;
+}
+
+.btn-mini-ai {
+    background: #f0f7ff;
+    color: #0066cc;
+    border: none;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+#editor {
+    z-index: 10;
+    position: relative;
+    cursor: text;
+}
+
+/* Ensure the editor content area has height */
+/* Ensure the editor content area has height */
+.ql-editor {
+    min-height: 400px;
+    cursor: text;
+    line-height: 1.8 !important;
+    /* Better reading rhythm */
+    font-size: 1.125rem;
+    /* ~18px for comfortable long-form reading */
+    color: #111827;
+    /* High contrast dark gray/almost black */
+}
+
+/* AI Spacing Boost & Headings */
+.ql-editor h1 {
+    margin-top: 60px !important;
+    margin-bottom: 30px !important;
+    font-weight: 800;
+    line-height: 1.2;
+    font-size: 2.25rem;
+    color: #000;
+}
+
+.ql-editor h2 {
+    margin-top: 50px !important;
+    margin-bottom: 25px !important;
+    font-weight: 700;
+    line-height: 1.3;
+    font-size: 1.8rem;
+    color: #1f2937;
+    border-bottom: 1px solid #f3f4f6;
+    /* Subtle divider for sub-sections */
+    padding-bottom: 10px;
+}
+
+.ql-editor h3 {
+    margin-top: 40px !important;
+    margin-bottom: 20px !important;
+    font-weight: 600;
+    font-size: 1.4rem;
+    color: #374151;
+}
+
+.ql-editor p {
+    margin-bottom: 28px !important;
+    font-weight: 400;
+}
+
+.ql-editor ul,
+.ql-editor ol {
+    margin-bottom: 32px !important;
+    padding-left: 1.5rem;
+}
+
+.ql-editor li {
+    margin-bottom: 12px !important;
+    padding-left: 8px;
+}
+
+/* --- Unified AI Assistant --- */
+.ai-assistant-container {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    z-index: 1000;
+}
+
+.btn-ai-master {
+    background: #000;
+    color: #fff;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 99px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.btn-ai-master:hover {
+    transform: scale(1.05);
+    background: linear-gradient(135deg, #333, #000);
+}
+
+.btn-ai-master i {
+    color: #FFD700;
+    /* Gold Sparkle */
+}
+
+/* AI Menu */
+.ai-menu {
+    position: absolute;
+    bottom: 70px;
+    right: 0;
+    width: 260px;
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    border: 1px solid #eee;
+    padding: 1rem;
+    display: none;
+    /* Hidden by default */
+    animation: slideUp 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+    transform-origin: bottom right;
+}
+
+.ai-menu.active {
+    display: block;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.ai-menu-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 0.8rem;
+    border-bottom: 1px solid #f0f0f0;
+    margin-bottom: 0.8rem;
+    font-weight: 700;
+    color: #333;
+}
+
+.close-ai {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: #999;
+}
+
+.ai-options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.ai-option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    border: none;
+    background: #f8f9fa;
+    padding: 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s;
+}
+
+.ai-option:hover {
+    background: #f0f7ff;
+}
+
+.ai-option i {
+    font-size: 1.1rem;
+    color: #555;
+    width: 24px;
+    text-align: center;
+}
+
+.ai-option:hover i {
+    color: #0066cc;
+}
+
+.ai-opt-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.ai-opt-text strong {
+    font-size: 0.9rem;
+    color: #333;
+}
+
+.ai-opt-text small {
+    font-size: 0.75rem;
+    color: #777;
+}
+
+.section-label {
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #999;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    margin-left: 5px;
+    display: block;
+}
+
+/* --- Premium AI Buttons ("Aurora" Theme) --- */
+.btn-ai-premium,
+.btn-toolbar-ai,
+.btn-mini-ai,
+.btn-ai-glass {
+    position: relative;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    background-clip: padding-box;
+    color: #333;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    z-index: 1;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+/* Gradient Border Effect */
+.btn-ai-premium::before,
+.btn-toolbar-ai::before,
+.btn-mini-ai::before,
+.btn-ai-glass::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 2px;
+    background: linear-gradient(135deg, #FF0F7B, #F89B29, #00C6FB, #6A11CB);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0.5;
+    transition: opacity 0.3s;
+    z-index: -1;
+}
+
+.btn-ai-premium:hover,
+.btn-toolbar-ai:hover,
+.btn-mini-ai:hover,
+.btn-ai-glass:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(100, 100, 255, 0.15);
+}
+
+.btn-ai-premium:hover::before,
+.btn-toolbar-ai:hover::before,
+.btn-mini-ai:hover::before,
+.btn-ai-glass:hover::before {
+    opacity: 1;
+}
+
+/* Icons Gradient */
+.btn-ai-premium i,
+.btn-toolbar-ai i,
+.btn-mini-ai i,
+.btn-ai-glass i {
+    background: linear-gradient(135deg, #FF0F7B, #F89B29);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-size: 1.1em;
+}
+
+/* Specific Adjustments */
+
+/* 1. Magic Title Button (Pill Shape) */
+#title-magic-btn {
+    position: static;
+    /* Flow naturally in flex container */
+    transform: none;
+    width: auto;
+    height: auto;
+    padding: 6px 12px;
+    border-radius: 99px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.55rem;
+    z-index: 1;
+    /* Reset z-index */
+    transition: all 0.2s;
+    margin-left: auto;
+    /* Push to right if needed, though parent is space-between */
+}
+
+/* 2. Cover AI Button */
+.btn-ai-glass {
+    padding: 6px 14px;
+    /* Reduced padding */
+    border-radius: 99px;
+    font-size: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* 3. Toolbar Auto-Complete */
+.btn-toolbar-ai {
+    padding: 5px 10px;
+    /* Reduced padding */
+    border-radius: 8px;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* 4. Mini AI (Tags) */
+.btn-mini-ai {
+    padding: 4px 10px;
+    /* Reduced from 6px 14px */
+    border-radius: 99px;
+    font-size: 0.75rem;
+    /* Reduced from 0.8rem */
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 10px;
+}
+
+
+/* --- Improved Category & Tags Design --- */
+
+/* Refined Category Pills */
+.cat-item span {
+    padding: 8px 18px;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 99px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #666;
+    transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.cat-item:hover span {
+    transform: translateY(-2px);
+    border-color: #ccc;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+    background: #fcfcfc;
+}
+
+/* Selected State */
+.cat-item input:checked+span {
+    background: #111;
+    color: #fff;
+    border-color: #111;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    font-weight: 600;
+}
+
+/* Optional: Add a checkmark icon via pseudo-element for selected state if desired, 
+   or stick to the bold active state for cleanliness */
+
+/* Refined Tag Input Wrapper */
+.tag-input-wrapper {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+    transition: all 0.2s ease;
+}
+
+.tag-input-wrapper:focus-within {
+    border-color: #000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transform: translateY(-1px);
+}
+
+.tag-input-wrapper i.fa-hashtag {
+    color: #999;
+    font-size: 0.9rem;
+    margin-right: 12px;
+}
+
+.tag-input-wrapper input {
+    font-size: 0.95rem;
+    color: #333;
+    font-weight: 500;
+}
+
+.tag-input-wrapper input::placeholder {
+    color: #aaa;
+    font-weight: 400;
+}
+
+
+/* --- Editor Status Bar (Below Body) --- */
+.editor-status-bar {
+    margin-top: 5px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.word-counter {
+    font-size: 0.85rem;
+    color: #999;
+    font-weight: 500;
+}
+
+/* --- Form Actions Footer (Bottom) --- */
+.form-actions-footer {
+    margin-top: 4rem;
+    padding-top: 2rem;
+    border-top: 1px solid #f0f0f0;
+    display: flex;
+    justify-content: flex-end;
+    /* Align right */
+    gap: 15px;
+    align-items: center;
+}
+
+.btn-publish-large {
+    background: #000;
+    color: #fff;
+    border: none;
+    padding: 14px 32px;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.btn-publish-large:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+    background: linear-gradient(135deg, #1a1a1a, #000);
+}
+
+.section-hint {
+    display: block;
+    font-size: 0.8rem;
+    color: #999;
+    margin-bottom: 1rem;
+    margin-top: -0.5rem;
+    margin-left: 5px;
+}
+
+/* --- Pre-Publish Checklist Modal --- */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(5px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+}
+
+.modal-content {
+    background: #fff;
+    padding: 2rem;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    animation: modalSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalSlideIn {
+    from {
+        transform: scale(0.95) translateY(10px);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+    }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.modal-header h3 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #111;
+    margin: 0;
+}
+
+.close-modal {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #999;
+}
+
+.checklist-items {
+    list-style: none;
+    padding: 0;
+    margin: 1.5rem 0;
+}
+
+.checklist-items li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 8px;
+    background: #f9fafb;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #4b5563;
+    transition: all 0.2s;
+}
+
+.checklist-items li.valid {
+    background: #ecfdf5;
+    color: #047857;
+}
+
+.checklist-items li.invalid {
+    background: #fef2f2;
+    color: #b91c1c;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #f3f4f6;
+}
+
+.btn-secondary {
+    padding: 10px 20px;
+    border-radius: 99px;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    color: #374151;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-primary {
+    padding: 10px 24px;
+    border-radius: 99px;
+    border: none;
+    background: #111;
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #6b7280;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .editor-container {
+        margin: 6rem auto 2rem;
+        /* Reduced top margin from 10rem */
+        padding: 0 1rem;
+    }
+
+    /* Header Actions: Make them accessible but not overlapping */
+    .editor-actions {
+        position: static;
+        /* Flow with document */
+        margin-bottom: 1rem;
+        justify-content: flex-end;
+        width: 100%;
+        padding: 0;
+    }
+
+    .word-counter {
+        display: none;
+        /* Hide word count on very small screens to save space, or keep small */
+    }
+
+    /* Typography */
+    .input-title {
+        font-size: 2rem;
+        /* Reduced from 3.5rem */
+    }
+
+    .section-label {
+        margin-left: 0;
+    }
+
+    /* AI Toolbar */
+    .ai-toolbar {
+        flex-wrap: wrap;
+        /* Allow wrapping */
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+        justify-content: center;
+    }
+
+    .tone-wrapper {
+        width: 100%;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 5px;
+        margin-bottom: 5px;
+        justify-content: center;
+    }
+
+    .toolbar-divider {
+        display: none;
+    }
+
+    .btn-toolbar-ai {
+        width: 100%;
+        justify-content: center;
+    }
+
+    /* Cover Area */
+    .cover-container {
+        height: 180px;
+        /* Shorter cover area */
+    }
+
+    .cover-actions {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .btn-cover-action {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .divider {
+        display: none;
+        /* Hide 'or' separator in column layout */
+    }
+
+    /* Editor Box */
+    .editor-box {
+        padding: 1rem;
+        /* Less padding in editor */
+    }
+
+    .ql-editor {
+        font-size: 1.05rem;
+        /* Slightly smaller text */
+        padding: 0 !important;
+        /* Removes default Quill padding if any */
+    }
+
+    .ql-editor h1 {
+        font-size: 1.8rem;
+        margin-top: 30px !important;
+    }
+
+    .ql-editor h2 {
+        font-size: 1.5rem;
+    }
+
+    /* AI Assistant Float */
+    .btn-ai-master {
+        padding: 10px 18px;
+        font-size: 0.9rem;
+    }
+
+    .ai-assistant-container {
+        bottom: 20px;
+        right: 20px;
+    }
+
+    .ai-menu {
+        width: 240px;
+        bottom: 60px;
+        right: 0;
+    }
+}

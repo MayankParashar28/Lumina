@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <%- include('./partials/header') %>
+        <title>Sign In - Lumina</title>
+        <link rel="stylesheet" href="/css/auth.css">
+</head>
+
+<body>
+    <%- include('./partials/nav', { searchQuery: '' }) %>
+
+        <div class="page-container">
+            <header class="header text-center mb-4">
+                <h1 class="auth-title">Welcome Back</h1>
+                <p class="auth-subtitle">Where ideas come to life</p>
+            </header>
+
+            <div class="auth-card">
+                <h1>Welcome, Blogger!</h1>
+
+
+
+                <form action="/user/signin" method="post" id="signin-form">
+                    <div class="form-group">
+                        <label for="email">Email address</label>
+                        <input type="email" class="form-control" name="email" id="exampleInputEmail1"
+                            placeholder="your@email.com" required>
+                        <div class="form-text mt-1 text-muted">We'll never share your email with anyone else.
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" name="password"
+                            placeholder="Enter your password" required>
+                        <div class="text-end mt-1">
+                            <a href="/user/forgot-password"
+                                style="font-size: 0.9rem; color: #666; text-decoration: none;">Forgot
+                                Password?</a>
+                        </div>
+                    </div>
+
+                    <div class="captcha-container">
+                        <label for="captcha">Verify you are human</label>
+                        <div class="captcha-row">
+                            <img src="/captcha" alt="CAPTCHA" id="captcha-image" height="50"
+                                style="border: 2px solid black;">
+                            <button type="button" class="refresh-btn" onclick="refreshCaptcha()">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
+                        <input type="text" class="captcha-input" name="captcha"
+                            placeholder="Type the characters you see" required>
+                    </div>
+
+                    <button type="submit" class="submit-btn" id="submit-button">
+                        <span>Sign In to Your Blog</span>
+                    </button>
+                </form>
+
+                <div class="google-auth-wrapper" style="margin-top: 20px; text-align: center;">
+                    <a href="/user/auth/google" class="btn-google"
+                        style="display: inline-flex; align-items: center; justify-content: center; width: 100%; border: 1px solid #ccc; background: white; color: #444; padding: 12px; border-radius: 5px; text-decoration: none; font-weight: 500; box-shadow: 0 1px 3px rgba(0,0,0,0.1); transition: all 0.2s;">
+                        <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google"
+                            style="width: 20px; height: 20px; margin-right: 10px;">
+                        Sign in with Google
+                    </a>
+                </div>
+
+                <div class="auth-footer" style="margin-top: 20px;">
+                    Don't have an account? <a href="/user/signup">Sign Up</a>
+                </div>
+            </div>
+        </div>
+
+        <%- include('./partials/footer') %>
+
+            <script>
+                // Function to refresh CAPTCHA
+                function refreshCaptcha() {
+                    const captchaImg = document.getElementById("captcha-image");
+                    captchaImg.style.opacity = "0";
+
+                    setTimeout(() => {
+                        captchaImg.src = "/captcha?" + Date.now();
+                        captchaImg.style.opacity = "1";
+                    }, 300);
+                }
+
+                // Add ripple effect to button (Preserved)
+                document.getElementById("submit-button").addEventListener("click", function (e) {
+                    const button = this;
+                    const ripple = document.createElement("span");
+                    ripple.classList.add("ripple"); // Ensure ripple class exists in CSS if needed, or rely on JS
+                    ripple.style.position = "absolute";
+                    ripple.style.borderRadius = "50%";
+                    ripple.style.backgroundColor = "rgba(255, 255, 255, 0.4)";
+                    ripple.style.transform = "scale(0)";
+                    ripple.style.animation = "ripple 0.6s linear";
+
+                    button.appendChild(ripple);
+
+                    const x = e.clientX - button.getBoundingClientRect().left;
+                    const y = e.clientY - button.getBoundingClientRect().top;
+
+                    ripple.style.left = `${x}px`;
+                    ripple.style.top = `${y}px`;
+
+                    setTimeout(() => {
+                        ripple.remove();
+                    }, 600);
+                });
+
+                // Add style for ripple animation dynamically since we removed inline styles
+                const style = document.createElement('style');
+                style.innerHTML = `
+            @keyframes ripple {
+                to { transform: scale(4); opacity: 0; }
+            }
+        `;
+                document.head.appendChild(style);
+            </script>
+</body>
+
+</html>

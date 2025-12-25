@@ -1,0 +1,198 @@
+/* Docs Layout - 3 Columns (Big Tech Style) */
+.docs-wrapper {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 120px 40px 60px;
+    /* Increased top padding to 120px to clear navbar */
+    display: grid;
+    grid-template-columns: 240px 1fr 240px;
+    gap: 60px;
+    position: relative;
+    align-items: start;
+    font-family: 'Inter', sans-serif;
+}
+
+/* --- Left Sidebar (Navigation) --- */
+.docs-sidebar-left {
+    position: sticky;
+    top: 120px;
+    /* Aligned with new padding */
+    padding-top: 10px;
+    border-right: 1px solid #f0f0f0;
+    height: calc(100vh - 120px);
+    overflow-y: auto;
+    padding-right: 20px;
+}
+
+/* Custom Scrollbar for sidebar */
+.docs-sidebar-left::-webkit-scrollbar {
+    width: 4px;
+}
+
+.docs-sidebar-left::-webkit-scrollbar-thumb {
+    background-color: #ddd;
+    border-radius: 4px;
+}
+
+.docs-nav-group {
+    margin-bottom: 35px;
+}
+
+.docs-nav-title {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: #888;
+    margin-bottom: 15px;
+    font-weight: 700;
+}
+
+.docs-nav-link {
+    display: block;
+    color: #555;
+    text-decoration: none;
+    padding: 8px 12px;
+    margin-left: -12px;
+    font-size: 0.95rem;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.docs-nav-link:hover {
+    color: #111;
+    background-color: #f7f7f7;
+}
+
+.docs-nav-link.active {
+    color: #000;
+    font-weight: 600;
+    background-color: #f0f0f0;
+}
+
+/* --- Center Content (Main) --- */
+.docs-main {
+    padding-top: 10px;
+    padding-bottom: 100px;
+    min-height: 80vh;
+}
+
+.docs-header {
+    margin-bottom: 50px;
+    padding-bottom: 30px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.docs-title {
+    font-size: 3rem;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    margin-bottom: 15px;
+    color: #111;
+    line-height: 1.1;
+}
+
+.docs-meta {
+    color: #666;
+    font-size: 1rem;
+    font-weight: 400;
+}
+
+.docs-content h2 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-top: 60px;
+    margin-bottom: 25px;
+    color: #111;
+    letter-spacing: -0.02em;
+    scroll-margin-top: 140px;
+}
+
+.docs-content p {
+    font-size: 1.125rem;
+    line-height: 1.8;
+    color: #333;
+    margin-bottom: 24px;
+}
+
+.docs-content ul {
+    margin-bottom: 24px;
+    padding-left: 20px;
+}
+
+.docs-content li {
+    margin-bottom: 12px;
+    line-height: 1.7;
+    font-size: 1.1rem;
+    color: #333;
+}
+
+.docs-content strong {
+    font-weight: 600;
+    color: #000;
+}
+
+/* --- Right Sidebar (Table of Contents) --- */
+.docs-sidebar-right {
+    position: sticky;
+    top: 120px;
+    padding-top: 10px;
+    height: calc(100vh - 120px);
+}
+
+.toc-title {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: #888;
+    margin-bottom: 15px;
+    font-weight: 700;
+}
+
+.toc-link {
+    display: block;
+    color: #666;
+    text-decoration: none;
+    font-size: 0.9rem;
+    padding: 6px 0;
+    border-left: 2px solid transparent;
+    padding-left: 15px;
+    transition: all 0.2s;
+}
+
+.toc-link:hover {
+    color: #000;
+    border-left-color: #ddd;
+}
+
+.toc-link.active {
+    color: #000;
+    border-left-color: #111;
+    font-weight: 500;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .docs-wrapper {
+        grid-template-columns: 220px 1fr;
+        padding: 100px 30px 60px;
+    }
+
+    .docs-sidebar-right {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .docs-wrapper {
+        grid-template-columns: 1fr;
+        padding: 100px 20px 40px;
+    }
+
+    .docs-sidebar-left {
+        display: none;
+    }
+
+    .docs-title {
+        font-size: 2.25rem;
+    }
+}

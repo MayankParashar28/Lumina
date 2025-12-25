@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <%- include('./partials/header') %>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+        <link rel="stylesheet" href="/css/notifications.css">
+</head>
+
+<body>
+    <%- include('./partials/nav', { searchQuery: searchQuery || '' }) %>
+
+
+        <div class="container">
+            <% if (notifications.length===0) { %>
+                <p class="no-notifications">No new notifications.</p>
+                <% } else { %>
+                    <ul id="notifications">
+                        <% notifications.forEach(notification=> { %>
+                            <li id="notif-<%= notification._id %>" class="<%= notification.read ? 'read' : '' %>">
+                                <div class="notif-message">
+                                    <img src="<%= (notification.senderId && notification.senderId.profilePic) ? notification.senderId.profilePic : '/images/default-user.png' %>"
+                                        alt="Profile" width="40" height="40">
+                                    <span class="message-content">
+                                        <strong class="message">
+                                            <%= notification.message %>
+                                        </strong>
+                                    </span>
+                                </div>
+                                <span class="time-ago" data-time="<%= notification.createdAt %>"></span>
+                                <% if (!notification.read) { %>
+                                    <button class="mark-read-btn" data-id="<%= notification._id %>">Mark as
+                                        Read</button>
+                                    <% } %>
+                            </li>
+                            <% }) %>
+                    </ul>
+                    <% } %>
+        </div>
+
+        <%- include('./partials/footer') %>
+
+            <!-- Theme Toggle Button -->
+
+
+            <script> // Notification handling
+                // Function to mark notification as read
+                async function markAsRead(notificationId) {
+                    try {
+                        const response = await fetch(`/notifications/mark-read/${notificationId}`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" }
+                        });
+
+                        const data = await response.json();
+
+                        if (data.success) {
+                            const notifElement = document.getElementById(`notif-${notificationId}`);
+                            if (notifElement) {
+                                notifElement.classList.add("read");
+                                const button = notifElement.querySelector(".mark-read-btn");
+                                if (button) button.remove(); // Hide the button after marking as read
+                            }
+
+                            // Update notification count badge
+                            const notifCount = document.getElementById("notification-count");
+                            if (notifCount) notifCount.textContent = data.count;
+                        } else {
+                            alert("Failed to mark notification as read.");
+                        }
+                    } catch (error) {
+                        console.error("❌ Error marking notification as read:", error);
+                    }
+                }
+
+                function timeAgo(dateString) {
+                    const date = new Date(dateString);
+                    const now = new Date();
+                    const seconds = Math.floor((now - date) / 1000);
+
+                    let interval = Math.floor(seconds / 31536000);
+                    if (interval === 1) return "1 year ago";
+                    if (interval > 1) return interval + " years ago";
+
+                    interval = Math.floor(seconds / 2592000);
+                    if (interval === 1) return "1 month ago";
+                    if (interval > 1) return interval + " months ago";
+
+                    interval = Math.floor(seconds / 86400);
+                    if (interval === 1) return "1 day ago";
+                    if (interval > 1) return interval + " days ago";
+
+                    interval = Math.floor(seconds / 3600);
+                    if (interval === 1) return "1 hour ago";
+                    if (interval > 1) return interval + " hours ago";
+
+                    interval = Math.floor(seconds / 60);
+                    if (interval === 1) return "1 min ago";
+                    if (interval > 1) return interval + " mins ago";
+
+                    return "just now";
+                }
+
+                // Update timestamps on load
+                document.addEventListener("DOMContentLoaded", () => {
+                    document.querySelectorAll(".time-ago").forEach(el => {
+                        const timestamp = el.getAttribute("data-time");
+                        el.textContent = timeAgo(timestamp);
+                    });
+
+                    // Existing mark as read logic
+                    document.querySelectorAll(".mark-read-btn").forEach(button => {
+                        button.addEventListener("click", function () {
+                            const notificationId = this.getAttribute("data-id");
+                            markAsRead(notificationId);
+                        });
+                    });
+                });
+            </script>
+</body>
+
+</html>

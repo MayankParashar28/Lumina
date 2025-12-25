@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <%- include('./partials/header') %>
+        <title>
+            <%= title %>
+        </title>
+        <link rel="stylesheet" href="/css/docs.css">
+</head>
+
+<body>
+    <%- include('./partials/nav', { searchQuery: '' }) %>
+
+        <div class="docs-wrapper">
+            <!-- Left Sidebar (Navigation) -->
+            <aside class="docs-sidebar-left">
+                <div class="docs-nav-group">
+                    <div class="docs-nav-title">Company</div>
+                    <a href="/about" class="docs-nav-link">About Lumina</a>
+                    <a href="/mission" class="docs-nav-link">Our Mission</a>
+                </div>
+                <div class="docs-nav-group">
+                    <div class="docs-nav-title">Legal</div>
+                    <a href="/privacy" class="docs-nav-link">Privacy Policy</a>
+                    <a href="/terms" class="docs-nav-link active">Terms of Service</a>
+                </div>
+                <div class="docs-nav-group">
+                    <div class="docs-nav-title">Support</div>
+                    <a href="mailto:support@lumina.com" class="docs-nav-link">Contact Us</a>
+                </div>
+            </aside>
+
+            <!-- Main Content -->
+            <main class="docs-main">
+                <div class="docs-header">
+                    <h1 class="docs-title">Terms of Service</h1>
+                    <div class="docs-meta">Effective Date: <%= new Date().toLocaleDateString('en-US', { year: 'numeric'
+                            , month: 'long' , day: 'numeric' }) %>
+                    </div>
+                </div>
+
+                <div class="docs-content">
+                    <p>
+                        Welcome to Lumina. By using our platform, you're agreeing to these terms. It's mutual trust with
+                        a little bit of legalese.
+                    </p>
+
+                    <h2 id="acceptance">1. Acceptance of Terms</h2>
+                    <p>
+                        By creating an account, you agree to abide by these terms. We want to build a safe, respectful
+                        community, and these rules help us do that.
+                    </p>
+
+                    <h2 id="conduct">2. User Conduct</h2>
+                    <p>Lumina is a place for ideas, not hate. You agree NOT to:</p>
+                    <ul>
+                        <li>Post illegal, harmful, threatening, or harassing content.</li>
+                        <li>Spam other users or use automated bots.</li>
+                        <li>Attempt to hack, reverse engineer, or disrupt our services.</li>
+                    </ul>
+
+                    <h2 id="ownership">3. Content Ownership</h2>
+                    <p>
+                        <strong>You own your words.</strong> When you post on Lumina, you retain full ownership of your
+                        content. You grant us a license to display it to the world, but the IP remains yours.
+                    </p>
+
+                    <h2 id="termination">4. Termination</h2>
+                    <p>
+                        We reserve the right to suspend accounts that violate these terms. We will always try to provide
+                        a warning, but zero-tolerance violations (like hate speech) may result in immediate bans.
+                    </p>
+
+                    <h2 id="disclaimer">5. Disclaimer</h2>
+                    <p>
+                        Lumina is provided "as is". We strive for 99.9% uptime and perfection, but software is software.
+                        We aren't liable for any digital hiccups.
+                    </p>
+                </div>
+            </main>
+
+            <!-- Right Sidebar (Table of Contents) -->
+            <aside class="docs-sidebar-right">
+                <div class="toc-title">On this page</div>
+                <nav class="toc-nav">
+                    <a href="#acceptance" class="toc-link">Acceptance</a>
+                    <a href="#conduct" class="toc-link">User Conduct</a>
+                    <a href="#ownership" class="toc-link">Content Ownership</a>
+                    <a href="#termination" class="toc-link">Termination</a>
+                    <a href="#disclaimer" class="toc-link">Disclaimer</a>
+                </nav>
+            </aside>
+        </div>
+
+        <%- include('./partials/footer') %>
+</body>
+
+</html>

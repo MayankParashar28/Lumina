@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <%- include('./partials/header') %>
+        <title>
+            <%= title %>
+        </title>
+        <link rel="stylesheet" href="/css/docs.css">
+</head>
+
+<body>
+    <%- include('./partials/nav', { searchQuery: '' }) %>
+
+        <div class="docs-wrapper">
+            <!-- Left Sidebar (Navigation) -->
+            <aside class="docs-sidebar-left">
+                <div class="docs-nav-group">
+                    <div class="docs-nav-title">Company</div>
+                    <a href="/about" class="docs-nav-link active">About Lumina</a>
+                    <a href="/mission" class="docs-nav-link">Our Mission</a>
+                </div>
+                <div class="docs-nav-group">
+                    <div class="docs-nav-title">Legal</div>
+                    <a href="/privacy" class="docs-nav-link">Privacy Policy</a>
+                    <a href="/terms" class="docs-nav-link">Terms of Service</a>
+                </div>
+                <div class="docs-nav-group">
+                    <div class="docs-nav-title">Support</div>
+                    <a href="mailto:support@lumina.com" class="docs-nav-link">Contact Us</a>
+                </div>
+            </aside>
+
+            <!-- Main Content -->
+            <main class="docs-main">
+                <div class="docs-header">
+                    <h1 class="docs-title">Where Ideas Come to Life.</h1>
+                    <div class="docs-meta">The Story of Lumina</div>
+                </div>
+
+                <div class="docs-content">
+                    <p class="lead" style="font-size: 1.25rem; font-weight: 500; color: #444; margin-bottom: 40px;">
+                        Lumina is a platform for the bold, the curious, and the storytellers of tomorrow.
+                    </p>
+
+                    <h2 id="mission">Our Mission</h2>
+                    <p>
+                        We built Lumina because we believe that great ideas shouldn't be buried under algorithms.
+                        In a world of noise, we offer a signal. A clean, distraction-free space where your words matter
+                        more than engagement metrics.
+                    </p>
+                    <p>
+                        Whether you are an industry expert sharing deep insights or a creative soul weaving narratives,
+                        Lumina provides the canvas you need to express yourself fully.
+                    </p>
+
+                    <h2 id="why">Why Lumina?</h2>
+                    <p>
+                        <strong>Radical Simplicity:</strong> No pop-ups, no ads, no clutter. Just you and your
+                        audience.<br>
+                        <strong>Global Reach:</strong> We optimize your content to be found and read by the world.<br>
+                        <strong>Community First:</strong> We are building a network of thinkers, not just a list of
+                        users.
+                    </p>
+
+                    <h2 id="future">The Future</h2>
+                    <p>
+                        We are currently building advanced AI tools to help you write better, faster, and more
+                        creatively. From an intelligent Writing Assistant to cover image generation, the future of
+                        Lumina is bright and intelligent.
+                    </p>
+
+                    <div class="mt-5">
+                        <a href="/user/signup" class="btn btn-dark px-5">Join the Journey</a>
+                    </div>
+                </div>
+            </main>
+
+            <!-- Right Sidebar (Table of Contents) -->
+            <aside class="docs-sidebar-right">
+                <div class="toc-title">On this page</div>
+                <nav class="toc-nav">
+                    <a href="#mission" class="toc-link">Our Mission</a>
+                    <a href="#why" class="toc-link">Why Lumina?</a>
+                    <a href="#future" class="toc-link">The Future</a>
+                </nav>
+            </aside>
+        </div>
+
+        <%- include('./partials/footer') %>
+</body>
+
+</html>

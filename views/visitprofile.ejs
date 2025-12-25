@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <%- include('./partials/header') %>
+        <title>
+            <%= user.fullName %> - Lumina
+        </title>
+        <link rel="stylesheet" href="/css/profile.css">
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+    <%- include('./partials/nav', { searchQuery: '' }) %>
+
+        <div class="profile-container classic-portfolio">
+            <!-- Author Header -->
+            <header class="author-header">
+                <div class="profile-image-wrapper">
+                    <img src="<%= optimizeImage(user.profilePic, { width: 300, height: 300 }) %>" alt="Profile Picture"
+                        class="profile-pic">
+                </div>
+
+                <h1 class="author-name">
+                    <%= user.fullName %>
+                </h1>
+
+                <p class="member-since">
+                    Member since <%= new Date(user.createdAt).getFullYear() %>
+                </p>
+
+                <!-- Minimal Stats Row -->
+                <div class="author-stats-row">
+                    <span>
+                        <%= blogCount || 0 %> Stories
+                    </span>
+                    <span class="divider">/</span>
+                    <span>
+                        <%= totalLikes || 0 %> Likes
+                    </span>
+                    <span class="divider">/</span>
+                    <span>
+                        <%= user.followers ? user.followers.length : 0 %> Followers
+                    </span>
+                </div>
+
+                <!-- Socials -->
+                <div class="social-links-minimal">
+                    <% if (user.socials) { %>
+                        <% if (user.socials.linkedin) { %> <a href="<%= user.socials.linkedin %>"
+                                target="_blank">LinkedIn</a>
+                            <% } %>
+                                <% if (user.socials.twitter) { %> <a href="<%= user.socials.twitter %>"
+                                        target="_blank">Twitter</a>
+                                    <% } %>
+                                        <% if (user.socials.github) { %> <a href="<%= user.socials.github %>"
+                                                target="_blank">GitHub</a>
+                                            <% } %>
+                                                <% if (user.socials.instagram) { %> <a
+                                                        href="<%= user.socials.instagram %>"
+                                                        target="_blank">Instagram</a>
+                                                    <% } %>
+                                                        <% } %>
+                </div>
+
+                <!-- Public Actions (Follow) -->
+                <div class="author-actions">
+                    <form method="POST" action="/user/follow/<%= user._id %>" style="display: inline;">
+                        <button type="submit"
+                            class="action-btn-text <%= (loggedInUser && user.followers && user.followers.includes(loggedInUser._id)) ? 'text-danger' : '' %>">
+                            <%= (loggedInUser && user.followers && user.followers.includes(loggedInUser._id))
+                                ? 'Unfollow' : 'Follow Author' %>
+                        </button>
+                    </form>
+                </div>
+            </header>
+
+            <hr class="section-divider">
+
+            <!-- Editorial Bio -->
+            <section class="author-bio-editorial">
+                <h3>About the Author</h3>
+                <p>
+                    <%= user.bio || "This author prefers to let their work speak for itself." %>
+                </p>
+            </section>
+
+
+            <!-- Written Blogs -->
+            <section class="reading-list">
+                <h3 class="section-label">Written Stories</h3>
+                <% if (blogs && blogs.length> 0) { %>
+                    <ul class="clean-list">
+                        <% blogs.forEach(blog=> { %>
+                            <li>
+                                <a href="/blog/<%= blog._id %>" class="bookmark-card">
+                                    <div class="bookmark-img-wrapper">
+                                        <img src="<%= optimizeImage(blog.coverImageURL || '/images/default-cover.jpg', { width: 400, height: 250 }) %>"
+                                            alt="Cover" class="bookmark-img">
+                                    </div>
+                                    <div class="bookmark-info">
+                                        <span class="bookmark-title">
+                                            <%= blog.title %>
+                                        </span>
+                                        <span class="bookmark-meta">
+                                            Published <%= new Date(blog.createdAt).toLocaleDateString() %> · <%=
+                                                    blog.views || 0 %> Views
+                                        </span>
+                                    </div>
+                                </a>
+                            </li>
+                            <% }); %>
+                    </ul>
+                    <% } else { %>
+                        <p class="empty-state">No stories written yet.</p>
+                        <% } %>
+            </section>
+
+        </div>
+        <%- include('./partials/footer') %>
+
+            <!-- Chart Data & Script -->
+            <script id="user-data" type="application/json">
+    {
+        "labels": ["Stories", "Likes", "Followers", "Following"],
+        "data": [
+            <%= blogCount || 0 %>,
+            <%= totalLikes || 0 %>,
+            <%= user.followers ? user.followers.length : 0 %>,
+            <%= user.following ? user.following.length : 0 %>
+        ]
+    }
+    </script>
+            <script>
+                document.addEventListener("DOMContentLoaded", function () {
+                    const userData = JSON.parse(document.getElementById("user-data").textContent);
+                    const ctx = document.getElementById("dashboard-chart").getContext("2d");
+
+                    new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: userData.labels,
+                            datasets: [{
+                                label: 'Activity',
+                                data: userData.data,
+                                backgroundColor: ['#333', '#555', '#999', '#bbb'],
+                                borderWidth: 0,
+                                borderRadius: 4
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { display: false } },
+                            scales: {
+                                y: { beginAtZero: true, grid: { display: false }, ticks: { font: { family: 'Inter' } } },
+                                x: { grid: { display: false }, ticks: { font: { family: 'Inter' } } }
+                            }
+                        }
+                    });
+                });
+            </script>
+
+            <style>
+                /* Specific override for the follow button to look like a text link */
+                .action-btn-text {
+                    background: none;
+                    border: none;
+                    padding: 0;
+                    font-family: inherit;
+                    font-size: 0.9rem;
+                    font-weight: 600;
+                    cursor: pointer;
+                    color: var(--text-color);
+                    border-bottom: 1px solid transparent;
+                    transition: border-color 0.2s;
+                }
+
+                .action-btn-text:hover {
+                    border-bottom-color: var(--text-color);
+                }
+
+                .action-btn-text.text-danger {
+                    color: #d32f2f;
+                }
+
+                .action-btn-text.text-danger:hover {
+                    border-bottom-color: #d32f2f;
+                }
+            </style>
+</body>
+
+</html>

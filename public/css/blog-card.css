@@ -1,0 +1,118 @@
+/* Neo-Brutalist Blog Card Styles */
+
+.card {
+    border: var(--border-width) solid var(--border-color);
+    border-radius: 0;
+    background-color: var(--bg-color);
+    box-shadow: var(--shadow-offset) var(--shadow-offset) 0px 0px var(--border-color);
+    transition: all 0.2s ease;
+    margin-bottom: 2rem;
+    position: relative;
+    overflow: visible;
+}
+
+.card:hover {
+    transform: translate(-4px, -4px);
+    box-shadow: 8px 8px 0px 0px var(--border-color);
+}
+
+.card-img-top {
+    border-bottom: var(--border-width) solid var(--border-color);
+    border-radius: 0;
+    height: 200px;
+    object-fit: cover;
+    filter: grayscale(100%);
+    transition: filter 0.3s ease;
+}
+
+.card:hover .card-img-top {
+    filter: grayscale(0%);
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+.card-title {
+    font-family: 'Archivo Black', sans-serif;
+    font-size: 1.4rem;
+    margin-bottom: 1rem;
+    color: var(--text-color);
+    text-transform: uppercase;
+    line-height: 1.1;
+}
+
+.card-text {
+    font-family: 'Public Sans', sans-serif;
+    color: var(--text-color);
+    margin-bottom: 1.5rem;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+/* Tags */
+.badge {
+    border: 2px solid var(--border-color);
+    border-radius: 0;
+    background-color: var(--accent-yellow) !important;
+    color: black !important;
+    font-weight: 700;
+    text-transform: uppercase;
+    box-shadow: 2px 2px 0px 0px var(--border-color);
+    padding: 0.5em 0.8em;
+}
+
+/* Buttons */
+.btn-primary {
+    background-color: var(--accent-pink);
+    border: 2px solid var(--border-color);
+    border-radius: 0;
+    color: white;
+    font-family: 'Archivo Black', sans-serif;
+    text-transform: uppercase;
+    box-shadow: 4px 4px 0px 0px var(--border-color);
+    transition: all 0.1s ease;
+}
+
+.btn-primary:hover {
+    background-color: var(--accent-pink);
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0px 0px var(--border-color);
+    color: white;
+}
+
+.btn-primary:active {
+    transform: translate(2px, 2px);
+    box-shadow: 2px 2px 0px 0px var(--border-color);
+}
+
+/* New Post Badge */
+.new-post {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    background-color: var(--accent-green);
+    color: black;
+    font-family: 'Archivo Black', sans-serif;
+    padding: 0.5rem 1rem;
+    border: var(--border-width) solid var(--border-color);
+    box-shadow: 4px 4px 0px 0px var(--border-color);
+    z-index: 10;
+    transform: rotate(5deg);
+}
+
+/* Remove old elements */
+.paper-clip,
+.card-img-caption,
+.card-inner::before {
+    display: none;
+}
+
+.card-inner {
+    border: none;
+    box-shadow: none;
+}
+
+.tilt-container {
+    transform: none !important;
+}

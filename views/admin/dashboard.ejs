@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <%- include('../partials/header') %>
+        <title>Admin Dashboard - Lumina</title>
+        <style>
+            :root {
+                --primary-color: #0d6efd;
+                --bg-light: #f8f9fa;
+                --text-dark: #212529;
+                --text-muted: #6c757d;
+                --card-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+                --hover-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+            }
+
+            body {
+                background-color: var(--bg-light);
+                font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            }
+
+            .admin-container {
+                max-width: 1100px;
+                margin: 8rem auto 4rem;
+                /* Increased from 6rem */
+                padding: 0 1.5rem;
+            }
+
+            /* --- Stat Cards --- */
+            .stat-card {
+                background: #fff;
+                border: none;
+                border-radius: 16px;
+                padding: 1.75rem;
+                text-align: center;
+                box-shadow: var(--card-shadow);
+                transition: all 0.3s ease;
+                position: relative;
+                overflow: hidden;
+            }
+
+            .stat-card::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 4px;
+                background: linear-gradient(90deg, var(--primary-color), #0dcaf0);
+                opacity: 0;
+                transition: opacity 0.3s;
+            }
+
+            .stat-card:hover {
+                transform: translateY(-5px);
+                box-shadow: var(--hover-shadow);
+            }
+
+            .stat-card:hover::before {
+                opacity: 1;
+            }
+
+            .stat-number {
+                font-weight: 800;
+                color: var(--text-dark);
+                font-size: 2.5rem;
+                line-height: 1.2;
+                margin-bottom: 0.25rem;
+                letter-spacing: -1px;
+            }
+
+            .stat-label {
+                color: var(--text-muted);
+                text-transform: uppercase;
+                letter-spacing: 1.2px;
+                font-size: 0.75rem;
+                font-weight: 600;
+            }
+
+            /* --- Navigation Pills --- */
+            .nav-pills {
+                background: #fff;
+                box-shadow: var(--card-shadow);
+                padding: 0.5rem;
+                border-radius: 12px;
+                border: 1px solid #eee;
+            }
+
+            .nav-pills .nav-link {
+                color: var(--text-muted);
+                font-weight: 500;
+                padding: 0.6rem 1.25rem;
+                border-radius: 8px;
+                transition: all 0.2s;
+            }
+
+            .nav-pills .nav-link:hover {
+                background-color: rgba(13, 110, 253, 0.05);
+                color: var(--primary-color);
+            }
+
+            .nav-pills .nav-link.active {
+                background-color: var(--primary-color);
+                color: #fff;
+                box-shadow: 0 4px 10px rgba(13, 110, 253, 0.3);
+            }
+
+            /* --- Tables & Cards --- */
+            .card {
+                border-radius: 16px;
+                border: 1px solid rgba(0, 0, 0, 0.05) !important;
+            }
+
+            .table-custom {
+                width: 100%;
+                border-collapse: separate;
+                border-spacing: 0 0;
+            }
+
+            .table-custom th {
+                text-transform: uppercase;
+                font-size: 0.7rem;
+                color: #adb5bd;
+                font-weight: 700;
+                padding: 1rem 1.5rem;
+                border-bottom: 1px solid #f1f1f1;
+                letter-spacing: 0.5px;
+            }
+
+            .table-custom td {
+                background: #fff;
+                padding: 1rem 1.5rem;
+                vertical-align: middle;
+                border-bottom: 1px solid #f8f9fa;
+                color: #495057;
+                font-size: 0.95rem;
+            }
+
+            .table-custom tr:last-child td {
+                border-bottom: none;
+            }
+
+            .role-badge {
+                padding: 4px 10px;
+                border-radius: 20px;
+                font-size: 0.7rem;
+                font-weight: 700;
+                letter-spacing: 0.3px;
+            }
+
+            .role-badge.admin {
+                background-color: #ffeef0;
+                color: #dc3545;
+            }
+
+            .role-badge:not(.admin) {
+                background-color: #e7f1ff;
+                color: #0d6efd;
+            }
+
+            /* --- Mobile Responsiveness --- */
+            @media (max-width: 768px) {
+                .admin-container {
+                    margin-top: 7rem;
+                    /* Increased from 5rem */
+                    padding: 0 1rem;
+                }
+
+                h1 {
+                    font-size: 1.75rem;
+                }
+
+                /* Horizontal Scroll Nav */
+                .nav-pills {
+                    display: flex;
+                    flex-wrap: nowrap;
+                    overflow-x: auto;
+                    -webkit-overflow-scrolling: touch;
+                    padding: 0.5rem;
+                    gap: 0.5rem;
+                }
+
+                .nav-pills::-webkit-scrollbar {
+                    display: none;
+                }
+
+                .nav-item {
+                    flex: 0 0 auto;
+                }
+
+                /* Stats grid */
+                .stat-number {
+                    font-size: 2rem;
+                }
+
+                /* Mobile Card Tables */
+                .table-responsive {
+                    border: 0;
+                }
+
+                .table-custom,
+                .table-custom tbody,
+                .table-custom tr,
+                .table-custom td {
+                    display: block;
+                    width: 100%;
+                }
+
+                .table-custom thead {
+                    display: none;
+                }
+
+                .table-custom tr {
+                    background: #fff;
+                    margin-bottom: 1rem;
+                    border: 1px solid #eee;
+                    border-radius: 12px;
+                    padding: 1rem;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+                    position: relative;
+                }
+
+                .table-custom td {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    text-align: right;
+                    padding: 0.75rem 0;
+                    border-bottom: 1px solid #f5f5f5;
+                }
+
+                .table-custom td:last-child {
+                    border-bottom: none;
+                    justify-content: flex-end;
+                    /* Actions aligned right */
+                    padding-top: 1rem;
+                }
+
+                .table-custom td::before {
+                    content: attr(data-label);
+                    font-weight: 600;
+                    color: #999;
+                    font-size: 0.75rem;
+                    text-transform: uppercase;
+                    text-align: left;
+                    margin-right: 1rem;
+                }
+
+                /* Specific adjustments for content that might be too long */
+                .table-custom td[data-label="Title"] a {
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    max-width: 200px;
+                    display: inline-block;
+                }
+            }
+        </style>
+</head>
+
+<body>
+    <%- include('../partials/nav', { searchQuery: '' }) %>
+
+        <div class="admin-container">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="fw-light m-0">Dashboard <span class="fs-5 text-muted ms-2">Admin Panel</span></h1>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-primary" onclick="location.reload()"><i
+                            class="bi bi-arrow-clockwise"></i> Refresh</button>
+                </div>
+            </div>
+
+            <!-- Stats Row (Always Visible) -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <div class="stat-card p-3">
+                        <div class="stat-number fs-3">
+                            <%= userCount %>
+                        </div>
+                        <div class="stat-label small">Total Users</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stat-card p-3">
+                        <div class="stat-number fs-3">
+                            <%= blogCount %>
+                        </div>
+                        <div class="stat-label small">Published Blogs</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stat-card p-3">
+                        <div class="stat-number fs-3">
+                            <%= commentCount %>
+                        </div>
+                        <div class="stat-label small">Total Comments</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Navigation -->
+            <ul class="nav nav-pills mb-4 bg-light p-2 rounded-3 gap-2" id="adminTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active rounded-2" id="users-tab" data-bs-toggle="pill"
+                        data-bs-target="#users" type="button" role="tab"><i class="bi bi-people me-2"></i>Users</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link rounded-2" id="blogs-tab" data-bs-toggle="pill" data-bs-target="#blogs"
+                        type="button" role="tab"><i class="bi bi-journal-text me-2"></i>Content</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link rounded-2" id="announcements-tab" data-bs-toggle="pill"
+                        data-bs-target="#announcements" type="button" role="tab"><i
+                            class="bi bi-megaphone me-2"></i>Announcements</button>
+                </li>
+            </ul>
+
+            <div class="tab-content" id="adminTabsContent">
+
+                <!-- � Users Tab -->
+                <div class="tab-pane fade show active" id="users" role="tabpanel">
+                    <div class="card border-0 shadow-sm p-4">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h5 class="fw-bold m-0">Users Management</h5>
+                            <form class="d-flex gap-2" method="GET" action="/admin">
+                                <input type="text" name="search" class="form-control form-control-sm"
+                                    placeholder="Search users..." value="<%= searchQuery %>">
+                                <button type="submit" class="btn btn-sm btn-primary">Search</button>
+                            </form>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table-custom">
+                                <thead>
+                                    <tr>
+                                        <th>User</th>
+                                        <th>Email</th>
+                                        <th>Role</th>
+                                        <th>Joined</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% users.forEach(u=> { %>
+                                        <tr>
+                                            <td data-label="User">
+                                                <div class="d-flex align-items-center gap-3">
+                                                    <img src="<%= u.profilePic %>" class="rounded-circle" width="32"
+                                                        height="32" alt="">
+                                                    <span class="fw-bold small">
+                                                        <%= u.fullName %>
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td class="text-muted small" data-label="Email">
+                                                <%= u.email %>
+                                            </td>
+                                            <td data-label="Role">
+                                                <span class="role-badge <%= u.role === 'ADMIN' ? 'admin' : '' %>"
+                                                    style="font-size: 0.7rem;">
+                                                    <%= u.role %>
+                                                </span>
+                                            </td>
+                                            <td class="text-muted small" data-label="Joined">
+                                                <%= new Date(u.createdAt).toLocaleDateString() %>
+                                            </td>
+                                            <td data-label="Actions">
+                                                <% if (u.role !=='ADMIN' ) { %>
+                                                    <form action="/admin/user/delete/<%= u._id %>" method="POST"
+                                                        onsubmit="return confirm('Delete this user permanently?');">
+                                                        <button class="btn btn-link text-danger p-0 border-0 small"><i
+                                                                class="fas fa-trash-alt"></i></button>
+                                                    </form>
+                                                    <% } else { %>
+                                                        <span class="text-muted small"
+                                                            style="font-size: 0.75rem;">Protected</span>
+                                                        <% } %>
+                                            </td>
+                                        </tr>
+                                        <% }) %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 📝 Content Tab -->
+                <div class="tab-pane fade" id="blogs" role="tabpanel">
+                    <div class="card border-0 shadow-sm p-4">
+                        <h5 class="fw-bold mb-4">Content Moderation</h5>
+                        <div class="table-responsive">
+                            <table class="table-custom">
+                                <thead>
+                                    <tr>
+                                        <th width="40%">Title</th>
+                                        <th>Author</th>
+                                        <th>Stats</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% blogs.forEach(b=> { %>
+                                        <tr>
+                                            <td data-label="Title">
+                                                <a href="/blog/<%= b._id %>"
+                                                    class="text-dark text-decoration-none fw-bold small">
+                                                    <%= b.title %>
+                                                </a>
+                                            </td>
+                                            <td data-label="Author">
+                                                <div class="d-flex align-items-center gap-2 small">
+                                                    <span class="text-muted">by</span>
+                                                    <span>
+                                                        <%= b.createdBy ? b.createdBy.fullName : 'Unknown' %>
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td data-label="Stats">
+                                                <small class="text-muted">
+                                                    <%= b.views %> views
+                                                </small>
+                                            </td>
+                                            <td data-label="Actions">
+                                                <div class="d-flex gap-2">
+                                                    <form action="/admin/blog/feature/<%= b._id %>" method="POST">
+                                                        <button
+                                                            class="btn btn-sm p-0 border-0 <%= b.featured ? 'text-warning' : 'text-muted' %>"
+                                                            title="<%= b.featured ? 'Remove Featured' : 'Mark Featured' %>">
+                                                            <i class="fas fa-star"></i>
+                                                        </button>
+                                                    </form>
+                                                    <form action="/admin/blog/delete/<%= b._id %>" method="POST"
+                                                        onsubmit="return confirm('Delete blog?');">
+                                                        <button class="btn btn-sm p-0 border-0 text-danger"
+                                                            title="Delete"><i class="fas fa-trash-alt"></i></button>
+                                                    </form>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <% }) %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 📢 Announcements Tab -->
+                <div class="tab-pane fade" id="announcements" role="tabpanel">
+                    <div class="card border-0 shadow-sm p-4">
+                        <h5 class="fw-bold mb-4">📢 Global Announcement</h5>
+
+                        <% if (activeAnnouncement) { %>
+                            <div
+                                class="alert alert-<%= activeAnnouncement.type %> d-flex justify-content-between align-items-center py-2 px-3 mb-4 rounded-3 small">
+                                <span><strong>Active:</strong>
+                                    <%= activeAnnouncement.message %>
+                                </span>
+                                <form action="/admin/announcement/delete/<%= activeAnnouncement._id %>" method="POST"
+                                    class="m-0" onsubmit="return confirm('Turn off?');">
+                                    <button type="submit"
+                                        class="btn btn-sm py-0 btn-outline-<%= activeAnnouncement.type %> border-0 text-decoration-underline">Turn
+                                        Off</button>
+                                </form>
+                            </div>
+                            <% } %>
+
+                                <form action="/admin/announcement" method="POST" id="announcementForm">
+                                    <div class="row g-3">
+                                        <div class="col-md-12">
+                                            <label class="form-label text-muted small mb-1"
+                                                style="font-size: 0.75rem;">Template</label>
+                                            <select id="announcementTemplate" class="form-select form-select-sm"
+                                                onchange="applyTemplate()">
+                                                <option value="">-- Select Template --</option>
+                                                <option value="maintenance|warning">🛠 System Maintenance</option>
+                                                <option value="deployment|info">🚀 New Features</option>
+                                                <option value="downtime|danger">⚠️ Technical issues</option>
+                                                <option value="welcome|success">🎉 Warm Welcome</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-12">
+                                            <label class="form-label text-muted small mb-1"
+                                                style="font-size: 0.75rem;">Message</label>
+                                            <input type="text" name="message" id="announcementMessage"
+                                                class="form-control form-control-sm" placeholder="Message content..."
+                                                required>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label text-muted small mb-1"
+                                                style="font-size: 0.75rem;">Alert Type</label>
+                                            <select name="type" id="announcementType"
+                                                class="form-select form-select-sm">
+                                                <option value="info">Info (Blue)</option>
+                                                <option value="warning">Warning (Yellow)</option>
+                                                <option value="danger">Danger (Red)</option>
+                                                <option value="success">Success (Green)</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label text-muted small mb-1"
+                                                style="font-size: 0.75rem;">Duration</label>
+                                            <select name="duration" class="form-select form-select-sm">
+                                                <option value="always">Always On</option>
+                                                <option value="1">1 Hour</option>
+                                                <option value="12">12 Hours</option>
+                                                <option value="24">24 Hours</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary btn-sm w-100 mt-4">
+                                        <i class="bi bi-megaphone-fill me-1"></i> Broadcast Now
+                                    </button>
+                                </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <%- include('../partials/footer') %>
+            <script>
+                function applyTemplate() {
+                    const template = document.getElementById('announcementTemplate').value;
+                    if (!template) return;
+
+                    const [msg, type] = template.split('|');
+                    const messages = {
+                        maintenance: "Lumina will be undergoing scheduled maintenance on Saturday. Expect minor downtime.",
+                        deployment: "New features have been deployed! Check out the improved Feed and AI tools.",
+                        downtime: "We are currently experiencing technical issues with image uploads. Our team is on it.",
+                        welcome: "Welcome to Lumina! Start sharing your stories with the world today."
+                    };
+
+                    document.getElementById('announcementMessage').value = messages[msg] || "";
+                    document.getElementById('announcementType').value = type;
+                }
+            </script>
+</body>
+
+</html>

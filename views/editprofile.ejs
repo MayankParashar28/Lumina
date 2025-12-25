@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <%- include('./partials/header') %>
+        <title>Edit Profile - Lumina</title>
+        <link rel="stylesheet" href="/css/auth.css">
+        <!-- Font Awesome for Icons -->
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+
+<body>
+    <%- include('./partials/nav', { searchQuery: '' }) %>
+
+        <div class="page-container">
+            <div class="settings-card">
+                <h2 class="settings-title">Profile Settings</h2>
+
+                <form id="editProfileForm" enctype="multipart/form-data">
+                    <div class="settings-layout">
+                        <!-- Left Column: Avatar & Basic Info -->
+                        <div class="settings-left">
+                            <div class="avatar-upload-container">
+                                <div class="avatar-wrapper">
+                                    <img src="<%= optimizeImage(user.profilePic || '/images/default-profile.png', { width: 300, height: 300 }) %>"
+                                        id="avatarPreview" alt="Profile Picture">
+                                    <label for="profilePic" class="avatar-overlay">
+                                        <i class="fas fa-camera"></i>
+                                    </label>
+                                </div>
+                                <input type="file" id="profilePic" name="profilePic" accept="image/*"
+                                    onchange="previewAvatar(this)" hidden>
+                                <span class="avatar-hint">Tap to change</span>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="fullName">Display Name</label>
+                                <input type="text" name="fullName" id="fullName" class="form-control"
+                                    value="<%= user.fullName || '' %>" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="bio">Bio</label>
+                                <textarea name="bio" id="bio" class="form-control" rows="4"
+                                    placeholder="Tell the world about yourself..."><%= user.bio || '' %></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Right Column: Socials & Private Details -->
+                        <div class="settings-right">
+                            <h3 class="section-heading">Social Links</h3>
+
+                            <div class="form-group icon-input">
+                                <i class="fab fa-linkedin"></i>
+                                <input type="url" name="socials[linkedin]" class="form-control"
+                                    value="<%= user.socials?.linkedin || '' %>" placeholder="LinkedIn URL">
+                            </div>
+
+                            <div class="form-group icon-input">
+                                <i class="fab fa-twitter"></i>
+                                <input type="url" name="socials[twitter]" class="form-control"
+                                    value="<%= user.socials?.twitter || '' %>" placeholder="Twitter URL">
+                            </div>
+
+                            <div class="form-group icon-input">
+                                <i class="fab fa-github"></i>
+                                <input type="url" name="socials[github]" class="form-control"
+                                    value="<%= user.socials?.github || '' %>" placeholder="GitHub URL">
+                            </div>
+
+                            <div class="form-group icon-input">
+                                <i class="fab fa-instagram"></i>
+                                <input type="url" name="socials[instagram]" class="form-control"
+                                    value="<%= user.socials?.instagram || '' %>" placeholder="Instagram URL">
+                            </div>
+
+                            <div class="divider"></div>
+
+                            <h3 class="section-heading">Account Info</h3>
+                            <div class="form-group">
+                                <label for="email">Email Address</label>
+                                <input type="email" name="email" id="email" class="form-control"
+                                    value="<%= user.email || '' %>">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn-cancel" onclick="history.back()">Cancel</button>
+                        <button type="submit" class="submit-btn" id="saveBtn">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <%- include('./partials/footer') %>
+
+            <script>
+                // Avatar Preview
+                function previewAvatar(input) {
+                    if (input.files && input.files[0]) {
+                        const reader = new FileReader();
+                        reader.onload = function (e) {
+                            document.getElementById('avatarPreview').src = e.target.result;
+                        }
+                        reader.readAsDataURL(input.files[0]);
+                    }
+                }
+
+                // AJAX Form Submission
+                document.getElementById("editProfileForm").addEventListener("submit", async (e) => {
+                    e.preventDefault();
+                    const btn = document.getElementById('saveBtn');
+                    const originalText = btn.innerHTML;
+
+                    btn.disabled = true;
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
+                    // Use FormData for file upload
+                    const formData = new FormData(e.target);
+
+                    try {
+                        const response = await fetch("/user/edit-profile", {
+                            method: "POST",
+                            body: formData // No headers needed, browser sets multipart/form-data boundary automatically
+                        });
+
+                        const result = await response.json();
+
+                        if (response.ok) {
+                            window.location.href = "/user/profile";
+                        } else {
+                            alert("⚠️ " + (result.error || "Update failed"));
+                        }
+                    } catch (error) {
+                        console.error("Update Error:", error);
+                        alert("❌ Something went wrong.");
+                    } finally {
+                        btn.disabled = false;
+                        btn.innerHTML = originalText;
+                    }
+                });
+            </script>
+</body>
+
+</html>

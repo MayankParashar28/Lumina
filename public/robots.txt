@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /user/profile
+Sitemap: https://lumina.blog/sitemap.xml

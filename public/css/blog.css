@@ -1,0 +1,1027 @@
+/* High-End Editorial Blog Styles */
+
+::selection {
+    background: var(--text-color);
+    color: var(--bg-color);
+}
+
+.blog-container {
+    max-width: 100%;
+    margin: 0;
+    margin: 0;
+    padding-bottom: 0;
+}
+
+/* Progress Bar */
+#progress-bar {
+    background: var(--text-color) !important;
+    height: 3px !important;
+}
+
+#progress-container {
+    background: transparent !important;
+    backdrop-filter: none;
+}
+
+/* Header */
+.blog-header {
+    max-width: 900px;
+    margin: 8rem auto 4rem;
+    padding: 0 1.5rem;
+    text-align: center;
+}
+
+.category-pill {
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    border: 1px solid var(--border-color);
+    padding: 0.4rem 1rem;
+    border-radius: 999px;
+    display: inline-block;
+}
+
+.blog-title {
+    font-family: 'Inter', sans-serif;
+    font-size: clamp(2.5rem, 6vw, 4.5rem);
+    font-weight: 900;
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+    margin: 1.5rem 0 2rem;
+    color: var(--text-color);
+}
+
+.author-meta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.author-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--bg-color);
+    box-shadow: 0 0 0 1px var(--border-color);
+}
+
+.meta-info {
+    font-size: 0.95rem;
+    color: #666;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+}
+
+.author-name {
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.meta-divider {
+    color: var(--border-color);
+}
+
+/* Hero Image */
+.hero-image-wrapper {
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto 4rem;
+    aspect-ratio: 21/9;
+    overflow: hidden;
+    position: relative;
+}
+
+.blog-hero-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+}
+
+/* Content Layout */
+.content-wrapper {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 740px 1fr;
+    /* Centered content column */
+    gap: 2rem;
+    position: relative;
+    padding: 0 1.5rem;
+}
+
+@media (max-width: 1024px) {
+    .content-wrapper {
+        grid-template-columns: 1fr;
+        display: block;
+        max-width: 740px;
+    }
+}
+
+
+/* Typography & Body */
+.blog-body {
+    grid-column: 2;
+    font-size: 1.25rem;
+    line-height: 1.8;
+    color: #222;
+}
+
+.typography-enhanced p {
+    margin-bottom: 2rem;
+}
+
+.typography-enhanced h2 {
+    font-size: 2rem;
+    font-weight: 800;
+    margin: 3rem 0 1.5rem;
+    letter-spacing: -0.02em;
+}
+
+.typography-enhanced h3 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 2.5rem 0 1rem;
+}
+
+.typography-enhanced img {
+    max-width: 100%;
+    border-radius: 8px;
+    margin: 2rem 0;
+}
+
+.typography-enhanced blockquote {
+    border-left: 4px solid var(--text-color);
+    padding-left: 2rem;
+    font-style: italic;
+    font-size: 1.4rem;
+    margin: 3rem 0;
+    color: #444;
+}
+
+
+/* Comments */
+.comments-section {
+    padding: 2rem 0;
+    max-width: 1800px;
+    width: 100%;
+    /* Match text width */
+    margin: 0 auto;
+}
+
+.comment-content-wrapper {
+    width: 100%;
+    padding: 0 1.5rem;
+}
+
+/* Force standard footer size */
+.site-footer-minimal {
+    padding: 1.5rem 2rem !important;
+    line-height: normal !important;
+}
+
+.comment-container {
+    background: var(--accent-gray);
+    border-radius: var(--border-radius);
+    padding: 1rem 1.5rem;
+    margin-bottom: 1rem;
+    border: none;
+}
+
+/* Professional Minimalist Blog Styles */
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+}
+
+.blog-container {
+    width: 100%;
+    margin: 0 auto;
+    padding-bottom: 2rem;
+}
+
+/* Progress Bar */
+#progress-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    z-index: 1001;
+    background: transparent;
+}
+
+#progress-bar {
+    height: 100%;
+    width: 0%;
+    background: var(--text-color);
+    transition: width 0.1s ease;
+}
+
+/* Header */
+.blog-header {
+    max-width: 1000px;
+    margin: 3rem auto 1rem;
+    /* Aggressively reduced from 6rem/3rem */
+    padding: 0 1rem;
+    text-align: center;
+}
+
+.category-pill {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 0.3rem 0.8rem;
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    display: inline-block;
+    margin-bottom: 1.5rem;
+}
+
+.blog-title {
+    font-size: clamp(2.5rem, 5vw, 4rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+    margin-bottom: 2rem;
+    color: var(--text-color);
+}
+
+.blog-meta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    color: #666;
+    font-size: 0.95rem;
+}
+
+.author-info {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.author-avatar-sm {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.author-name {
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.meta-divider {
+    color: var(--border-color);
+}
+
+/* Hero Image */
+.hero-image-container {
+    width: 100%;
+    max-width: 1000px;
+    margin: 0 auto 4rem;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.blog-hero-image {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+/* Increased max-width for wider layout */
+/* Content Layout */
+.content-wrapper {
+    /* Increased max-width for wider layout */
+    max-width: 1800px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1200px 1fr;
+    gap: 2rem;
+    position: relative;
+    padding: 0 1rem;
+}
+
+/* Vertical Action Bar (Right-aligned at end) */
+.article-actions-bar-vertical {
+    grid-column: 3;
+    /* Desktop: Sidebar column */
+    position: sticky;
+    top: 30vh;
+    /* Consistent vertical centering */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    /* Spacing between actions */
+    width: fit-content;
+    height: max-content;
+    margin: 0 auto;
+    padding: 0.8rem 0.3rem;
+    /* Thin padding */
+    border: none;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-radius: 50px;
+    /* Pill shape */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    /* Soft floating shadow */
+    z-index: 100;
+}
+
+.action-icon-btn {
+    background: transparent;
+    border: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.2rem;
+    color: #666;
+    font-size: 1.15rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 0.3rem;
+    /* Compact touch target */
+    border-radius: 50%;
+}
+
+.action-icon-btn:hover {
+    color: var(--text-color);
+    background: rgba(0, 0, 0, 0.04);
+}
+
+.action-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+.article-actions-bar-vertical .edit-item {
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border-color);
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+@media (max-width: 1024px) {
+    .content-wrapper {
+        display: grid;
+        /* Grid is needed for overlay */
+        grid-template-columns: 1fr;
+        /* Single column */
+        max-width: 1200px;
+    }
+
+    /* Overlay Technique: Stack content and actions */
+    .blog-body {
+        grid-column: 1;
+        grid-row: 1;
+    }
+
+    .article-actions-bar-vertical {
+        grid-column: 1;
+        /* Same column as content */
+        grid-row: 1;
+        /* Same row as content */
+        justify-self: end;
+        /* Push to right edge */
+        align-self: start;
+
+        position: sticky;
+        /* Enables the magic "stick with content" behavior */
+        top: 30vh;
+
+        margin: 0;
+        margin-right: 0.2rem;
+        /* Almost flush with right edge */
+        padding: 0.6rem 0.2rem;
+        /* Extra thin padding for mobile */
+        gap: 0.8rem;
+
+        /* Ensure specific styles for mobile if different, else inherited */
+        background: rgba(255, 255, 255, 0.85);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        right: 0;
+        /* Reinforce right alignment */
+    }
+}
+
+/* Editorial Content */
+.blog-body {
+    grid-column: 2;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 1.15rem;
+    line-height: 1.75;
+    color: var(--text-color);
+}
+
+.editorial-typography p {
+    margin-bottom: 2rem;
+    margin-top: 0;
+}
+
+.editorial-typography ul,
+.editorial-typography ol {
+    margin-bottom: 2rem;
+}
+
+
+.editorial-typography h2 {
+    font-size: 2rem;
+    font-weight: 800;
+    margin: 4rem 0 2rem;
+    /* Increased top/bottom margin */
+    letter-spacing: -0.02em;
+    line-height: 1.3;
+}
+
+.editorial-typography h3 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 3rem 0 1.5rem;
+    /* Increased top/bottom margin */
+}
+
+.editorial-typography img {
+    width: 100%;
+    margin: 2.5rem 0;
+    border-radius: 4px;
+}
+
+.editorial-typography blockquote {
+    border-left: 3px solid var(--text-color);
+    padding-left: 1.5rem;
+    font-size: 1.35rem;
+    font-style: italic;
+    color: #444;
+    margin: 3rem 0;
+}
+
+.editorial-typography ul,
+.editorial-typography ol {
+    margin: 2.5rem 0;
+    /* Increased margin */
+    padding-left: 2rem;
+    font-size: 1.15rem;
+}
+
+.editorial-typography li {
+    margin-bottom: 1.2rem;
+    /* Increased list item spacing */
+    padding-left: 0.5rem;
+}
+
+.editorial-typography strong {
+    font-weight: 700;
+    color: #111;
+}
+
+.editorial-typography a {
+    color: var(--text-color);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 4px;
+}
+
+
+/* Modern Follow Button */
+.btn-follow {
+    padding: 0.5rem 1.2rem;
+    /* Compact padding */
+    border-radius: 999px;
+    background: var(--text-color);
+    color: var(--bg-color);
+    font-weight: 600;
+    font-size: 0.85rem;
+    /* Smaller text */
+    border: 1px solid var(--text-color);
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    white-space: nowrap;
+    min-width: auto;
+    /* Remove min-width constraint */
+}
+
+.btn-follow:hover {
+    background: transparent;
+    color: var(--text-color);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.btn-follow.followed {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    opacity: 0.7;
+}
+
+/* Like Button Active State */
+.text-red {
+    color: #e63946 !important;
+    /* Vibrant Red */
+    transition: color 0.3s ease;
+}
+
+/* Instagram-style Like Animation */
+@keyframes like-bounce {
+    0% {
+        transform: scale(1);
+    }
+
+    25% {
+        transform: scale(1.3);
+    }
+
+    50% {
+        transform: scale(0.9);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+.animate-like {
+    animation: like-bounce 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* Amazing Header Animations */
+@keyframes fadeUpReveal {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.blog-header {
+    /* Existing margin/width is fine, just tweaking if needed */
+    position: relative;
+}
+
+.category-pill {
+    background: transparent;
+    color: var(--text-color);
+    border: 1px solid var(--text-color);
+    padding: 0.5rem 1.2rem;
+    font-size: 0.75rem;
+    letter-spacing: 0.15em;
+    font-weight: 600;
+    margin-bottom: 2rem;
+    opacity: 0;
+    /* Init hidden */
+    animation: fadeUpReveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation-delay: 0.1s;
+    transition: all 0.3s ease;
+}
+
+.category-pill:hover {
+    background: var(--text-color);
+    color: var(--bg-color);
+}
+
+.blog-title {
+    opacity: 0;
+    /* Init hidden */
+    animation: fadeUpReveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation-delay: 0.2s;
+    /* Keeping existing font size but tweaking spacing if desired */
+    text-wrap: balance;
+    /* Ensure nice line breaks */
+}
+
+
+.blog-meta {
+    opacity: 0;
+    /* Init hidden */
+    animation: fadeUpReveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation-delay: 0.3s;
+    margin-top: 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    font-family: 'Inter', sans-serif;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    padding: 1rem 0;
+    width: fit-content;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.publish-date,
+.read-time {
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #555;
+    position: relative;
+}
+
+.read-time {
+    color: var(--text-color);
+    /* Highlight read time slightly */
+}
+
+/* Stylish Divider */
+.meta-divider {
+    color: #ccc;
+    font-weight: 300;
+    font-size: 1.2rem;
+    /* Larger but lighter divider */
+    line-height: 0;
+    transform: translateY(-1px);
+}
+
+.author-info {
+    /* Add subtle hover effect */
+    transition: transform 0.2s ease;
+    padding: 0.4rem 0.8rem;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.03);
+}
+
+.author-info:hover {
+    transform: translateY(-1px);
+    background: rgba(0, 0, 0, 0.06);
+}
+
+.view-count {
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #555;
+    display: flex;
+    /* Ensure it behaves like other items */
+    align-items: center;
+    gap: 0.3rem;
+    /* Space for icon if we add one */
+}
+
+/* Optional: Add an icon before "Views" if desired with ::before */
+.view-count::before {
+    content: "\f06e";
+    /* Font Awesome Eye Icon */
+    font-family: "Font Awesome 6 Free";
+    font-weight: 400;
+    /* Regular style */
+    font-size: 0.9em;
+    color: #999;
+}
+
+/* --- Shared Typography (Matches Editor) --- */
+.ql-editor {
+    line-height: 1.8 !important;
+    /* Better reading rhythm */
+    font-size: 1.125rem;
+    /* ~18px for comfortable long-form reading */
+    color: #111827;
+    /* High contrast dark gray/almost black */
+    cursor: default;
+    /* Override editor cursor */
+}
+
+/* Headings */
+.ql-editor h1 {
+    margin-top: 60px !important;
+    margin-bottom: 30px !important;
+    font-weight: 800;
+    line-height: 1.2;
+    font-size: 2.25rem;
+    color: #000;
+}
+
+.ql-editor h2 {
+    margin-top: 50px !important;
+    margin-bottom: 25px !important;
+    font-weight: 700;
+    line-height: 1.3;
+    font-size: 1.8rem;
+    color: #1f2937;
+    border-bottom: 1px solid #f3f4f6;
+    padding-bottom: 10px;
+}
+
+.ql-editor h3 {
+    margin-top: 40px !important;
+    margin-bottom: 20px !important;
+    font-weight: 600;
+    font-size: 1.4rem;
+    color: #374151;
+}
+
+.ql-editor p {
+    margin-bottom: 28px !important;
+    font-weight: 400;
+}
+
+.ql-editor ul,
+.ql-editor ol {
+    margin-bottom: 32px !important;
+    padding-left: 1.5rem;
+}
+
+.ql-editor li {
+    margin-bottom: 12px !important;
+    padding-left: 8px;
+}
+
+
+
+@media (max-width: 768px) {
+    .blog-header {
+        margin: 9rem auto 2rem;
+        /* Increased mobile top margin */
+        /* Reduce top margin */
+    }
+
+    .blog-title {
+        font-size: 2.25rem;
+        /* Explicit smaller size for mobile */
+    }
+
+    .hero-image-container {
+        width: calc(100% - 2rem);
+        /* Force margin on mobile */
+        margin: 0 auto 2rem;
+        /* Reduce bottom margin, keep centered */
+        border-radius: 8px;
+        /* Ensure radius is visible */
+    }
+
+    .blog-meta {
+        flex-wrap: wrap;
+        /* Allow wrapping */
+        gap: 0.8rem;
+    }
+
+    .content-wrapper {
+        padding: 0 1rem;
+    }
+
+    .editorial-typography h2 {
+        font-size: 1.75rem;
+    }
+
+    .editorial-typography p {
+        font-size: 1.1rem;
+    }
+
+    .author-footer-card {
+        flex-direction: row;
+        /* Force Row */
+        text-align: left;
+        padding: 1rem;
+        gap: 1rem;
+    }
+
+    .author-footer-header {
+        flex-direction: row;
+        align-items: center;
+        gap: 0.8rem;
+    }
+
+    .author-avatar-lg {
+        width: 48px;
+        /* Even smaller for mobile */
+        height: 48px;
+    }
+
+    .author-footer-info h3 {
+        font-size: 1rem;
+    }
+
+    .btn-follow {
+        padding: 0.4rem 1rem;
+        font-size: 0.8rem;
+    }
+
+    .comments-section {
+        margin: 4rem 1.5rem;
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+}
+
+/* EMERGENCY SPACING OVERRIDE */
+.blog-container .blog-body .ql-editor h2,
+.editorial-typography h2 {
+    margin-top: 60px !important;
+    margin-bottom: 30px !important;
+    display: block !important;
+    font-size: 2rem !important;
+    line-height: 1.4 !important;
+}
+
+.blog-container .blog-body .ql-editor h3,
+.editorial-typography h3 {
+    margin-top: 50px !important;
+    margin-bottom: 25px !important;
+    display: block !important;
+    font-size: 1.5rem !important;
+}
+
+.blog-container .blog-body .ql-editor p,
+.editorial-typography p {
+    margin-bottom: 32px !important;
+    display: block !important;
+}
+
+.blog-container .blog-body .ql-editor ul,
+.blog-container .blog-body .ql-editor ol,
+.editorial-typography ul,
+.editorial-typography ol {
+    margin-bottom: 40px !important;
+    padding-left: 25px !important;
+}
+
+.blog-container .blog-body .ql-editor li,
+.editorial-typography li {
+    margin-bottom: 15px !important;
+    padding-left: 10px !important;
+}
+
+/* --- Enhanced Comment Section --- */
+.comments-section {
+    max-width: 800px;
+    /* Narrower for readability */
+    margin: 4rem auto;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.comment-form {
+    margin-bottom: 3rem;
+}
+
+.comment-input-wrapper {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+.comment-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.input-box-wrapper {
+    flex: 1;
+    position: relative;
+    background: #f9f9f9;
+    border-radius: 12px;
+    padding: 0.5rem;
+    transition: background 0.2s;
+}
+
+.input-box-wrapper:focus-within {
+    background: #fff;
+    box-shadow: 0 0 0 2px var(--border-color);
+}
+
+.comment-textarea {
+    width: 100%;
+    border: none;
+    background: transparent;
+    padding: 0.8rem;
+    font-family: inherit;
+    font-size: 1rem;
+    resize: none;
+    outline: none;
+    min-height: 50px;
+    max-height: 200px;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding: 0 0.5rem 0.5rem;
+}
+
+.btn-comment {
+    background: var(--text-color);
+    color: var(--bg-color);
+    border: none;
+    padding: 0.5rem 1.2rem;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.btn-comment:hover {
+    opacity: 0.9;
+}
+
+.login-prompt {
+    text-align: center;
+    padding: 2rem;
+    background: #f9f9f9;
+    border-radius: 8px;
+    margin-bottom: 3rem;
+    color: #666;
+}
+
+.login-prompt a {
+    color: var(--text-color);
+    text-decoration: underline;
+    font-weight: 600;
+}
+
+/* Comment List */
+.comments-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.comment-card {
+    display: flex;
+    gap: 1rem;
+}
+
+.comment-avatar-small {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.comment-content-col {
+    flex: 1;
+}
+
+.comment-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.3rem;
+    font-size: 0.9rem;
+}
+
+.comment-author {
+    font-weight: 700;
+    color: var(--text-color);
+}
+
+.comment-dot {
+    color: #ccc;
+}
+
+.comment-date {
+    color: #888;
+    font-size: 0.8rem;
+}
+
+.btn-delete {
+    background: transparent;
+    border: none;
+    color: #ccc;
+    font-size: 0.8rem;
+    cursor: pointer;
+    margin-left: auto;
+    /* Push to right */
+    padding: 4px;
+    transition: color 0.2s;
+}
+
+.btn-delete:hover {
+    color: #d32f2f;
+}
+
+.comment-body p {
+    font-size: 1rem;
+    line-height: 1.5;
+    color: #333;
+    margin: 0;
+}
+
+.no-comments {
+    text-align: center;
+    color: #999;
+    font-style: italic;
+    padding: 2rem;
+}

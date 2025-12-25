@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <%- include('./partials/header') %>
+    <title>Error - Lumina</title>
+    <link rel="stylesheet" href="/css/global.css">
+    <style>
+      body {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        text-align: center;
+        background-image: radial-gradient(var(--border-color) 1px, transparent 1px);
+        background-size: 20px 20px;
+        padding: 2rem;
+      }
+
+      .error-container {
+        background: white;
+        border: 3px solid var(--border-color);
+        box-shadow: 10px 10px 0px 0px var(--accent-pink);
+        padding: 3rem;
+        max-width: 600px;
+        width: 100%;
+      }
+
+      .error-title {
+        font-family: 'Archivo Black', sans-serif;
+        font-size: 3rem;
+        text-transform: uppercase;
+        margin-bottom: 1rem;
+        color: var(--text-color);
+      }
+
+      .error-text {
+        font-family: 'Public Sans', sans-serif;
+        font-size: 1.2rem;
+        color: #555;
+        margin-bottom: 2rem;
+        word-wrap: break-word;
+      }
+    </style>
+</head>
+
+<body>
+  <div class="error-container">
+    <h1 class="error-title">Something Went Wrong!</h1>
+    <p class="error-text">
+      <%= message || "An unexpected error occurred." %>
+    </p>
+
+    <a href="/" class="neo-btn" style="border: 3px solid var(--border-color);">
+      Return Home
+    </a>
+  </div>
+</body>
+
+</html>

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <%- include('./partials/header') %>
+        <title>404 - Page Not Found</title>
+        <link rel="stylesheet" href="/css/global.css">
+        <style>
+            body {
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                text-align: center;
+                background-image: radial-gradient(var(--border-color) 1px, transparent 1px);
+                background-size: 20px 20px;
+            }
+
+            .error-code {
+                font-family: 'Archivo Black', sans-serif;
+                font-size: 8rem;
+                line-height: 1;
+                margin: 0;
+                color: var(--text-color);
+                text-shadow: 8px 8px 0px var(--accent-pink);
+                -webkit-text-stroke: 3px var(--border-color);
+            }
+
+            .error-message {
+                font-family: 'Public Sans', sans-serif;
+                font-size: 1.5rem;
+                font-weight: 700;
+                margin: 1rem 0 2rem;
+                color: #555;
+            }
+        </style>
+</head>
+
+<body>
+    <h1 class="error-code">404</h1>
+    <p class="error-message">Oops! This page went on a vacation.</p>
+
+    <a href="/" class="neo-btn" style="font-size: 1.2rem; border: 3px solid var(--border-color);">
+        Go Back Home
+    </a>
+</body>
+
+</html>

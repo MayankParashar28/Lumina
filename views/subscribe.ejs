@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <%- include('./partials/header') %>
+        <title>Subscribe - Lumina</title>
+        <link rel="stylesheet" href="/css/auth.css">
+        <style>
+            .subscribe-card {
+                background: white;
+                border: var(--border-width) solid var(--border-color);
+                box-shadow: 10px 10px 0px 0px var(--accent-purple);
+                padding: 3rem;
+                max-width: 600px;
+                width: 100%;
+                text-align: center;
+            }
+
+            .profile-pic-large {
+                width: 120px;
+                height: 120px;
+                border-radius: 50%;
+                border: 4px solid var(--border-color);
+                object-fit: cover;
+                margin-bottom: 1.5rem;
+                box-shadow: 4px 4px 0px 0px var(--border-color);
+            }
+
+            .price-tag {
+                font-family: 'Archivo Black', sans-serif;
+                font-size: 3rem;
+                color: var(--accent-blue);
+                margin: 1rem 0;
+                text-shadow: 2px 2px 0px var(--border-color);
+            }
+        </style>
+</head>
+
+<body>
+    <%- include('./partials/nav', { searchQuery: searchQuery || "" }) %>
+
+        <div class="page-container">
+            <div class="subscribe-card">
+                <h1 class="auth-title">Unlock AI Magic ✨</h1>
+                <p class="auth-subtitle">Generate amazing blog content with the power of AI.</p>
+
+                <% if (user) { %>
+                    <img src="<%= user.profilePic %>" alt="avatar" class="profile-pic-large">
+                    <h3 style="margin-bottom: 0.5rem;">
+                        <%= user.fullName %>
+                    </h3>
+                    <p style="color: #666; margin-bottom: 2rem;">
+                        <%= user.email %>
+                    </p>
+
+                    <div class="price-tag">$2.99<span style="font-size: 1rem; color: var(--text-color);">/month</span>
+                    </div>
+
+                    <form action="/subscription/create-checkout-session" method="POST">
+                        <input type="hidden" name="email" value="<%= user.email %>">
+                        <input type="hidden" name="name" value="<%= user.fullName %>">
+                        <button type="submit" class="submit-btn"
+                            style="background: var(--accent-success, #00c853); box-shadow: 6px 6px 0px 0px #009624; border-radius: 0; width: auto; min-width: 200px; padding: 1rem 3rem;">
+                            Subscribe Now
+                        </button>
+                        <a href="/" class="neo-btn"
+                            style="margin-top: 1rem; background: transparent; color: var(--text-color); border: 2px solid var(--border-color); box-shadow: none;">
+                            Cancel
+                        </a>
+                    </form>
+                    <% } else { %>
+                        <div class="alert"
+                            style="background: #fff3cd; border: 2px solid var(--border-color); padding: 1rem; margin-bottom: 2rem;">
+                            <strong>Wait a minute!</strong> You need to log in to subscribe.
+                        </div>
+                        <a href="/user/signin" class="submit-btn">Log In</a>
+                        <% } %>
+            </div>
+        </div>
+
+        <%- include('./partials/footer') %>
+</body>
+
+</html>

@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <%- include('./partials/header') %>
+    <title>New Story - Lumina</title>
+    <link rel="stylesheet" href="/css/add-blog.css?v=20">
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Quill Rich Text Editor Theme -->
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+</head>
+
+<body>
+  <%- include('./partials/nav', { searchQuery: searchQuery || "" }) %>
+
+    <div class="editor-container">
+      <form method="post" action="/blog" enctype="multipart/form-data" id="publishForm">
+
+        <!-- Minimal Header Actions -->
+        <div class="editor-actions">
+          <span id="word-count" class="word-counter">0 words</span>
+          <button type="submit" class="btn-publish">Publish</button>
+        </div>
+
+        <!-- Title Section -->
+        <div class="editor-section">
+          <div class="section-header-row"
+            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h3 class="section-label" style="margin-bottom: 0;">Title</h3>
+
+            <!-- Magic Title Button -->
+            <button type="button" id="title-magic-btn" class="btn-ai-premium" onclick="generateTitles()"
+              title="Generate AI Titles">
+              <i class="fas fa-magic"></i> AI Generate Title
+            </button>
+          </div>
+
+          <div class="input-group" style="margin-bottom: 2rem; position: relative;">
+            <textarea name="title" id="title" class="input-title" placeholder="Enter your story title..." rows="1"
+              required oninput="autoResize(this)"></textarea>
+
+            <!-- Suggestions Container -->
+            <div id="title-suggestions" style="display: none; margin-top: 10px; gap: 10px; flex-wrap: wrap;"></div>
+          </div>
+        </div>
+
+        <!-- Professional Cover Section -->
+        <div class="editor-section">
+          <h3 class="section-label">Cover Image</h3>
+          <div class="cover-container" id="coverContainer">
+            <img id="coverPreview" class="cover-preview hidden">
+
+            <div class="cover-controls" id="coverControls">
+              <div class="cover-actions">
+                <!-- Manual Upload -->
+                <label for="coverImage" class="btn-cover-action">
+                  <i class="fas fa-cloud-upload-alt"></i> Upload Cover Image
+                </label>
+                <input type="file" id="coverImage" name="coverImage" accept="image/*" class="hidden-input"
+                  onchange="previewCover(this)">
+
+                <!-- Separator -->
+                <span class="divider">or</span>
+
+                <!-- AI Generation -->
+                <button type="button" class="btn-cover-action btn-ai-glass" onclick="generateCoverWithAI()">
+                  <i class="fas fa-magic"></i> AI Generate Cover
+                </button>
+                <input type="hidden" id="aiCoverURL" name="aiCoverURL">
+              </div>
+              <p class="cover-hint">Add a high-quality cover image to attract readers.</p>
+            </div>
+
+            <button type="button" id="removeCover" class="btn-remove-cover hidden" onclick="removeCoverImage()">
+              <i class="fas fa-trash-alt"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Main Editor Area -->
+        <!-- Main Editor Area -->
+        <div class="editor-section">
+          <h3 class="section-label">Content</h3>
+          <div class="main-editor">
+
+            <!-- AI Writing Toolbar (Sticky/Integrates) -->
+            <div class="ai-toolbar">
+              <div class="tone-wrapper">
+                <i class="fas fa-sliders-h"></i>
+                <select id="toneSelector" class="tone-select-naked">
+                  <option value="Professional">Tone: Professional</option>
+                  <option value="Casual">Tone: Casual</option>
+                  <option value="Funny">Tone: Funny</option>
+                  <option value="Inspirational">Tone: Inspirational</option>
+                  <option value="Technical">Tone: Technical</option>
+                </select>
+              </div>
+
+              <div class="toolbar-divider"></div>
+
+              <button type="button" class="btn-toolbar-ai" onclick="generateWithAI()">
+                <i class="fas fa-sparkles"></i> AI Continue Writing
+              </button>
+            </div>
+
+            <!-- Body -->
+            <div class="editor-box">
+              <div id="editor" style="min-height: 400px; font-family: 'Merriweather', serif; font-size: 1.15rem;"></div>
+              <input type="hidden" name="body" id="body">
+            </div>
+          </div>
+        </div>
+
+        <!-- Category Section -->
+        <!-- Category Section -->
+        <div class="editor-section">
+          <h3 class="section-label">Category</h3>
+          <span class="section-hint">Choose 1 main category</span>
+          <div class="meta-section">
+            <div class="cat-list">
+              <% const categories=['Technology', 'Health' , 'Education' , 'Business' , 'Lifestyle' , 'Travel' , 'Food'
+                , 'Finance' , 'Science' , 'Art' , 'Sports' , 'Music' , 'Gaming' , 'Politics' , 'History' ]; %>
+                <% categories.forEach(cat=> { %>
+                  <label class="cat-item">
+                    <input type="radio" name="category" value="<%= cat %>" required>
+                    <span>
+                      <%= cat %>
+                    </span>
+                  </label>
+                  <% }) %>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tags Section -->
+        <!-- Tags Section -->
+        <div class="editor-section">
+          <h3 class="section-label">Tags</h3>
+          <span class="section-hint">Use 3–5 tags, comma separated</span>
+          <div class="meta-section">
+            <div class="tag-input-wrapper">
+              <i class="fas fa-hashtag"></i>
+              <input type="text" name="tags" id="tags" placeholder="Tags (comma separated)..." autocomplete="off">
+              <button type="button" class="btn-mini-ai" onclick="generateTags()">
+                <i class="fas fa-bolt"></i> AI FIND TAGS
+              </button>
+            </div>
+          </div>
+        </div>
+
+
+
+      </form>
+
+    </div>
+
+    <!-- Pre-Publish Checklist Modal -->
+    <div id="checklist-modal" class="modal-overlay hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>🚀 Ready to Publish?</h3>
+          <button type="button" class="close-modal" onclick="closeChecklist()">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p class="modal-intro">Let's check if your story is ready for the world:</p>
+          <ul class="checklist-items">
+            <li id="check-title"><i class="far fa-circle"></i> <span>Title</span></li>
+            <li id="check-cover"><i class="far fa-circle"></i> <span>Cover Image</span></li>
+            <li id="check-content"><i class="far fa-circle"></i> <span>Content (50+ words)</span></li>
+            <li id="check-category"><i class="far fa-circle"></i> <span>Category</span></li>
+            <li id="check-tags"><i class="far fa-circle"></i> <span>Tags</span></li>
+          </ul>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="closeChecklist()">Keep Editing</button>
+          <button type="button" id="btn-confirm-publish" class="btn-primary" onclick="submitFinal()" disabled>
+            Publish Now
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <%- include('./partials/footer') %>
+      <%- include('./partials/script') %>
+
+        <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+        <script>
+          // Initialize Quill editor
+          var quill = new Quill('#editor', {
+            theme: 'snow',
+            placeholder: 'Tell your story...',
+            modules: {
+              toolbar: [
+                [{ 'header': [1, 2, 3, false] }],
+                ['bold', 'italic', 'underline', 'strike'],
+                ['blockquote', 'code-block'],
+                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                [{ 'color': [] }, { 'background': [] }],
+                ['link', 'image'],
+                ['clean']
+              ]
+            }
+          });
+
+
+          // Generate Title Logic
+          window.generateTitles = async function () {
+            if (isAiBusy) return;
+
+            const body = quill.getText();
+            const tone = document.getElementById("toneSelector").value;
+            const btn = document.getElementById("title-magic-btn");
+            const suggestionsDiv = document.getElementById("title-suggestions");
+
+            if (body.trim().length < 50) {
+              alert("Please write some content first so AI can suggest titles!");
+              return;
+            }
+
+            const originalColor = btn.style.color;
+            btn.style.color = "#0066cc"; // Active color
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            isAiBusy = true;
+
+            try {
+              const response = await fetch("/ai/generate-title", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ body, tone })
+              });
+
+              const data = await response.json();
+
+              if (!response.ok) {
+                throw new Error(data.error || "Failed to generate titles");
+              }
+
+              if (data.titles && Array.isArray(data.titles)) {
+                suggestionsDiv.innerHTML = "";
+                suggestionsDiv.style.display = "flex";
+
+                data.titles.forEach(title => {
+                  const chip = document.createElement("button");
+                  chip.type = "button";
+                  chip.className = "btn-suggestion";
+                  chip.innerText = title;
+                  chip.style.padding = "8px 16px";
+                  chip.style.border = "1px solid #eee";
+                  chip.style.borderRadius = "20px";
+                  chip.style.background = "#fff";
+                  chip.style.cursor = "pointer";
+                  chip.style.fontSize = "0.9rem";
+                  chip.style.transition = "all 0.2s";
+
+                  chip.onmouseover = () => { chip.style.background = "#f0f7ff"; chip.style.borderColor = "#0066cc"; };
+                  chip.onmouseout = () => { chip.style.background = "#fff"; chip.style.borderColor = "#eee"; };
+
+                  chip.onclick = () => {
+                    document.getElementById("title").value = title;
+                    autoResize(document.getElementById("title"));
+                    suggestionsDiv.style.display = "none";
+                  };
+
+                  suggestionsDiv.appendChild(chip);
+                });
+              }
+
+            } catch (error) {
+              console.error("Title AI Error", error);
+              alert(error.message || "Could not generate titles.");
+            } finally {
+              btn.innerHTML = '<i class="fas fa-magic"></i>';
+              btn.style.color = "#ccc";
+              isAiBusy = false;
+            }
+          }
+
+          // Custom Word Count implementation for Quill
+          quill.on('text-change', function () {
+            var text = quill.getText();
+            var words = text.trim().split(/\s+/).filter(word => word.length > 0);
+            document.getElementById("word-count").innerText = `${words.length} words`;
+          });
+
+          // Auto-resize textareas (Title only now)
+          function autoResize(elem) {
+            elem.style.height = 'auto';
+            elem.style.height = elem.scrollHeight + 'px';
+          }
+
+          // Cover Image Preview
+          function previewCover(input) {
+            const preview = document.getElementById('coverPreview');
+            const removeBtn = document.getElementById('removeCover');
+            const controls = document.getElementById('coverControls');
+            const container = document.getElementById('coverContainer');
+
+            if (input.files && input.files[0]) {
+              const reader = new FileReader();
+              reader.onload = function (e) {
+                preview.src = e.target.result;
+                preview.classList.remove('hidden');
+                removeBtn.classList.remove('hidden');
+                controls.classList.add('hidden');
+                container.style.border = 'none';
+              }
+              reader.readAsDataURL(input.files[0]);
+            }
+          }
+
+          function removeCoverImage() {
+            const input = document.getElementById('coverImage');
+            const aiInput = document.getElementById('aiCoverURL');
+            const preview = document.getElementById('coverPreview');
+            const removeBtn = document.getElementById('removeCover');
+            const controls = document.getElementById('coverControls');
+            const container = document.getElementById('coverContainer');
+            const aiBtn = document.querySelector('.btn-cover-action.btn-ai-glass');
+
+            input.value = '';
+            aiInput.value = '';
+            preview.src = '';
+            preview.classList.add('hidden');
+            removeBtn.classList.add('hidden');
+            controls.classList.remove('hidden'); // Show controls again
+            container.style.border = '2px dashed #eee'; // Restore border
+
+            if (aiBtn) {
+              aiBtn.innerHTML = '<i class="fas fa-magic"></i> AI Generate';
+              aiBtn.disabled = false;
+            }
+          }
+
+          // Generate AI Cover Logic
+          async function generateCoverWithAI() {
+            const title = document.getElementById("title").value;
+            const tone = document.getElementById("toneSelector").value;
+
+            if (!title.trim()) {
+              alert("Please write a title first so AI knows what to generate!");
+              return;
+            }
+
+            const aiBtn = document.querySelector('.btn-cover-action.btn-ai-glass');
+            const originalText = aiBtn.innerHTML;
+            aiBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+            aiBtn.disabled = true;
+
+            // Map Tones to Visual Styles
+            const styleMap = {
+              "Professional": "minimalist, corporate, clean lines, high quality, 8k, business",
+              "Casual": "lifestyle, cozy, warm lighting, photorealistic, 4k",
+              "Funny": "cartoon, vibrant, colorful, playful, illustration",
+              "Inspirational": "majestic, sunrise, cinematic, motivational, dreamy, 8k",
+              "Technical": "cyberpunk, blueprint, futuristic, tech, glowing, neon, 4k"
+            };
+
+            const selectedStyle = styleMap[tone] || "minimalist, high quality";
+
+            // Construct Pollinations URL (Random seed to ensure uniqueness)
+            const seed = Math.floor(Math.random() * 10000);
+            // Prompt: Title + Tone Keywords + Generic Boosters
+            const prompt = `${title}, ${selectedStyle}, detailed, aesthetically pleasing`;
+            const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1200&height=600&nologo=true&seed=${seed}&model=flux`;
+
+            // Pre-load image to check success
+            const img = new Image();
+            img.src = imageUrl;
+            img.onload = () => {
+              const preview = document.getElementById('coverPreview');
+              const removeBtn = document.getElementById('removeCover');
+              const controls = document.getElementById('coverControls'); // NEW
+              const aiInput = document.getElementById('aiCoverURL');
+              const container = document.getElementById('coverContainer'); // NEW
+
+              preview.src = imageUrl;
+              aiInput.value = imageUrl;
+
+              preview.classList.remove('hidden');
+              removeBtn.classList.remove('hidden');
+              controls.classList.add('hidden');
+              container.style.border = 'none'; // Remove dashed border
+
+              aiBtn.innerHTML = originalText;
+              aiBtn.disabled = false;
+            };
+          }
+
+          // Initialize empty resize (Title only)
+          window.addEventListener('load', () => {
+            autoResize(document.getElementById('title'));
+          });
+
+          let isAiBusy = false; // Global lock
+
+          // AI Generation Logic (Adapted for Quill)
+          window.generateWithAI = async function () {
+            if (isAiBusy) return;
+
+            const title = document.getElementById("title").value;
+            // No direct body field anymore, using Quill
+            const btn = document.querySelector('.btn-toolbar-ai');
+            const tone = document.getElementById("toneSelector").value;
+
+            if (!title.trim()) {
+              alert("Please add a title first.");
+              return;
+            }
+
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Writing...';
+            btn.disabled = true;
+            isAiBusy = true;
+
+            try {
+              const response = await fetch("/ai/generate-blog", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ title, tone })
+              });
+
+              const data = await response.json();
+
+              if (data.content) {
+                // Insert content into Quill
+                // For typewriter effect, we'd need a custom loop inserting into delta
+                // For now, let's just insert basic text or HTML
+                // To keep it simple and robust:
+
+                // DOM-based Block Streaming (Robust)
+                // 1. Create a dummy element to parse the HTML string
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = data.content;
+
+                // 2. Get all top-level elements (p, h2, ul, etc.)
+                // Array.from is needed to convert HTMLCollection to manageable array
+                const blocks = Array.from(tempDiv.children).map(el => el.outerHTML);
+
+                // Fallback: If no tags were found (plain text), just use the text
+                if (blocks.length === 0) {
+                  blocks.push(`<p>${data.content}</p>`);
+                }
+
+                let i = 0;
+
+                function streamBlocks() {
+                  if (i < blocks.length) {
+                    const blockHTML = blocks[i];
+
+                    const range = { index: quill.getLength(), length: 0 };
+                    // Safely paste the HTML block
+                    quill.clipboard.dangerouslyPasteHTML(range.index, blockHTML);
+
+                    quill.scrollIntoView();
+
+                    i++;
+                    const delay = Math.floor(Math.random() * 400) + 400; // Slow cadence
+                    setTimeout(streamBlocks, delay);
+                  } else {
+                    finishAI();
+                  }
+                }
+
+                streamBlocks();
+
+                function finishAI() {
+                  btn.innerHTML = originalText;
+                  btn.disabled = false;
+                  isAiBusy = false;
+                }
+
+              } else {
+                quill.insertText(quill.getLength() - 1, "⚠️ No content generated.");
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                isAiBusy = false;
+              }
+            } catch (error) {
+              console.error("AI error:", error);
+              alert("AI Generation Failed: " + error.message);
+
+              // Try to reset button if found
+              const btn = document.querySelector('.btn-toolbar-ai');
+              if (btn) {
+                btn.innerHTML = '<i class="fas fa-sparkles"></i> Auto-Complete';
+                btn.disabled = false;
+              }
+              isAiBusy = false;
+            }
+          }
+
+
+          // Auto-Generate Tags Logic
+          window.generateTags = async function () {
+            if (isAiBusy) return;
+
+            try {
+              const title = document.getElementById("title").value;
+              const body = quill.getText();
+              const tagsInput = document.getElementById("tags");
+              const btn = document.querySelector('.btn-mini-ai'); // Corrected Selector
+
+              if (!btn) {
+                console.error("Tag AI Button not found");
+                return;
+              }
+
+              if (!title) {
+                alert("⚠️ Please add a title first so AI can suggest tags.");
+                return;
+              }
+
+              const originalText = btn.innerHTML;
+              btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+              btn.disabled = true;
+              isAiBusy = true;
+
+              const response = await fetch("/ai/generate-tags", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ title, body })
+              });
+
+              const data = await response.json();
+
+              if (!response.ok) {
+                throw new Error(data.error || "Server Error");
+              }
+
+              if (data.tags) {
+                const cleanTags = data.tags.replace(/["\.]/g, '');
+                tagsInput.value = cleanTags;
+                tagsInput.focus();
+              } else {
+                throw new Error("No tags generated");
+              }
+
+              btn.innerHTML = originalText;
+              btn.disabled = false;
+              isAiBusy = false;
+
+            } catch (error) {
+              console.error("Tag generation error:", error);
+              alert("Tag Generation Failed: " + error.message);
+
+              const btn = document.querySelector('.btn-tag-ai');
+              if (btn) {
+                btn.innerHTML = '<i class="fas fa-bolt"></i> AI';
+                btn.disabled = false;
+              }
+              isAiBusy = false;
+            }
+          }
+
+          // Modal Logic
+          const modal = document.getElementById('checklist-modal');
+          const confirmBtn = document.getElementById('btn-confirm-publish');
+
+          function closeChecklist() {
+            modal.classList.add('hidden');
+          }
+
+          function submitFinal() {
+            document.getElementById('publishForm').submit();
+          }
+
+          // Intercept Form Submission
+          document.getElementById('publishForm').addEventListener('submit', function (e) {
+            e.preventDefault(); // Stop default submit
+
+            const title = document.getElementById('title').value.trim();
+            const bodyContent = quill.root.innerHTML;
+            const textContent = quill.getText().trim();
+            const wordCount = textContent.split(/\s+/).filter(word => word.length > 0).length;
+            const coverImage = document.getElementById('coverImage');
+            const hasAiCover = document.getElementById('aiCoverURL').value !== "";
+            const category = document.querySelector('input[name="category"]:checked');
+            const tags = document.getElementById('tags').value.trim();
+
+            // Populate hidden input
+            document.getElementById('body').value = bodyContent;
+
+            // Validation State
+            const checks = {
+              title: !!title,
+              cover: (coverImage.files && coverImage.files.length > 0) || hasAiCover,
+              content: textContent && wordCount >= 50,
+              category: !!category,
+              tags: !!tags
+            };
+
+            // Update UI
+            updateCheckItem('check-title', checks.title);
+            updateCheckItem('check-cover', checks.cover);
+            updateCheckItem('check-content', checks.content);
+            updateCheckItem('check-category', checks.category);
+            updateCheckItem('check-tags', checks.tags);
+
+            // Enable/Disable Confirm
+            const allValid = Object.values(checks).every(Boolean);
+            confirmBtn.disabled = !allValid;
+            if (allValid) {
+              confirmBtn.classList.remove('btn-disabled');
+              confirmBtn.innerHTML = "Publish Now <i class='fas fa-arrow-right'></i>";
+            } else {
+              confirmBtn.classList.add('btn-disabled');
+              confirmBtn.innerHTML = "Fix Missing Items";
+            }
+
+            // Show Modal
+            modal.classList.remove('hidden');
+          });
+
+          function updateCheckItem(id, isValid) {
+            const el = document.getElementById(id);
+            const icon = el.querySelector('i');
+            if (isValid) {
+              el.classList.add('valid');
+              el.classList.remove('invalid');
+              icon.className = "fas fa-check-circle";
+              icon.style.color = "#10b981"; // Green
+            } else {
+              el.classList.add('invalid');
+              el.classList.remove('valid');
+              icon.className = "far fa-circle"; // Empty circle for to-do feel, or fa-times-circle
+              icon.className = "fas fa-exclamation-circle";
+              icon.style.color = "#ef4444"; // Red
+            }
+          }
+
+          // Close modal on outside click
+          window.onclick = function (event) {
+            if (event.target == modal) {
+              closeChecklist();
+            }
+          }
+        </script>
+</body>
+
+</html>

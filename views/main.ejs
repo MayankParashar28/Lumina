@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+
+<head>
+    <%- include('./partials/header') %>
+        <link rel="stylesheet" href="/css/landing.css">
+        <link rel="stylesheet" href="/css/blog-card.css">
+        <style>
+            html {
+                scroll-behavior: smooth;
+            }
+        </style>
+        <script>
+            // Theme logic - Critical to run in head to prevent flash
+            const theme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+        </script>
+</head>
+</head>
+
+<body>
+    <div class="noise-overlay"></div>
+    <div class="cursor-dot"></div>
+    <div class="cursor-outline"></div>
+
+    <%- include('./partials/nav') %>
+
+        <div class="main-wrapper">
+            <!-- Giant Hero Section -->
+            <section class="hero-section">
+                <div class="hero-background-text">LUMINA</div>
+                <div class="container position-relative z-2">
+                    <div class="row min-vh-100 align-items-center">
+                        <div class="col-lg-7 text-start">
+                            <h1 class="giant-text reveal-text">
+                                <span class="d-block">FRESH </span>
+                                <span class="d-block outline-text">PERSPECTIVES</span>
+                            </h1>
+                            <div class="hero-meta mt-4 reveal-delay-1 pe-lg-5">
+                                <p class="lead-subtitle">
+                                    A minimalist sanctuary where builders share insights and shape the future of tech.
+                                </p>
+                                <div class="cta-wrapper mt-5">
+                                    <% if (locals.user) { %>
+                                        <a href="/blog/add-new" class="magnetic-btn primary">
+                                            <span class="btn-text">Start Writing</span>
+                                        </a>
+                                        <% } else { %>
+                                            <a href="/user/signup" class="magnetic-btn primary">
+                                                <span class="btn-text">Join the Movement</span>
+                                            </a>
+                                            <% } %>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-5 d-none d-lg-block">
+                            <div class="hero-visual reveal-delay-2">
+                                <!-- The Living Grid: Generative 3D Terrain -->
+                                <div class="living-grid-wrapper">
+                                    <canvas id="living-grid-canvas"></canvas>
+                                    <div class="grid-overlay-vignette"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Marquee Section -->
+            <div class="marquee-section flow-left">
+                <div class="marquee-track">
+                    <span>BUILDING THE FUTURE • MINIMAL DESIGN • TECH INSIGHTS • FRESH PERSPECTIVES • </span>
+                    <span>BUILDING THE FUTURE • MINIMAL DESIGN • TECH INSIGHTS • FRESH PERSPECTIVES • </span>
+                </div>
+            </div>
+
+            <!-- Bento Grid Features -->
+            <section class="bento-section">
+                <div class="container">
+                    <div class="row mb-5">
+                        <div class="col-12">
+                            <h2 class="section-heading">THE ARSENAL<span class="dot">.</span></h2>
+                            <p class="section-subtitle">
+                                Tools for the modern storyteller. From AI augmentation to distraction-free writing,
+                                we provide the weapons you need to conquer the blank page.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="bento-grid">
+                        <div class="bento-item item-main">
+                            <div class="bento-content">
+                                <h3>AI Augmented</h3>
+                                <p>Transcend creative blocks. Our advanced AI co-pilot suggests ideas, refines
+                                    structure, and polishes your prose in real-time. It's not just a tool; it's your
+                                    creative partner.</p>
+                                <div class="bento-icon"><i class="fas fa-brain"></i></div>
+                            </div>
+                        </div>
+                        <div class="bento-item item-tall">
+                            <div class="bento-content">
+                                <h3>Minimalist<br>Core</h3>
+                                <p>Stripped of noise. No ads, no pop-ups, no clutter. A pure, zen-like writing
+                                    environment engineered for deep focus. It's just you, your thoughts, and the
+                                    blinking cursor.</p>
+                                <div class="bento-icon"><i class="fas fa-eraser"></i></div>
+                            </div>
+                        </div>
+                        <div class="bento-item item-wide">
+                            <div class="bento-content">
+                                <h3>Global Reach</h3>
+                                <p>Publish once, resonate everywhere. Your stories are instantly optimized for SEO and
+                                    cross-platform sharing, ensuring your voice finds its audience across the globe.</p>
+                                <div class="bento-icon"><i class="fas fa-globe"></i></div>
+                            </div>
+                        </div>
+                        <div class="bento-item item-normal">
+                            <div class="bento-content">
+                                <h3>Analytics</h3>
+                                <p>Data that matters. Go beyond vanity metrics with deep insights into reader engagement
+                                    and retention.</p>
+                                <div class="bento-icon"><i class="fas fa-chart-bar"></i></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Marquee Section Reverse -->
+            <div class="marquee-section flow-right">
+                <div class="marquee-track">
+                    <span>DESIGNED FOR WRITERS • BUILT FOR READERS • POWERED BY PASSION • </span>
+                    <span>DESIGNED FOR WRITERS • BUILT FOR READERS • POWERED BY PASSION • </span>
+                </div>
+            </div>
+
+            <!-- Latest Stories (Horizontal Scroll) -->
+            <section class="horizontal-scroll-section">
+                <div class="container-fluid px-0">
+                    <div class="d-flex align-items-end px-5 mb-5 justify-content-between">
+                        <h2 class="section-heading mb-0">FRESH INK<span class="dot">.</span></h2>
+                        <a href="#" class="view-all-link">VIEW ALL STORIES <i class="fas fa-arrow-right"></i></a>
+                    </div>
+
+                    <div class="horizontal-scroller">
+                        <div class="scroller-inner">
+                            <% if (locals.blogs && blogs.length> 0) { %>
+                                <% blogs.slice(0, 3).forEach(blog=> { %>
+                                    <div class="scroll-card">
+                                        <div class="card-image-wrapper">
+                                            <img src="<%= optimizeImage(blog.coverImageURL, { width: 600, crop: 'fill' }) %>"
+                                                alt="<%= blog.title %>">
+                                            <div class="card-overlay">
+                                                <a href="/blog/<%= blog._id %>" class="read-btn">READ</a>
+                                            </div>
+                                        </div>
+                                        <div class="card-info mt-3">
+                                            <span class="blog-cat">
+                                                <%= blog.category || 'Thought' %>
+                                            </span>
+                                            <h4>
+                                                <%= blog.title %>
+                                            </h4>
+                                        </div>
+                                    </div>
+                                    <% }) %>
+                                        <% } else { %>
+                                            <div class="empty-scroll-placeholder">
+                                                <h3>No stories yet. Be the first.</h3>
+                                            </div>
+                                            <% } %>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Big Stats -->
+            <section class="mega-stats">
+                <div class="container">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="stat-block">
+                                <span class="big-number">10+</span>
+                                <span class="stat-label">Active Voices</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="stat-block bordered">
+                                <span class="big-number">100+</span>
+                                <span class="stat-label">Words Written</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="stat-block">
+                                <span class="big-number">0$</span>
+                                <span class="stat-label">Always Free</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Footer CTA -->
+            <section class="footer-cta">
+                <div class="container text-center">
+                    <h2 class="cta-giant">MAKE HISTORY</h2>
+                    <p class="cta-description mt-4 quote-style">
+                        "The future is written by those who show up."
+                    </p>
+                    <div class="mt-5">
+                        <% if (locals.user) { %>
+                            <a href="/blog/add-new" class="magnetic-btn outline big">
+                                <span class="btn-text">Write Now</span>
+                            </a>
+                            <% } else { %>
+                                <a href="/user/signup" class="magnetic-btn outline big">
+                                    <span class="btn-text">Start Journey</span>
+                                </a>
+                                <% } %>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <%- include('./partials/footer') %>
+            <%- include('./partials/script') %>
+
+                <script>
+                    // Custom Cursor Logic
+                    const cursorDot = document.querySelector('.cursor-dot');
+                    const cursorOutline = document.querySelector('.cursor-outline');
+
+                    if (cursorDot && cursorOutline) {
+                        window.addEventListener('mousemove', (e) => {
+                            const posX = e.clientX;
+                            const posY = e.clientY;
+
+                            cursorDot.style.left = `${posX}px`;
+                            cursorDot.style.top = `${posY}px`;
+
+                            cursorOutline.animate({
+                                left: `${posX}px`,
+                                top: `${posY}px`
+                            }, { duration: 500, fill: "forwards" });
+                        });
+                    }
+
+                    // --- The Living Grid Engine ---
+                    const canvas = document.getElementById('living-grid-canvas');
+                    if (canvas) {
+                        const ctx = canvas.getContext('2d');
+                        let width, height;
+                        let mouseX = 0, mouseY = 0;
+                        let targetMouseX = 0, targetMouseY = 0;
+
+                        // Grid Parameters
+                        const gridSize = 40;
+                        const rows = 40;
+                        const cols = 40;
+                        const points = [];
+                        let frame = 0;
+
+                        const resize = () => {
+                            const parent = canvas.parentElement;
+                            width = parent.clientWidth;
+                            height = parent.clientHeight;
+                            canvas.width = width;
+                            canvas.height = height;
+                            initGrid();
+                        };
+
+                        const initGrid = () => {
+                            points.length = 0;
+                            for (let y = 0; y < rows; y++) {
+                                for (let x = 0; x < cols; x++) {
+                                    points.push({
+                                        x: (x / (cols - 1)) * width * 1.5 - (width * 0.25),
+                                        y: (y / (rows - 1)) * height * 1.5 - (height * 0.25),
+                                        baseX: (x / (cols - 1)) * width * 1.5 - (width * 0.25),
+                                        baseY: (y / (rows - 1)) * height * 1.5 - (height * 0.25),
+                                        z: 0,
+                                        angle: (x * 0.5) + (y * 0.2)
+                                    });
+                                }
+                            }
+                        };
+
+                        const animate = () => {
+                            ctx.clearRect(0, 0, width, height);
+                            frame += 0.05;
+
+                            mouseX += (targetMouseX - mouseX) * 0.1;
+                            mouseY += (targetMouseY - mouseY) * 0.1;
+
+                            const grad = ctx.createLinearGradient(0, 0, width, height);
+                            grad.addColorStop(0, 'rgba(99, 102, 241, 0.1)');
+                            grad.addColorStop(0.5, 'rgba(99, 102, 241, 0.4)');
+                            grad.addColorStop(1, 'rgba(6, 182, 212, 0.1)');
+                            ctx.strokeStyle = grad;
+                            ctx.lineWidth = 1;
+
+                            ctx.beginPath();
+                            for (let i = 0; i < points.length; i++) {
+                                const p = points[i];
+                                const waveZ = Math.sin(p.angle + frame) * 20;
+
+                                const dx = p.baseX - mouseX;
+                                const dy = p.baseY - mouseY;
+                                const dist = Math.sqrt(dx * dx + dy * dy);
+                                let interactZ = 0;
+
+                                if (dist < 300) {
+                                    interactZ = (1 - dist / 300) * -100;
+                                }
+
+                                p.z = waveZ + interactZ;
+
+                                const perspective = 1000;
+                                const scale = perspective / (perspective + p.z + 200);
+                                const screenX = p.baseX + (p.baseX - width / 2) * (scale - 1);
+                                const screenY = p.baseY + (p.baseY - height / 2) * (scale - 1);
+
+                                if ((i + 1) % cols !== 0) {
+                                    const n = points[i + 1];
+                                    const ns = perspective / (perspective + n.z + 200);
+                                    ctx.moveTo(screenX, screenY);
+                                    ctx.lineTo(n.baseX + (n.baseX - width / 2) * (ns - 1), n.baseY + (n.baseY - height / 2) * (ns - 1));
+                                }
+
+                                if (i + cols < points.length) {
+                                    const n = points[i + cols];
+                                    const ns = perspective / (perspective + n.z + 200);
+                                    ctx.moveTo(screenX, screenY);
+                                    ctx.lineTo(n.baseX + (n.baseX - width / 2) * (ns - 1), n.baseY + (n.baseY - height / 2) * (ns - 1));
+                                }
+                            }
+                            ctx.stroke();
+                            requestAnimationFrame(animate);
+                        };
+
+                        window.addEventListener('resize', resize);
+                        window.addEventListener('mousemove', (e) => {
+                            const rect = canvas.getBoundingClientRect();
+                            targetMouseX = e.clientX - rect.left;
+                            targetMouseY = e.clientY - rect.top;
+                        });
+
+                        resize();
+                        animate();
+                    }
+                </script>
+</body>
+
+</html>

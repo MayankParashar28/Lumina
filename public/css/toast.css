@@ -1,0 +1,38 @@
+/* Toast Flash Messages */
+#flash-toast-container {
+    position: fixed;
+    top: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2000;
+    max-width: 600px;
+    width: 90%;
+    pointer-events: none;
+    /* Let clicks pass through empty space */
+}
+
+#flash-toast-container .alert {
+    pointer-events: auto;
+    /* Re-enable clicks for buttons */
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    border: none;
+    backdrop-filter: blur(10px);
+}
+
+.fog-vanish {
+    animation: fogFadeOut 1.5s forwards ease-in;
+}
+
+@keyframes fogFadeOut {
+    0% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        filter: blur(0);
+    }
+
+    100% {
+        opacity: 0;
+        transform: translateY(-20px) scale(1.1);
+        filter: blur(10px);
+    }
+}
