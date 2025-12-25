@@ -17,10 +17,154 @@
 
 ---
 
+## 📸 Screenshots
+
+<div align="center">
+
+### Home Feed
+![Home Feed](screenshots/home-feed.png)
+*AI-powered personalized content feed with infinite scroll*
+
+### Semantic Search in Action
+![Search Results](screenshots/search-results.png)
+*Intelligent search finding relevant content beyond keywords*
+
+### AI Content Generation
+![AI Generation](screenshots/ai-generation.png)
+*Google Gemini-powered blog creation assistant*
+
+### Admin Dashboard
+![Admin Dashboard](screenshots/admin-dashboard.png)
+*Comprehensive content moderation and analytics*
+
+### Mobile Experience
+![Mobile View](screenshots/mobile-view.png)
+*Fully responsive design with touch-optimized UI*
+
+</div>
+
+---
+
+## 🏗️ System Architecture
+
+### High-Level Overview
+
+```mermaid
+graph TB
+    subgraph "Client Layer"
+        Browser["🌐 Browser/Mobile"]
+        UI["⚛️ EJS Templates + CSS"]
+    end
+    
+    subgraph "Application Layer"
+        Express["🚀 Express Server"]
+        Auth["🔐 Passport.js + OAuth"]
+        RL["🛡️ Rate Limiter"]
+        Socket["⚡ Socket.IO"]
+    end
+    
+    subgraph "Business Logic"
+        BlogService["📝 Blog Service"]
+        AIService["🤖 AI Service"]
+        SearchService["🔍 Search Service"]
+        NotifService["🔔 Notification Service"]
+    end
+    
+    subgraph "External Services"
+        Gemini["🧠 Google Gemini API"]
+        Cloudinary["☁️ Cloudinary CDN"]
+        MongoDB["🗄️ MongoDB Atlas"]
+    end
+    
+    Browser --> UI
+    UI --> Express
+    Express --> Auth
+    Express --> RL
+    Express --> Socket
+    
+    Express --> BlogService
+    Express --> AIService
+    Express --> SearchService
+    Express --> NotifService
+    
+    AIService --> Gemini
+    BlogService --> Cloudinary
+    BlogService --> MongoDB
+    SearchService --> MongoDB
+    NotifService --> Socket
+    
+    style Gemini fill:#4285f4,color:#fff
+    style Cloudinary fill:#3448c5,color:#fff
+    style MongoDB fill:#47a248,color:#fff
+```
+
+### Semantic Search Pipeline
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Frontend
+    participant Backend
+    participant Gemini
+    participant MongoDB
+    
+    Note over User,MongoDB: Content Creation Flow
+    User->>Frontend: Write blog post
+    Frontend->>Backend: POST /blog
+    Backend->>Gemini: Generate embedding
+    Gemini-->>Backend: 768-dim vector
+    Backend->>MongoDB: Store blog + embedding
+    MongoDB-->>Backend: Confirmation
+    Backend-->>Frontend: Success
+    
+    Note over User,MongoDB: Search Flow
+    User->>Frontend: Search "AI tutorials"
+    Frontend->>Backend: GET /search?q=AI+tutorials
+    Backend->>Gemini: Embed query
+    Gemini-->>Backend: Query vector
+    Backend->>MongoDB: Cosine similarity search
+    MongoDB-->>Backend: Top 10 results (sorted by score)
+    Backend-->>Frontend: Ranked results
+    Frontend-->>User: Display relevant posts
+```
+
+### Data Flow Architecture
+
+```mermaid
+flowchart LR
+    A[User Request] --> B{Authenticated?}
+    B -->|No| C[Login/OAuth]
+    B -->|Yes| D[Route Handler]
+    
+    D --> E{Request Type}
+    E -->|Blog CRUD| F[Blog Service]
+    E -->|AI Generation| G[AI Service]
+    E -->|Search| H[Search Service]
+    
+    F --> I[(MongoDB)]
+    G --> J[Google Gemini]
+    H --> I
+    
+    J --> K[Generate Embedding]
+    K --> I
+    
+    I --> L[Response]
+    L --> M[Render View]
+    M --> N[User]
+    
+    style J fill:#4285f4,color:#fff
+    style I fill:#47a248,color:#fff
+```
+
+---
+
 ## 📋 Table of Contents
 
+- [📸 Screenshots](#-screenshots)
+- [🏗️ System Architecture](#️-system-architecture)
 - [✨ Features](#-features)
-- [🛠️ Tech Stack](#-tech-stack)
+- [🔍 Search Innovation](#-search-innovation-our-competitive-edge)
+- [🛠️ Tech Stack](#️-tech-stack)
 - [🚀 Quick Start](#-quick-start)
 - [📊 Performance](#-performance)
 - [🔒 Security](#-security)
