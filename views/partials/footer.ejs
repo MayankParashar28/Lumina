@@ -42,9 +42,10 @@
     });
 </script>
 
-<!-- 🌊 Lenis Smooth Scroll -->
+<!-- 🌊 Lenis Smooth Scroll (Optimized) -->
 <script src="https://unpkg.com/@studio-freight/lenis@1.0.42/dist/lenis.min.js"></script>
 <script>
+    // Optimized configuration for stability ("No jerk")
     const lenis = new Lenis({
         duration: 1.2,
         easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
@@ -60,6 +61,10 @@
         lenis.raf(time);
         requestAnimationFrame(raf);
     }
-
     requestAnimationFrame(raf);
+
+    // Safety check to ensure body height is calculated
+    setTimeout(() => {
+        lenis.resize();
+    }, 1000);
 </script>
