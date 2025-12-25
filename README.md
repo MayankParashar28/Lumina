@@ -2,7 +2,7 @@
 
 # 🚀 Lumina
 
-### **AI-Powered Blogging Platform with Smart Search**
+### **Learning-Powered Blogging and Intelligent Retrieval**
 
 [![Production Ready](https://img.shields.io/badge/STATUS-Production%20Ready-success?style=for-the-badge)](#)
 [![Node.js](https://img.shields.io/badge/Node.js-v20+-339933?style=for-the-badge&logo=node.js)](https://nodejs.org/)
@@ -270,7 +270,43 @@ A modern, app-like experience on the web:
 
 ---
 
-## 🚀 Quick Start
+## �️ Tech Stack: The Full Arsenal
+
+We chose every tool for a specific reason—performance, scalability, or developer experience.
+
+### **Frontend Ecosystem**
+| Technology | Purpose |
+|:-----------|:--------|
+| **EJS (Embedded JS)** | Server-side rendering for optimal SEO and fast First Contentful Paint (FCP). |
+| **Vanilla CSS + Variables** | Custom design system without the bloat of frameworks. 100% control over the cascade. |
+| **Locomotive CSS** | Critical styles for the inertia-based scroll container. |
+| **Socket.IO Client** | Handles the bi-directional heartbeat for real-time notifications. |
+| **Bootstrap 5 (JS Only)** | Leveraged solely for complex interactive components (Modals, Dropdowns). |
+
+### **Backend Core**
+| Technology | Purpose |
+|:-----------|:--------|
+| **Node.js Runtime** | Non-blocking event loop perfect for handling I/O heavy workloads (AI + DB). |
+| **Express.js** | Minimalist web framework for routing and middleware orchestration. |
+| **Passport.js** | Robust authentication middleware handling the Google OAuth 2.0 strategy. |
+| **Multer** | Middleware for handling `multipart/form-data`, specifically enabling image uploads. |
+
+### **AI & Data Layer**
+| Technology | Purpose |
+|:-----------|:--------|
+| **Google Gemini Flash** | The "Fast Brain". Used for high-speed/low-latency content generation and rewriting. |
+| **Text Embedding 004** | The "Semantic Brain". Generates 768-dim vectors for the RAG system. |
+| **MongoDB Atlas** | Document store. Supports vector search arrays and flexible schema evolution. |
+| **Mongoose** | ODM. Provides schema validation and rich query API for MongoDB. |
+
+### **Infrastructure & DevOps**
+| Technology | Purpose |
+|:-----------|:--------|
+| **Docker** | Containerization. Ensures the app runs reliably in any environment. |
+| **Cloudinary** | Digital Asset Management. Handles AI-aware cropping, resizing, and format delivery (AVIF/WebP). |
+| **Git & GitHub** | Version control with production-grade branch protection rules. |
+
+
 
 ### Prerequisites
 ```
