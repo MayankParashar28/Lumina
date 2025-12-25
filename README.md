@@ -288,9 +288,7 @@ We utilized a battle-tested stack to ensure performance, security, and scalabili
 | **EJS (Embedded JS)** | Server-side rendering (SSR) for blazing fast FCP and SEO superiority. |
 | **Locomotive CSS** | Powers the premium inertia-based scrolling experience. |
 | **Socket.IO Client** | Real-time bi-directional communication for notifications. |
-| **Bootstrap 5 (JS)** | Complex interactive components (Modals, Dropdowns) without jQuery bloat. |
-| **Vanilla CSS 3** | Highly optimized, variable-based design system (Zero-runtime overhead). |
-| **FontAwesome** | Vector iconography. |
+
 
 ### **Backend & Architecture**
 | Technology | Purpose |
@@ -300,9 +298,7 @@ We utilized a battle-tested stack to ensure performance, security, and scalabili
 | **Passport.js** | Enterprise-grade authentication middleware (Google OAuth Strategy). |
 | **Multer** | Multipart/form-data handler for secure file uploads. |
 | **Helmet** | Secures HTTP headers to prevent simplistic attacks (XSS, Clickjacking). |
-| **Cors** | Cross-Origin Resource Sharing configuration. |
-| **Compression** | Gzip compression to reduce payload size by up to 70%. |
-| **Winston** | Industrial-grade structured logging for production debugging. |
+
 
 ### **AI & Data Intelligence**
 | Technology | Purpose |
@@ -313,12 +309,7 @@ We utilized a battle-tested stack to ensure performance, security, and scalabili
 | **Mongoose** | ODM for strict schema validation and query building. |
 | **Axios** | Promise-based HTTP client for external API communication. |
 
-### **Monetization & Integrations**
-| Technology | Purpose |
-|:-----------|:--------|
-| **Stripe** | Payment processing infrastructure for handling subscriptions. |
-| **Razorpay** | Alternative payment gateway for regional support. |
-| **Nodemailer** | SMTP transport for transactional emails (Welcome, Verify, etc.). |
+
 
 ### **Infrastructure & Tools**
 | Technology | Purpose |
