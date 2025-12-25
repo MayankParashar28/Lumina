@@ -36,30 +36,8 @@
                 scrollToTopBtn.style.display = window.scrollY > 400 ? "block" : "none";
             });
             scrollToTopBtn.addEventListener("click", () => {
-                const scroll = window.locomotive;
-                if (scroll) scroll.scrollTo('top');
-                else window.scrollTo({ top: 0, behavior: "smooth" });
+                window.scrollTo({ top: 0, behavior: "smooth" });
             });
         }
     });
 </script>
-
-<!-- Locomotive Scroll JS -->
-<script src="https://cdn.jsdelivr.net/npm/locomotive-scroll@4.1.4/dist/locomotive-scroll.min.js"></script>
-<script>
-    document.addEventListener("DOMContentLoaded", () => {
-        const scroll = new LocomotiveScroll({
-            el: document.querySelector('[data-scroll-container]'),
-            smooth: true,
-            multiplier: 1,
-            class: 'is-revealed'
-        });
-        window.locomotive = scroll; // Expose for button
-
-        // Sync with ResizeObserver
-        new ResizeObserver(() => scroll.update()).observe(document.querySelector('[data-scroll-container]'));
-    });
-</script>
-
-<!-- Close Scroll Container -->
-</div>
