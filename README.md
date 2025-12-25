@@ -289,6 +289,7 @@ We utilized a battle-tested stack to ensure performance, security, and scalabili
 | **Locomotive CSS** | Powers the premium inertia-based scrolling experience. |
 | **Socket.IO Client** | Real-time bi-directional communication for notifications. |
 
+<br>
 
 ### **Backend & Architecture**
 | Technology | Purpose |
@@ -299,6 +300,7 @@ We utilized a battle-tested stack to ensure performance, security, and scalabili
 | **Multer** | Multipart/form-data handler for secure file uploads. |
 | **Helmet** | Secures HTTP headers to prevent simplistic attacks (XSS, Clickjacking). |
 
+<br>
 
 ### **AI & Data Intelligence**
 | Technology | Purpose |
@@ -309,7 +311,7 @@ We utilized a battle-tested stack to ensure performance, security, and scalabili
 | **Mongoose** | ODM for strict schema validation and query building. |
 | **Axios** | Promise-based HTTP client for external API communication. |
 
-
+<br>
 
 ### **Infrastructure & Tools**
 | Technology | Purpose |
