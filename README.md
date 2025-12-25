@@ -17,6 +17,16 @@
 
 ---
 
+## 🎥 Project Demo
+
+<div align="center">
+  <img src="lumina-demo.webp" width="100%" alt="Lumina Application Demo">
+  <br>
+  <em>Full walkthrough showing responsive Bento grid, Semantic Search, and AI integration.</em>
+</div>
+
+---
+
 ## 📸 Screenshots
 
 <div align="center">
@@ -28,13 +38,13 @@
 
 | **Authentication** | **Admin Dashboard** |
 |:---:|:---:|
-| <img src="screenshots/authenication.png" width="400" alt="Authentication"> | <img src="screenshots/admin-dashboard.png" width="400" alt="Admin Dashboard"> |
+| <img src="screenshots/authentication.png" width="400" alt="Authentication"> | <img src="screenshots/admin-dashboard.png" width="400" alt="Admin Dashboard"> |
 | **Secure Logic / Signup** | **Analytics & Management** |
 
 | **Engagement** | **Documentation** |
 |:---:|:---:|
-| <img src="screenshots/comment-smartRecomedatoin.png" width="400" alt="Comments & Recommendations"> | <img src="screenshots/docs.png" width="400" alt="Docs"> |
-| **Comments & Smart Recs** | **API & Project Docs** |
+| <img src="screenshots/comment-smart-recommendation.png" width="400" alt="Comments & Recommendations"> | <img src="screenshots/docs.png" width="400" alt="Docs"> |
+| **Comments & Smart Recommendation System** | **Project Docs** |
 
 </div>
 
