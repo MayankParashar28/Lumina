@@ -21,25 +21,20 @@
 
 <div align="center">
 
-### Home Feed
-![Home Feed](screenshots/home-feed.png)
-*AI-powered personalized content feed with infinite scroll*
+| **Landing & Home** | **Feed & Content** |
+|:---:|:---:|
+| <img src="screenshots/home.png" width="400" alt="Home Page"> | <img src="screenshots/feed.png" width="400" alt="Blog Feed"> |
+| **Modern Landing Page** | **Infinite Scroll Feed** |
 
-### Semantic Search in Action
-![Search Results](screenshots/search-results.png)
-*Intelligent search finding relevant content beyond keywords*
+| **Authentication** | **Admin Dashboard** |
+|:---:|:---:|
+| <img src="screenshots/authenication.png" width="400" alt="Authentication"> | <img src="screenshots/admin-dashboard.png" width="400" alt="Admin Dashboard"> |
+| **Secure Logic / Signup** | **Analytics & Management** |
 
-### AI Content Generation
-![AI Generation](screenshots/ai-generation.png)
-*Google Gemini-powered blog creation assistant*
-
-### Admin Dashboard
-![Admin Dashboard](screenshots/admin-dashboard.png)
-*Comprehensive content moderation and analytics*
-
-### Mobile Experience
-![Mobile View](screenshots/mobile-view.png)
-*Fully responsive design with touch-optimized UI*
+| **Documentation** |
+|:---:|
+| <img src="screenshots/docs.png" width="400" alt="Docs"> |
+| **API & Project Docs** |
 
 </div>
 
