@@ -42,7 +42,7 @@
 
 ## 🏗️ System Architecture
 
-### High-Level Overview
+### 🔭 High-Level Overview
 
 ```mermaid
 graph TB
@@ -93,7 +93,7 @@ graph TB
     style MongoDB fill:#47a248,color:#fff
 ```
 
-### Semantic Search Pipeline
+### 🧬 Semantic Search Pipeline
 
 ```mermaid
 sequenceDiagram
@@ -123,7 +123,7 @@ sequenceDiagram
     Frontend-->>User: Display relevant posts
 ```
 
-### Data Flow Architecture
+### 🔄 Data Flow Architecture
 
 ```mermaid
 flowchart LR
@@ -197,13 +197,13 @@ flowchart LR
 
 ## 🧠 Search & AI: Embeddings & Smart Recommendations
 
-### **The Discovery Crisis: Why Keywords Fail**
+### 😵 The Discovery Crisis: Why Keywords Fail
 In an era of information overflow, traditional search engines suffer from **"Context Blindness."**
 - 🚫 **Rigid Algorithms**: They rely on exact-match (SQL `LIKE`) and fail to grasp human intent.
 - 🚫 **Missed Connections**: A search for *"scalable systems"* misses *"Microservices 101"* because keywords don't match.
-- � **Information Silos**: Valuable insights remain buried, leading to dead-end user journeys.
+- 🚫 **Information Silos**: Valuable insights remain buried, leading to dead-end user journeys.
 
-### **The Solution: RAG-Powered Cognitive Retrieval**
+### 💡 The Solution: RAG-Powered Cognitive Retrieval
 Lumina implements a high-performance **Retrieval-Augmented Generation (RAG)** architecture using **Google's Text Embedding 004**.
 We don't just index words; we vectorize *meaning*.
 
@@ -218,7 +218,7 @@ We don't just index words; we vectorize *meaning*.
 - 🔌 **API-First Design**: Ready for integrations with CRM, Email Marketing, and Social Media automations.
 - 🛡️ **Enterprise-Grade Security**: Helmet.js headers, Rate Limiting, and XSS protection out of the box.
 
-### **Technical Implementation**
+### 💻 Technical Implementation
 
 ```javascript
 // Generate embedding for new blog
@@ -233,7 +233,7 @@ const results = blogs.map(b => ({
 })).sort((a, b) => b.score - a.score);
 ```
 
-### **Performance Impact**
+### 🚀 Performance Impact
 
 | Metric | Traditional Search | Semantic Search |
 |--------|-------------------|-----------------|
@@ -242,7 +242,7 @@ const results = blogs.map(b => ({
 | **Discovery Rate** | 10% of content | **35% of content** ✅ |
 | **Query Time** | 120ms | **95ms** ✅ |
 
-### **Why This Wins**
+### 🏆 Why This Wins
 
 - ✅ **Google Gemini Integration** - Showcases advanced AI usage
 - ✅ **Production-Scale** - Handles 10K+ documents efficiently
@@ -284,7 +284,7 @@ A modern, app-like experience on the web:
 
 We utilized a battle-tested stack to ensure performance, security, and scalability.
 
-### **Frontend & User Experience**
+### 🎨 Frontend & User Experience
 | Technology | Purpose |
 |:-----------|:--------|
 | **EJS (Embedded JS)** | Server-side rendering (SSR) for blazing fast FCP and SEO superiority. |
@@ -293,7 +293,7 @@ We utilized a battle-tested stack to ensure performance, security, and scalabili
 
 <br>
 
-### **Backend & Architecture**
+### ⚙️ Backend & Architecture
 | Technology | Purpose |
 |:-----------|:--------|
 | **Node.js** | Event-driven runtime for handling concurrent I/O operations efficiently. |
@@ -304,7 +304,7 @@ We utilized a battle-tested stack to ensure performance, security, and scalabili
 
 <br>
 
-### **AI & Data Intelligence**
+### 🧠 AI & Data Intelligence
 | Technology | Purpose |
 |:-----------|:--------|
 | **Google Gemini Flash** | High-speed LLM for content generation, rewriting, and summarization. |
@@ -315,7 +315,7 @@ We utilized a battle-tested stack to ensure performance, security, and scalabili
 
 <br>
 
-### **Infrastructure & Tools**
+### 🏗️ Infrastructure & Tools
 | Technology | Purpose |
 |:-----------|:--------|
 | **Docker** | Containerization ensuring "Write once, run anywhere" consistency. |
@@ -329,7 +329,7 @@ We utilized a battle-tested stack to ensure performance, security, and scalabili
 
 
 ### Prerequisites
-```
+```bash
 Node.js >= 20.0.0
 MongoDB >= 6.0
 Google Gemini API Key
@@ -384,7 +384,7 @@ Cloudinary API Key (for image uploads)
 
 ## 📊 Performance
 
-### Core Web Vitals
+### 📈 Core Web Vitals
 | Metric | Target | Achieved |
 |--------|--------|----------|
 | **LCP** | < 2.5s | ✅ 1.8s |
@@ -392,7 +392,7 @@ Cloudinary API Key (for image uploads)
 | **CLS** | < 0.1 | ✅ 0.05 |
 | **TTFB** | < 600ms | ✅ 420ms |
 
-### Optimizations
+### ⚡ Optimizations
 - ✅ Brotli compression (70% reduction)
 - ✅ Image optimization via Cloudinary
 - ✅ Database indexing for fast queries
@@ -403,12 +403,12 @@ Cloudinary API Key (for image uploads)
 
 ## 🔒 Security
 
-### Authentication
+### 🔐 Authentication
 - SHA-256 password hashing with unique salts
 - Session-based auth with secure cookies
 - Rate limiting on sensitive endpoints
 
-### Rate Limits
+### 🛡️ Rate Limits
 | Endpoint | Limit | Window |
 |----------|-------|--------|
 | Login/Signup | 5 req | 15 min |
@@ -416,7 +416,7 @@ Cloudinary API Key (for image uploads)
 | Blog Creation | 1 req | 30 min |
 | Comments | 1 req | 5 min |
 
-### Security Headers (Helmet.js)
+### 👮 Security Headers (Helmet.js)
 - ✅ Content Security Policy (CSP)
 - ✅ HSTS (HTTP Strict Transport Security)
 - ✅ X-Frame-Options (Clickjacking protection)
@@ -444,7 +444,7 @@ We welcome contributions! Follow these steps:
 4. Push: `git push origin feature/amazing-feature`
 5. Open a Pull Request
 
-### Commit Convention
+### 📝 Commit Convention
 Follow [Conventional Commits](https://www.conventionalcommits.org/):
 - `feat:` New feature
 - `fix:` Bug fix
