@@ -31,10 +31,10 @@
 | <img src="screenshots/authenication.png" width="400" alt="Authentication"> | <img src="screenshots/admin-dashboard.png" width="400" alt="Admin Dashboard"> |
 | **Secure Logic / Signup** | **Analytics & Management** |
 
-| **Documentation** |
-|:---:|
-| <img src="screenshots/docs.png" width="400" alt="Docs"> |
-| **API & Project Docs** |
+| **Engagement** | **Documentation** |
+|:---:|:---:|
+| <img src="screenshots/comment-smartRecomedatoin.png" width="400" alt="Comments & Recommendations"> | <img src="screenshots/docs.png" width="400" alt="Docs"> |
+| **Comments & Smart Recs** | **API & Project Docs** |
 
 </div>
 
