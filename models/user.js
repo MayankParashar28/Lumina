@@ -129,6 +129,9 @@ const userSchema = new Schema(
 
 // ✅ Hash password before saving user
 userSchema.pre("save", function (next) {
+  // Allow skipping hash (useful when moving from pendingUser which is already hashed)
+  if (this._skipHash) return next();
+
   if (!this.isModified("password")) return next();
 
   const salt = randomBytes(16).toString("hex");

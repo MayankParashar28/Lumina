@@ -623,7 +623,8 @@ router.get("/verify/:token", verifyLimiter, async (req, res) => {
     }
 
     // 2. Move to Real User Collection
-    const newUser = await User.create({
+    // 2. Move to Real User Collection
+    const newUser = new User({
       fullName: pendingUser.fullName,
       email: pendingUser.email,
       password: pendingUser.password, // Already hashed
@@ -632,6 +633,10 @@ router.get("/verify/:token", verifyLimiter, async (req, res) => {
       isVerified: true,
       role: "USER"
     });
+
+    // Skip hashing because it's already hashed in PendingUser
+    newUser._skipHash = true;
+    await newUser.save();
 
     // 3. Delete from Pending
     await PendingUser.deleteOne({ _id: pendingUser._id });

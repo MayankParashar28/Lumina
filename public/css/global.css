@@ -25,6 +25,8 @@ body {
     flex-direction: column;
     min-height: 100vh;
     width: 100%;
+    overflow-x: hidden;
+    /* Prevent horizontal scroll */
     overscroll-behavior: none;
     /* Prevents bounce/jerk conflict */
 }
@@ -131,6 +133,8 @@ input.form-control:focus {
     transform: translateX(-50%);
     width: 90%;
     max-width: 1000px;
+    box-sizing: border-box;
+    /* Ensure padding doesn't add to width */
     z-index: 1000;
     transition: all 0.3s ease;
 }
@@ -141,11 +145,15 @@ input.form-control:focus {
     -webkit-backdrop-filter: blur(16px);
     border: 1px solid rgba(255, 255, 255, 0.3);
     border-radius: 999px;
-    padding: 0.8rem 2rem;
+    padding: 0.8rem 1.5rem;
+    /* Reduced horizontal padding */
     display: flex;
     align-items: center;
     justify-content: space-between;
     box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
+    width: 100%;
+    /* Ensure it fills container but respects box-sizing */
+    box-sizing: border-box;
 }
 
 [data-theme="dark"] .nav-content {
