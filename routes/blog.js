@@ -21,7 +21,6 @@ const router = Router();
 const { storage } = require("../config/cloudConfig");
 const upload = multer({ storage: storage });
 
-// 📝 Create a Blog
 // 📝 Create a Blog (GET Form)
 router.get("/add-new", async (req, res) => {
   try {
@@ -69,10 +68,63 @@ router.get("/:id", async (req, res) => {
     blog.views += 1;
     await blog.save();
 
-    // Fetch comments
-    const comments = await Comment.find({ blogId: req.params.id })
+    // Fetch comments (All comments for this blog)
+    const allComments = await Comment.find({ blogId: req.params.id })
       .populate("createdBy", "fullName profilePic")
-      .lean() || [];
+      .lean();
+
+    // 🧵 Build Thread Tree
+    const commentMap = {};
+    const comments = []; // Top-level roots
+
+    // Initialize Map
+    allComments.forEach(c => {
+      c.children = [];
+      commentMap[c._id.toString()] = c;
+    });
+
+    // Link Children to Parents
+    allComments.forEach(c => {
+      if (c.parentId) {
+        const parent = commentMap[c.parentId.toString()];
+        if (parent) {
+          parent.children.push(c);
+        }
+      } else {
+        comments.push(c); // Is Root
+      }
+    });
+
+    // ⚡ Sort: Author > Pinned > Newest
+    const authorId = blog.createdBy ? blog.createdBy._id.toString() : null;
+
+    // Recursive Sort Function
+    const sortComments = (list) => {
+      list.sort((a, b) => {
+        // 1. Author (Always First)
+        if (authorId) {
+          const aIsAuthor = a.createdBy && a.createdBy._id.toString() === authorId;
+          const bIsAuthor = b.createdBy && b.createdBy._id.toString() === authorId;
+
+          if (aIsAuthor && !bIsAuthor) return -1;
+          if (!aIsAuthor && bIsAuthor) return 1;
+        }
+
+        // 2. Pinned
+        if (a.isPinned && !b.isPinned) return -1;
+        if (!a.isPinned && b.isPinned) return 1;
+
+        // 3. Newest First
+        return new Date(b.createdAt) - new Date(a.createdAt);
+      });
+
+      // Recursively sort children
+      list.forEach(c => {
+        if (c.children.length > 0) sortComments(c.children);
+      });
+    };
+
+    sortComments(comments);
 
     // Check if bookmarked & Track History
     let isBookmarked = false;
@@ -301,6 +353,30 @@ router.post("/comment/:blogId", async (req, res) => {
       }
     }
 
+    // 🔴 Real-time Update: Emit new root comment
+    const io = req.app.get("io");
+    if (io) {
+      const populatedComment = await Comment.findById(comment._id).populate("createdBy", "fullName profilePic");
+
+      // Render the partial to a string
+      res.render("partials/comment-thread", {
+        comment: populatedComment,
+        user: req.user,
+        blog: blog,
+        moment: require("moment")
+      }, (err, html) => {
+        if (!err) {
+          io.to(`blog:${req.params.blogId}`).emit("new_comment", {
+            html: html,
+            parentId: null,
+            commentId: comment._id
+          });
+        } else {
+          console.error("❌ EJS Render Error:", err);
+        }
+      });
+    }
+
     req.flash("success", "Comment added successfully!");
     return res.redirect(`/blog/${req.params.blogId}`);
   } catch (error) {
@@ -340,6 +416,181 @@ router.post("/comment/delete/:commentId", async (req, res) => {
     console.error("❌ Error deleting comment:", error);
     req.flash("error", "Server error.");
     return res.redirect("back");
+  }
+});
+
+// 💬 Reply to Comment (Threaded)
+router.post("/comment/:commentId/reply", async (req, res) => {
+  try {
+    if (!req.user) return res.status(401).send("Unauthorized");
+
+    const parentComment = await Comment.findById(req.params.commentId).populate("blogId");
+    if (!parentComment) return res.status(404).send("Parent comment not found");
+
+    // ✅ Threaded Reply: Create new Document
+    const reply = await Comment.create({
+      content: req.body.content,
+      blogId: parentComment.blogId._id,
+      createdBy: req.user._id,
+      parentId: parentComment._id,
+      depth: (parentComment.depth || 1) + 1,
+      createdAt: new Date()
+    });
+
+    // Notify Parent Author
+    if (parentComment.createdBy.toString() !== req.user._id.toString()) {
+      await Notification.create({
+        userId: parentComment.createdBy,
+        senderId: req.user._id,
+        message: `${req.user.fullName} replied: "${req.body.content}"`,
+        type: "reply",
+        read: false,
+      });
+
+      const io = req.app.get("io");
+      if (io) {
+        io.to(`user:${parentComment.createdBy.toString()}`).emit("new_notification", {
+          message: `${req.user.fullName} replied: "${req.body.content}"`
+        });
+      }
+    }
+
+    // 🚀 UNIFIED RENDER: Generate HTML for both Socket & AJAX
+    const populatedReply = await Comment.findById(reply._id).populate("createdBy", "fullName profilePic");
+
+    // Render the partial to a string
+    res.render("partials/comment-thread", {
+      comment: populatedReply,
+      user: req.user,
+      blog: parentComment.blogId,
+      moment: require("moment")
+    }, (err, html) => {
+      if (err) {
+        console.error("❌ EJS Render Error:", err);
+        return res.status(500).json({ success: false, error: "Render Error" });
+      }
+
+      // 🔴 1. Real-time Update (Everyone else)
+      const io = req.app.get("io");
+      if (io) {
+        io.to(`blog:${parentComment.blogId._id}`).emit("new_comment", {
+          html: html,
+          parentId: parentComment._id,
+          commentId: reply._id
+        });
+      }
+
+      // 🟢 2. AJAX Response (The sender)
+      if (req.xhr || req.headers.accept.includes('json')) {
+        return res.json({ success: true, reply: populatedReply, html: html });
+      }
+
+      // 🔵 3. Fallback Redirect (No-JS)
+      req.flash("success", "Reply posted.");
+      return res.redirect(`/blog/${parentComment.blogId._id}`);
+    });
+
+
+
+  } catch (error) {
+    console.error("❌ Error replying:", error);
+    if (req.xhr || req.headers.accept.includes('json')) {
+      return res.status(500).json({ success: false, error: "Server Error" });
+    }
+    res.status(500).send("Server Error");
+  }
+});
+
+// 📌 Toggle Pin Comment
+router.post("/comment/:commentId/pin", async (req, res) => {
+  try {
+    if (!req.user) return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    const comment = await Comment.findById(req.params.commentId).populate("blogId");
+    if (!comment) return res.status(404).json({ success: false, message: "Comment not found" });
+
+    // Auth: Only Blog Author can pin
+    if (comment.blogId.createdBy.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ success: false, message: "Only author can pin" });
+    }
+
+    // Toggle logic
+    const wasPinned = comment.isPinned;
+
+    // Optional: Unpin all others if you want only 1 pinned comment? 
+    // Let's stick to simple toggle for now, allowing multiple pins is fine, or UI will sort them.
+    // If we want Single Pin behavior:
+    if (!wasPinned) {
+      await Comment.updateMany({ blogId: comment.blogId._id }, { isPinned: false });
+    }
+
+    comment.isPinned = !wasPinned;
+    await comment.save();
+
+    return res.json({ success: true, isPinned: comment.isPinned });
+  } catch (error) {
+    console.error("❌ Pin Error:", error);
+    res.status(500).json({ success: false });
+  }
+});
+
+// 😍 Reaction to Comment
+router.post("/comment/:commentId/react", async (req, res) => {
+  try {
+    if (!req.user) return res.status(401).json({ success: false, message: "Login required" });
+
+    const { emoji } = req.body;
+    const userId = req.user._id.toString();
+
+    // Use lean() to get POJO and avoid Schema Validation on load
+    // This allows us to handle the "corrupt" Array data without crashing
+    let comment = await Comment.findById(req.params.commentId).lean();
+    if (!comment) return res.status(404).json({ success: false });
+
+    let reactions = comment.reactions || {};
+    let isCorrupt = false;
+
+    // Detect legacy/corrupt data (Array instead of Map/Object)
+    if (Array.isArray(reactions) || typeof reactions !== 'object') {
+      reactions = {};
+      isCorrupt = true; // Flag to overwrite entire field to fix it
+    }
+
+    const currentEmoji = reactions[userId];
+    let updateQuery = {};
+
+    if (currentEmoji === emoji) {
+      // Toggle OFF
+      delete reactions[userId]; // Update local for counts
+      if (isCorrupt) {
+        updateQuery = { $set: { reactions: reactions } }; // Overwrite/Reset to valid object
+      } else {
+        updateQuery = { $unset: { [`reactions.${userId}`]: 1 } };
+      }
+    } else {
+      // Toggle ON / Switch
+      reactions[userId] = emoji; // Update local for counts
+      if (isCorrupt) {
+        updateQuery = { $set: { reactions: reactions } }; // Overwrite/Reset to valid object
+      } else {
+        updateQuery = { $set: { [`reactions.${userId}`]: emoji } };
+      }
+    }
+
+    // Perform atomic update (bypasses schema validation)
+    await Comment.updateOne({ _id: req.params.commentId }, updateQuery);
+
+    // Calculate new counts
+    const reactionCounts = {};
+    Object.values(reactions).forEach((e) => {
+      reactionCounts[e] = (reactionCounts[e] || 0) + 1;
+    });
+
+    return res.json({ success: true, reactionCounts });
+
+  } catch (error) {
+    console.error("❌ Reaction Error:", error);
+    res.status(500).json({ success: false });
   }
 });
 
@@ -488,7 +739,7 @@ router.get("/tag/:tag", async (req, res) => {
 // 🔥 Fetch Featured Blogs
 router.get("/featured", async (req, res) => {
   const featuredBlogs = await Blog.find({ featured: true });
-  console.log(featuredBlogs); // Debugging: Check if blogs are fetched  console.log("Featured Blogs:", featuredBlogs); // Debugging
+
   return res.render("home", { user: req.user, blogs: featuredBlogs });
 });
 
@@ -567,7 +818,7 @@ router.post("/", upload.single("coverImage"), async (req, res) => {
     // ✅ Save Blog in Database
     const blog = await Blog.create({
       title,
-      body: finalBody,
+      finalBody,
       category,
       tags: tagArray,
       createdBy: req.user._id,
@@ -615,20 +866,22 @@ router.post("/", upload.single("coverImage"), async (req, res) => {
       });
     }
 
-    return res.redirect("/");
+    req.flash("success", "Blog posted successfully!");
+    return res.redirect(`/blog/${blog._id}`);
+
   } catch (error) {
-    console.error("❌ Server Error:", error);
+    console.error("❌ Error creating blog:", error);
     res.status(500).send("Internal Server Error");
   }
 });
 
-
-// 🚀 Infinite Scroll API
+// ⚡ Local API: Get Paginated Blogs (Infinite Scroll)
 router.get("/api/feed", async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 8;
-    const categoryFilter = req.query.category ? req.query.category.toLowerCase() : "";
+    const limit = 5;
+    const categoryFilter = req.query.category || "all";
+
     const skip = (page - 1) * limit;
 
     let filter = {};

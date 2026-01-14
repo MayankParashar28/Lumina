@@ -964,6 +964,11 @@ body {
 .comment-card {
     display: flex;
     gap: 1rem;
+    padding: 1.2rem;
+    border-radius: 16px;
+    transition: all 0.2s;
+    position: relative;
+    /* Ensure badges work */
 }
 
 .comment-avatar-small {
@@ -1095,3 +1100,644 @@ body {
         color: #333 !important;
     }
 }
+
+/* ⚡ Reactions & Actions Bar */
+.comment-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0.8rem;
+    padding-top: 0.6rem;
+    border-top: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.reaction-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+}
+
+.reaction-btn {
+    background: #f2f4f7;
+    /* Soft gray like modern social apps */
+    border: none;
+    border-radius: 20px;
+    padding: 0.35rem 0.75rem;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    /* Bouncy transition */
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: #444;
+    user-select: none;
+    font-family: 'Inter', sans-serif;
+    /* Ensure clean font */
+}
+
+.reaction-btn:hover {
+    background: #e4e6eb;
+    transform: translateY(-2px) scale(1.05);
+}
+
+.reaction-btn.active {
+    background: #e3f2fd;
+    /* Light Blue */
+    color: #1565c0;
+    box-shadow: 0 4px 10px rgba(33, 150, 243, 0.15);
+}
+
+.reaction-btn.active .count {
+    color: #0d47a1;
+    font-weight: 800;
+}
+
+.reaction-btn .count {
+    font-size: 0.8rem;
+    font-weight: 600;
+    opacity: 0.9;
+}
+
+/* 💬 Reply Button & Form */
+.btn-reply-toggle {
+    background: none;
+    border: none;
+    color: #666;
+    font-size: 0.85rem;
+    cursor: pointer;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    transition: background 0.2s;
+}
+
+.btn-reply-toggle:hover {
+    background: #f0f0f0;
+    color: #000;
+}
+
+/* 😃 Reaction Picker System */
+.reaction-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-reaction-trigger {
+    background: transparent;
+    border: none;
+    color: #888;
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 0.3rem 0.5rem;
+    border-radius: 50%;
+    transition: color 0.2s, background 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-reaction-trigger:hover {
+    background: #f0f0f0;
+    color: #e91e63;
+    /* Pink hover */
+}
+
+.text-red {
+    color: #e91e63;
+}
+
+.reaction-picker {
+    position: absolute;
+    top: 100%;
+    /* Below the trigger */
+    right: 0;
+    /* Align right */
+    left: auto;
+    bottom: auto;
+    background: #fff;
+    border-radius: 50px;
+    padding: 0 0.5rem;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    display: flex;
+    gap: 0.2rem;
+    z-index: 100;
+    border: 1px solid #f0f0f0;
+    animation: fadeInScale 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    margin-top: 5px;
+}
+
+.reaction-picker.hidden {
+    display: none;
+}
+
+.reaction-option {
+    background: transparent;
+    border: none;
+    font-size: 1.2rem;
+    padding: 0.4rem;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.reaction-option:hover {
+    transform: scale(1.3);
+}
+
+.reaction-option.active {
+    background: rgba(233, 30, 99, 0.1);
+    border-radius: 50%;
+}
+
+@keyframes fadeInScale {
+    from {
+        opacity: 0;
+        transform: scale(0.8) translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* Chips for existing counts */
+.existing-reactions {
+    display: flex;
+    gap: 0.3rem;
+    flex-wrap: wrap;
+}
+
+.reaction-count-chip {
+    background: #f0f2f5;
+    border-radius: 12px;
+    padding: 0.2rem 0.6rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #555;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.2rem;
+    transition: background 0.2s;
+}
+
+.reaction-count-chip:hover {
+    background: #e4e6eb;
+}
+
+.count-num {
+    font-size: 0.7rem;
+    opacity: 0.8;
+}
+
+.reply-form.hidden {
+    display: none;
+}
+
+.reply-form {
+    margin-top: 0.5rem;
+    padding-left: 1rem;
+    border-left: 2px solid #e0e0e0;
+    margin-left: 20px;
+    /* Offset for thread line */
+    animation: fadeIn 0.3s ease;
+}
+
+.reply-input-wrapper {
+    display: flex;
+    gap: 0.8rem;
+    align-items: center;
+}
+
+.reply-avatar {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    object-fit: cover;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.reply-form textarea {
+    flex: 1;
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    padding: 0.3rem 0.8rem;
+    resize: none;
+    font-family: inherit;
+    font-size: 0.85rem;
+    background: #f9f9f9;
+    transition: all 0.2s;
+    height: 32px;
+    min-height: 32px;
+    overflow: hidden;
+}
+
+.reply-form textarea:focus {
+    background: #fff;
+    border-color: #000;
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.05);
+    outline: none;
+}
+
+.btn-submit-reply {
+    background: #111;
+    color: #fff;
+    border: none;
+    border-radius: 18px;
+    padding: 0.4rem 1rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.btn-submit-reply:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* 🔍 Nested Replies (Thread Style) */
+.nested-replies {
+    position: relative;
+    margin-top: 1rem;
+    padding-left: 2rem;
+    /* Indentation step */
+    border-left: 2px solid #e0e0e0;
+    /* Continuous thread line */
+    margin-left: 1rem;
+    /* spacing from parent avatar */
+}
+
+/* Hide default before if using border-left */
+.nested-replies::before {
+    display: none;
+}
+
+.reply-card {
+    position: relative;
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    background: transparent;
+}
+
+/* Curved Connector */
+.reply-card::before {
+    content: '';
+    position: absolute;
+    top: 24px;
+    /* Align with avatar center */
+    left: -26px;
+    /* 3rem (48px) - 22px = 26px gap */
+    width: 26px;
+    height: 2px;
+    background: #e0e0e0;
+    border-radius: 2px 0 0 2px;
+}
+
+/*
+.reply-card:last-child::after {
+    content: '';
+    position: absolute;
+    top: 20px;
+    left: -26px;
+    bottom: 0;
+    width: 2px;
+    background: #fff;
+}
+*/
+
+.reply-avatar-small {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #fff;
+    /* Ring effect */
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    z-index: 2;
+    /* Above lines */
+    background: #fff;
+}
+
+.reply-content {
+    background: #f8f9fa;
+    padding: 0.8rem 1rem;
+    border-radius: 0 12px 12px 12px;
+    border: 1px solid #eee;
+    flex: 1;
+    position: relative;
+    /* Triangle pointer? Optional */
+}
+
+.reply-header {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.4rem;
+}
+
+.reply-author-badge {
+    background: #333;
+    color: #fff;
+    font-size: 0.65rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 100px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.reply-date {
+    color: #999;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.reply-body {
+    font-size: 0.95rem;
+    color: #222;
+    line-height: 1.5;
+    margin: 0;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 📌 Pinned Comment */
+.comment-card.is-pinned {
+    border: 1px solid #ffb74d;
+    /* Subtle Gold/Orange */
+    background: #fff8e1;
+    box-shadow: 0 4px 12px rgba(255, 167, 38, 0.1);
+}
+
+.pinned-badge {
+    color: #bf360c;
+    /* Deep Orange */
+    font-size: 0.7rem;
+    font-weight: 800;
+    margin-bottom: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+/* 👑 Author Top-Level Highlight */
+/* 👑 Author Top-Level Highlight */
+.comment-card.is-author-comment {
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-left: 4px solid #212121;
+    /* Strong dark accent */
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+    /* Lifted slightly */
+}
+
+.author-badge {
+    background: #212121;
+    color: #fff;
+    font-size: 0.65rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 20px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    display: inline-flex;
+    align-items: center;
+    margin-left: 0.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+/* Action Icon Btn (Pin) */
+.btn-action-icon {
+    background: none;
+    border: none;
+    color: #aaa;
+    font-size: 1rem;
+    cursor: pointer;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-action-icon:hover {
+    background: #f0f0f0;
+    color: #333;
+}
+
+.btn-action-icon.active {
+    color: #ef6c00;
+    /* Active Pin Color */
+    background: #fff3e0;
+}
+
+.comment-card {
+    position: relative;
+    /* Ensure corner badge pos */
+}
+
+/* 🧵 Premium Threaded Design */
+.nested-replies {
+    margin-left: 1rem;
+    /* Indentation */
+    padding-left: 1rem;
+    border-left: 3px solid #ddd;
+    /* Thicker, visible line */
+    margin-top: 1rem;
+    position: relative;
+    transition: border-color 0.2s ease;
+}
+
+.nested-replies:hover {
+    border-left-color: #999;
+    /* Darker on hover */
+}
+
+/* 🔹 Nested Cards: Clean / Transparent Look */
+.nested-replies .comment-card {
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0.5rem 0 !important;
+    margin-bottom: 0.5rem !important;
+}
+
+.nested-replies .comment-card::before {
+    content: '';
+    position: absolute;
+    top: 24px;
+    left: -1rem;
+    width: 0.8rem;
+    height: 2px;
+    background: #ddd;
+    /* Connector Line */
+    transition: background 0.2s ease;
+}
+
+.nested-replies:hover .comment-card::before {
+    background: #999;
+}
+
+/* 🔹 Nested Avatars: Smaller */
+.nested-replies .comment-avatar-small {
+    width: 32px !important;
+    height: 32px !important;
+    border-width: 1px !important;
+}
+
+/* Mobile Tweak: Less indentation on small screens */
+@media (max-width: 600px) {
+    .nested-replies {
+        margin-left: 0.5rem;
+        padding-left: 0.8rem;
+    }
+}
+
+/* 📌 Corner Pinned Badge */
+.pinned-badge-corner {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: #ffa726;
+    /* Orange Accent */
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 800;
+    padding: 0.2rem 0.6rem;
+    border-radius: 0 12px 0 12px;
+    /* Smooth corner flow */
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    box-shadow: -1px 2px 5px rgba(0, 0, 0, 0.1);
+    z-index: 10;
+}
+
+/* 🤖 On-Demand Trigger */
+.ai-trigger-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+    font-family: 'Inter', sans-serif;
+}
+
+.ai-trigger-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(118, 75, 162, 0.3);
+}
+
+/* 🤖 AI Suggestion Chips */
+.ai-suggestions-wrapper {
+    margin-bottom: 1rem;
+    padding-left: 3.5rem;
+    /* Align with input box (avatar width + gap) */
+    animation: fadeUpReveal 0.5s ease forwards;
+}
+
+.ai-chip-label {
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: #888;
+    margin-bottom: 0.5rem;
+    letter-spacing: 0.05em;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.ai-suggestions-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+}
+
+.ai-suggestion-chip {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    color: #444;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+/* Skeleton Loader */
+.ai-suggestion-chip.skeleton {
+    width: 60px;
+    height: 32px;
+    background: #f0f0f0;
+    border-color: transparent;
+    cursor: default;
+    animation: pulse 1.5s infinite ease-in-out;
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 0.6;
+    }
+
+    50% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0.6;
+    }
+}
+
+.ai-suggestion-chip:hover {
+    background: #f0f4ff;
+    /* Light Blue tint */
+    border-color: #bcdbe6;
+    color: #0056b3;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+}
+
+.ai-suggestion-chip:active {
+    @keyframes fadeUpReveal {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }

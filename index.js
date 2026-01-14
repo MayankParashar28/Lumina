@@ -90,12 +90,12 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://code.jquery.com", "https://kit.fontawesome.com", "https://www.google.com", "https://www.gstatic.com", "https://cdn.quilljs.com"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://code.jquery.com", "https://kit.fontawesome.com", "https://www.google.com", "https://www.gstatic.com", "https://cdn.quilljs.com", "https://unpkg.com"],
       scriptSrcAttr: ["'unsafe-inline'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com", "https://cdn.jsdelivr.net", "https://maxcdn.bootstrapcdn.com", "https://kit.fontawesome.com", "https://cdn.quilljs.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com", "https://cdn.jsdelivr.net", "https://maxcdn.bootstrapcdn.com", "https://kit.fontawesome.com", "https://cdn.quilljs.com", "https://unpkg.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com", "https://cdn.jsdelivr.net", "https://ka-f.fontawesome.com", "https://r2cdn.perplexity.ai"],
       imgSrc: ["'self'", "data:", "https:", "https://api.dicebear.com"],
-      connectSrc: ["'self'", "https://ka-f.fontawesome.com", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com"],
+      connectSrc: ["'self'", "https://ka-f.fontawesome.com", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://unpkg.com"],
     },
   },
 }));
@@ -359,6 +359,13 @@ io.on("connection", (socket) => {
     if (userId) {
       socket.join(`user:${userId}`);
       // console.log(`✅ User ${userId} joined room: user:${userId}`);
+    }
+  });
+
+  socket.on("join_blog", (blogId) => {
+    if (blogId) {
+      socket.join(`blog:${blogId}`);
+      // console.log(`✅ User joined blog room: blog:${blogId}`);
     }
   });
 });

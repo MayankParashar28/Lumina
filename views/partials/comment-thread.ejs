@@ -1,0 +1,142 @@
+<div class="comment-card <%= comment.isPinned ? 'is-pinned' : '' %> <%= (comment.createdBy && blog.createdBy && String(comment.createdBy._id) === String(blog.createdBy._id)) ? 'is-author-comment' : '' %>"
+    id="comment-<%= comment._id %>">
+
+    <% if (comment.isPinned) { %>
+        <div class="pinned-badge-corner"><i class="fas fa-thumbtack"></i> Pinned</div>
+        <% } %>
+
+            <div class="comment-avatar-col">
+                <img src="<%= comment.createdBy ? comment.createdBy.profilePic : 'https://api.dicebear.com/7.x/initials/svg?seed=Unknown' %>"
+                    class="comment-avatar-small">
+            </div>
+
+            <div class="comment-content-col">
+                <div class="comment-header">
+                    <span class="comment-author">
+                        <%= comment.createdBy ? comment.createdBy.fullName : "Unknown User" %>
+                    </span>
+                    <% if (comment.createdBy && blog.createdBy &&
+                        String(comment.createdBy._id)===String(blog.createdBy._id)) { %>
+                        <span class="author-badge">Author</span>
+                        <% } %>
+                            <span class="comment-dot">·</span>
+                            <span class="comment-date">
+                                <%= moment(comment.createdAt).fromNow() %>
+                            </span>
+
+                            <!-- Delete Button -->
+                            <% const isCommentOwner=user && comment.createdBy &&
+                                String(user._id)===String(comment.createdBy._id); const isBlogOwner=user &&
+                                blog.createdBy && String(user._id)===String(blog.createdBy._id); const isAdmin=user &&
+                                user.role==="ADMIN" ; if (isCommentOwner || isBlogOwner || isAdmin) { %>
+                                <form action="/blog/comment/delete/<%= comment._id %>" method="POST" class="delete-form"
+                                    onsubmit="return confirm('Delete?');" style="display:inline;">
+                                    <button type="submit" class="btn-delete" title="Delete"><i
+                                            class="fas fa-trash-alt"></i></button>
+                                </form>
+                                <% } %>
+
+                                    <!-- 1. Trigger / Like Button (Right Side) -->
+                                    <% const emojis=['👍', '❤️' , '🔥' , '😂' ]; const reactionCounts={}; if
+                                        (comment.reactions) { Object.values(comment.reactions).forEach(r=> {
+                                        reactionCounts[r] = (reactionCounts[r] || 0) + 1;
+                                        });
+                                        }
+                                        const myReaction = (user && comment.reactions &&
+                                        comment.reactions[user._id.toString()]) || null;
+                                        const hasReactions = Object.keys(reactionCounts).length > 0;
+                                        %>
+                                        <div class="reaction-wrapper" style="position: relative; margin-left: auto;">
+                                            <button class="btn-reaction-trigger"
+                                                onclick="toggleReactionPicker('<%= comment._id %>', this)"
+                                                title="Add Reaction">
+                                                <% if (myReaction) { %>
+                                                    <span style="font-style: normal; font-size: 1.1rem;">
+                                                        <%= myReaction %>
+                                                    </span>
+                                                    <% } else { %>
+                                                        <i class="far fa-heart"></i>
+                                                        <% } %>
+                                            </button>
+
+                                            <!-- Picker (Hidden) -->
+                                            <div id="reaction-picker-<%= comment._id %>" class="reaction-picker hidden">
+                                                <% emojis.forEach(emoji=> { %>
+                                                    <button
+                                                        class="reaction-option <%= myReaction === emoji ? 'active' : '' %>"
+                                                        onclick="toggleReaction('<%= comment._id %>', '<%= emoji %>', this)">
+                                                        <%= emoji %>
+                                                    </button>
+                                                    <% }); %>
+                                            </div>
+                                        </div>
+                </div>
+
+                <div class="comment-body">
+                    <p>
+                        <%= comment.content %>
+                    </p>
+                </div>
+
+                <!-- Actions Bar -->
+                <div class="comment-actions">
+                    <!-- Emoji Reactions (Counts Only) -->
+                    <div class="reaction-bar">
+                        <% if (hasReactions) { %>
+                            <div class="existing-reactions">
+                                <% Object.entries(reactionCounts).forEach(([emoji, count])=> { %>
+                                    <span class="reaction-count-chip"
+                                        onclick="toggleReaction('<%= comment._id %>', '<%= emoji %>', this)"
+                                        title="Click to toggle">
+                                        <%= emoji %> <span class="count-num">
+                                                <%= count %>
+                                            </span>
+                                    </span>
+                                    <% }); %>
+                            </div>
+                            <% } %>
+                    </div>
+
+                    <div class="action-buttons-right" style="display: flex; gap: 10px; align-items: center;">
+                        <!-- Pin Button (Author Only) -->
+                        <% if (user && blog.createdBy && String(user._id)===String(blog.createdBy._id)) { %>
+                            <button class="btn-action-icon <%= comment.isPinned ? 'active' : '' %>"
+                                onclick="togglePin('<%= comment._id %>', this)"
+                                title="<%= comment.isPinned ? 'Unpin' : 'Pin' %>">
+                                <i class="fas fa-thumbtack"></i>
+                            </button>
+                            <% } %>
+
+                                <!-- Reply Button (Everyone who is logged in) -->
+                                <% if (user) { %>
+                                    <button class="btn-reply-toggle" onclick="toggleReplyForm('<%= comment._id %>')">
+                                        <i class="fas fa-reply"></i> Reply
+                                    </button>
+                                    <% } %>
+                    </div>
+                </div>
+
+                <!-- Reply Form (Hidden) -->
+                <% if (user) { %>
+                    <form id="reply-form-<%= comment._id %>" class="reply-form hidden"
+                        onsubmit="return handleReplySubmit(event, '<%= comment._id %>')">
+                        <div class="reply-input-wrapper">
+                            <img src="<%= user.profilePic %>" class="reply-avatar">
+                            <textarea name="content" placeholder="Write a reply..." required rows="1"></textarea>
+                            <button type="submit" class="btn-submit-reply">Reply</button>
+                        </div>
+                    </form>
+                    <% } %>
+
+                        <!-- Recursive Children -->
+                        <div class="nested-replies" id="replies-<%= comment._id %>">
+                            <% if (comment.children && comment.children.length> 0) { %>
+                                <% comment.children.forEach(child=> { %>
+                                    <%- include('./comment-thread', { comment: child, user: user, blog: blog, moment:
+                                        moment }) %>
+                                        <% }) %>
+                                            <% } %>
+                        </div>
+
+            </div>
+</div>

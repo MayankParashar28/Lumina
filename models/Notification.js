@@ -17,7 +17,7 @@ const notificationSchema = new mongoose.Schema({
     type: {
 
         type: String,
-        enum: ["like", "comment", "follow","blog_upload"],
+        enum: ["like", "comment", "follow", "blog_upload", "reply"],
         required: true,
     }, // Action type
     message: {
@@ -33,5 +33,8 @@ const notificationSchema = new mongoose.Schema({
         default: Date.now
     },
 });
+
+// ⚡ Optimize Unread Count Query
+notificationSchema.index({ userId: 1, read: 1 });
 
 module.exports = mongoose.model("Notification", notificationSchema);

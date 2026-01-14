@@ -4,7 +4,7 @@
 <head>
     <%- include('./partials/header') %>
 </head>
-<link rel="stylesheet" href="/css/blog.css?v=14">
+<link rel="stylesheet" href="/css/blog.css?v=21">
 <!-- Quill Theme for matching styles -->
 <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
 
@@ -159,6 +159,72 @@
             <h3 class="input-label" style="margin-bottom: 1.5rem;">Discussion (<%= comments.length %>)</h3>
 
             <% if (user) { %>
+                <!-- AI Comment Suggestions -->
+                <div id="ai-suggestions-container" class="ai-suggestions-wrapper">
+                    <div class="ai-chip-label">✨ AI Suggestions</div>
+                    <div id="ai-suggestions-list" class="ai-suggestions-list">
+                        <!-- Skeleton Loading Chips -->
+                        <div class="ai-suggestion-chip skeleton"></div>
+                        <div class="ai-suggestion-chip skeleton" style="width: 80px;"></div>
+                        <div class="ai-suggestion-chip skeleton" style="width: 100px;"></div>
+                    </div>
+                </div>
+
+                <script>
+                    document.addEventListener("DOMContentLoaded", () => {
+                        const blogId = "<%= blog._id %>";
+                        const suggestionsContainer = document.getElementById("ai-suggestions-container");
+                        const suggestionsList = document.getElementById("ai-suggestions-list");
+                        const commentBox = document.querySelector(".comment-textarea");
+
+                        if (!suggestionsContainer || !suggestionsList || !commentBox) return;
+
+                        const defaultSuggestions = ["Great read! 👏", "Thanks for sharing.", "Interesting perspective."];
+
+                        const renderChips = (texts) => {
+                            suggestionsList.innerHTML = ""; // Clear skeletons
+                            texts.forEach(text => {
+                                const chip = document.createElement("button");
+                                chip.className = "ai-suggestion-chip";
+                                chip.innerText = text;
+                                chip.onclick = (e) => {
+                                    e.preventDefault();
+                                    commentBox.value = text;
+                                    commentBox.focus();
+                                };
+                                suggestionsList.appendChild(chip);
+                            });
+                        };
+
+                        // Timeout Promise
+                        const timeout = new Promise((resolve) => {
+                            setTimeout(() => resolve({ suggestions: defaultSuggestions }), 3000); // 3s Timeout
+                        });
+
+                        // Fetch Request
+                        const fetchRequest = fetch('/ai/generate-comment-suggestions', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ blogId }),
+                            credentials: 'include'
+                        }).then(res => res.json());
+
+                        // Race: AI vs Timeout
+                        Promise.race([fetchRequest, timeout])
+                            .then(data => {
+                                if (data.suggestions && data.suggestions.length > 0) {
+                                    renderChips(data.suggestions);
+                                } else {
+                                    renderChips(defaultSuggestions);
+                                }
+                            })
+                            .catch(err => {
+                                console.error("AI Error, using defaults", err);
+                                renderChips(defaultSuggestions);
+                            });
+                    });
+                </script>
+
                 <form method="post" action="/blog/comment/<%= blog._id %>" class="comment-form">
                     <div class="comment-input-wrapper">
                         <img src="<%= user.profilePic %>" class="comment-avatar">
@@ -181,48 +247,14 @@
                         <div class="comments-list">
                             <% if (comments.length> 0) { %>
                                 <% comments.forEach(comment=> { %>
-                                    <div class="comment-card">
-                                        <div class="comment-avatar-col">
-                                            <img src="<%= comment.createdBy ? comment.createdBy.profilePic : 'https://api.dicebear.com/7.x/initials/svg?seed=Unknown' %>"
-                                                class="comment-avatar-small">
-                                        </div>
-                                        <div class="comment-content-col">
-                                            <div class="comment-header">
-                                                <span class="comment-author">
-                                                    <%= comment.createdBy ? comment.createdBy.fullName : "Unknown User"
-                                                        %>
-                                                </span>
-                                                <span class="comment-dot">·</span>
-                                                <span class="comment-date">
-                                                    <%= moment(comment.createdAt).fromNow() %>
-                                                </span>
-
-                                                <% const isCommentOwner=user && comment.createdBy &&
-                                                    String(user._id)===String(comment.createdBy._id); const
-                                                    isBlogOwner=user && blog.createdBy &&
-                                                    String(user._id)===String(blog.createdBy.id); const isAdmin=user &&
-                                                    user.role==="ADMIN" ; if (isCommentOwner || isBlogOwner || isAdmin)
-                                                    { %>
-                                                    <form action="/blog/comment/delete/<%= comment._id %>" method="POST"
-                                                        class="delete-form" onsubmit="return confirm('Delete?');">
-                                                        <button type="submit" class="btn-delete" title="Delete"><i
-                                                                class="fas fa-trash-alt"></i></button>
-                                                    </form>
-                                                    <% } %>
-                                            </div>
-                                            <div class="comment-body">
-                                                <p>
-                                                    <%= comment.content %>
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <% }); %>
-                                        <% } else { %>
-                                            <div class="no-comments">
-                                                <p>No comments yet. Be the first to share your thoughts!</p>
-                                            </div>
-                                            <% } %>
+                                    <%- include('./partials/comment-thread', { comment: comment, user: user, blog: blog,
+                                        moment: moment }) %>
+                                        <% }); %>
+                                            <% } else { %>
+                                                <div class="no-comments">
+                                                    <p>No comments yet. Be the first to share your thoughts!</p>
+                                                </div>
+                                                <% } %>
                         </div>
         </div>
 
@@ -360,8 +392,280 @@
                     }
                 });
             });
+
+            // 😃 Emoji Picker Logic
+            function toggleReactionPicker(commentId, btn) {
+                // Close others
+                document.querySelectorAll('.reaction-picker').forEach(p => {
+                    if (p.id !== `reaction-picker-${commentId}`) p.classList.add('hidden');
+                });
+
+                const picker = document.getElementById(`reaction-picker-${commentId}`);
+                if (picker) {
+                    picker.classList.toggle('hidden');
+                }
+
+                // Stop propagation so document click doesn't close immediately
+                if (event) event.stopPropagation();
+            }
+
+            // Close pickers on outside click
+            document.addEventListener('click', () => {
+                document.querySelectorAll('.reaction-picker').forEach(p => p.classList.add('hidden'));
+            });
+
+            // ⚡ Emoji Reaction Logic (Updated)
+            async function toggleReaction(commentId, emoji, btn) {
+                try {
+                    const res = await fetch(`/blog/comment/${commentId}/react`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ emoji })
+                    });
+
+                    const data = await res.json();
+                    if (data.success) {
+                        // 🟢 Dynamic DOM Update (No Reload)
+                        const commentCard = document.getElementById(`comment-${commentId}`);
+
+                        // 1. Update Trigger Button
+                        const triggerBtn = commentCard.querySelector('.btn-reaction-trigger');
+                        if (triggerBtn) {
+                            // Are we reacting or un-reacting?
+                            // We can guess by checking if we clicked the same emoji that was active, 
+                            // but safer to rely on returned data if possible. 
+                            // Since we don't have "myReaction" in response yet, we can infer:
+                            // If user clicked emoji X and it was NOT active, it is now active.
+                            // Actually, let's assume successful toggle means state flipped.
+
+                            // Better approach: server response could return `myReaction`.
+                            // For now, let's just use the clicked `emoji` as active if it wasn't before?
+                            // Or simpler: Just update the visual state based on what we clicked.
+
+                            // Let's implement a visual toggle for immediate feedback
+                            // But accurate state requires server data. Let's assume we toggle it ON
+                            // unless we clicked the active one.
+
+                            // Actually, `data.reactionCounts` is returned.
+                            // The `toggleReaction` endpoint logic is: Toggle.
+
+                            // Let's update the Trigger Icon based on specific logic:
+                            // If `btn` (the option clicked) was already `.active`, we unreacted -> Show Empty Heart.
+                            // If it wasn't active, we reacted -> Show Emoji.
+
+                            const wasActive = btn.classList.contains('active');
+                            if (wasActive) {
+                                // Unreacted
+                                triggerBtn.innerHTML = '<i class="far fa-heart"></i>';
+                                btn.classList.remove('active');
+                            } else {
+                                // Reacted
+                                triggerBtn.innerHTML = `<span style="font-style: normal; font-size: 1.1rem;">${emoji}</span>`;
+                                // Clear other actives
+                                commentCard.querySelectorAll('.reaction-option').forEach(o => o.classList.remove('active'));
+                                btn.classList.add('active');
+                            }
+                        }
+
+                        // 2. Update Counts Chips at Bottom
+                        const actionCmdDiv = commentCard.querySelector('.reaction-bar'); // Actually sits in .comment-actions
+                        let existingReactionsDiv = commentCard.querySelector('.existing-reactions');
+
+                        if (!existingReactionsDiv) {
+                            // Create if doesn't exist (and we have counts)
+                            existingReactionsDiv = document.createElement('div');
+                            existingReactionsDiv.className = 'existing-reactions';
+                            // Append to .reaction-bar (which is correctly located at bottom)
+                            actionCmdDiv.appendChild(existingReactionsDiv);
+                        }
+
+                        // Re-render chips
+                        existingReactionsDiv.innerHTML = '';
+                        const counts = data.reactionCounts || {};
+                        Object.entries(counts).forEach(([em, count]) => {
+                            if (count > 0) {
+                                const chip = document.createElement('span');
+                                chip.className = 'reaction-count-chip';
+                                chip.innerHTML = `${em} <span class="count-num">${count}</span>`;
+                                chip.onclick = function () { toggleReaction(commentId, em, chip); };
+                                existingReactionsDiv.appendChild(chip);
+                            }
+                        });
+
+                    } else if (data.message === "Login required") {
+                        window.location.href = "/user/signin";
+                    }
+                } catch (err) {
+                    console.error("Reaction failed", err);
+                }
+            }
+
+            // 💬 Toggle Reply Form
+            function toggleReplyForm(commentId) {
+                const form = document.getElementById(`reply-form-${commentId}`);
+                if (form) {
+                    form.classList.toggle('hidden');
+                    if (!form.classList.contains('hidden')) {
+                        const textarea = form.querySelector('textarea');
+                        if (textarea) textarea.focus();
+                    }
+                }
+            }
+
+            // 📌 Toggle Pin
+            async function togglePin(commentId, btn) {
+                try {
+                    const response = await fetch(`/blog/comment/${commentId}/pin`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" }
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                        window.location.reload();
+                    }
+                } catch (err) {
+                    console.error("Pin failed", err);
+                }
+            }
+
+            // 🚀 AJAX Reply
+            async function handleReplySubmit(e, commentId) {
+                e.preventDefault();
+                const form = e.target;
+                const textarea = form.querySelector('textarea');
+                const content = textarea.value;
+                const btn = form.querySelector('button');
+
+                const originalText = btn.innerText;
+                btn.disabled = true;
+                btn.innerText = "Posting...";
+
+                try {
+                    const response = await fetch(`/blog/comment/${commentId}/reply`, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Accept": "application/json"
+                        },
+                        body: JSON.stringify({ content })
+                    });
+
+                    const data = await response.json();
+                    if (data.success) {
+                        const reply = data.reply;
+                        const commentCard = document.getElementById(`comment-${commentId}`);
+
+                        let nestedContainer = commentCard.querySelector('.nested-replies');
+                        if (!nestedContainer) {
+                            nestedContainer = document.createElement('div');
+                            nestedContainer.className = 'nested-replies';
+                            // Insert after form (which is inside .comment-actions sibling usually? No, let's verify structure again)
+                            // In view: .comment-actions -> form -> .nested-replies
+                            // So insert after the form.
+                            form.insertAdjacentElement('afterend', nestedContainer);
+                        }
+
+                        const replyHtml = data.html; // Use Server-Rendered HTML (Complete with Buttons)
+
+                        // Fallback/Safety: If existing dummy ID exists, remove it (highly unlikely with this flow)
+                        const existingInfo = document.getElementById(`comment-${data.reply._id}`);
+                        if (existingInfo) existingInfo.remove();
+
+                        nestedContainer.insertAdjacentHTML('beforeend', replyHtml);
+
+                        // Add animation class manually since it's injected
+                        const newCard = nestedContainer.lastElementChild;
+                        if (newCard) {
+                            newCard.style.animation = "fadeIn 0.5s ease";
+                        }
+
+                        textarea.value = "";
+                        form.classList.add("hidden");
+
+                    } else {
+                        alert("Failed to reply: " + (data.error || "Unknown error"));
+                    }
+                } catch (err) {
+                    console.error(err);
+                    alert("Error replying");
+                } finally {
+                    btn.disabled = false;
+                    btn.innerText = originalText;
+                }
+                return false;
+            }
         </script>
         <%- include('./partials/footer') %>
+            <!-- ⚡ Socket.io Real-time Comments -->
+            <script src="/socket.io/socket.io.js"></script>
+            <script>
+                (() => {
+                    const socket = io();
+                    const blogId = "<%= blog._id %>";
+
+                    // 1. Join Blog Room
+                    socket.emit("join_blog", blogId);
+
+                    // 2. Listen for New Comments
+                    socket.on("new_comment", (data) => {
+                        const { html, parentId, commentId } = data;
+
+                        // Prevent duplicate insertion (in case user gets it via AJAX response too)
+                        if (document.getElementById(`comment-${commentId}`)) return;
+
+                        const tempDiv = document.createElement("div");
+                        tempDiv.innerHTML = html;
+                        const newCommentNode = tempDiv.firstElementChild;
+
+                        // Add fade-in animation class
+                        newCommentNode.style.opacity = "0";
+                        newCommentNode.style.transition = "opacity 0.5s ease, transform 0.5s ease";
+                        newCommentNode.style.transform = "translateY(10px)";
+
+                        if (parentId) {
+                            // Nested Reply
+                            const parentRepliesContainer = document.getElementById(`replies-${parentId}`);
+                            if (parentRepliesContainer) {
+                                parentRepliesContainer.appendChild(newCommentNode);
+                            }
+                        } else {
+                            // Root Comment
+                            const commentsList = document.querySelector(".comments-list");
+
+                            // Remove "No comments" placeholder if exists
+                            const noCommentsMsg = commentsList.querySelector(".no-comments");
+                            if (noCommentsMsg) noCommentsMsg.remove();
+
+                            // Append to top or bottom? Usually bottom for threaded, or top depending on sort. 
+                            // Our partial uses Flex column, append is standard.
+                            commentsList.prepend(newCommentNode); // Newest at top for roots is often preferred, but logic in backend sort was different.
+                            // Let's stick to append to match server-side loop order if existing are author-first. 
+                            // Actually, standard live feed usually prepends or appends. 
+                            // Backend logic: Author > Pinned > Newest. 
+                            // If we append, it goes to bottom. If we prepend, top. 
+                            // Let's Prepend to make it visible immediately.
+                            // However, backend sort put new ones lower down unless pinned.
+                            // Let's Append for now to maintain conversation flow, or better, insert after pinned ones? 
+                            // Simplest UX: Prepend (show new stuff).
+
+                            // Correction: The backend sorts roots by Author Priority. 
+                            // Dynamic insertion is tricky to match strict sort. 
+                            // Simple approach: Prepend to top of list (User sees it instantly).
+                            if (commentsList.firstChild) {
+                                commentsList.insertBefore(newCommentNode, commentsList.firstChild);
+                            } else {
+                                commentsList.appendChild(newCommentNode);
+                            }
+                        }
+
+                        // Trigger Animation
+                        requestAnimationFrame(() => {
+                            newCommentNode.style.opacity = "1";
+                            newCommentNode.style.transform = "translateY(0)";
+                        });
+                    });
+                })();
+            </script>
 </body>
 
 </html>

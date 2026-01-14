@@ -3,6 +3,7 @@ const express = require("express");
 const router = express.Router();
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const User = require("../models/user"); // Import User model
+const Blog = require("../models/blog"); // Import Blog model
 
 const GOOGLE_API_KEY = process.env.GOOGLE_GEMINI_API_KEY;
 const GEMINI_MODEL_ID = process.env.GOOGLE_GEMINI_MODEL || "gemini-2.5-flash";
@@ -159,6 +160,84 @@ router.post("/generate-title", rateLimitAI, async (req, res) => {
     const status = error.status === 429 ? 429 : 500;
     const message = error.status === 429 ? "AI Quota Exceeded. Please wait a minute." : "Failed to generate titles.";
     return res.status(status).json({ error: message });
+  }
+});
+
+const AiSuggestion = require("../models/aiSuggestion"); // Import Cache Model
+
+// Generate AI Comment Suggestions
+router.post("/generate-comment-suggestions", rateLimitAI, async (req, res) => {
+  const { blogId } = req.body;
+
+  if (!blogId) {
+    return res.status(400).json({ error: "Blog ID is required." });
+  }
+
+  try {
+    // 1️⃣ CACHE CHECK: Do we have fresh suggestions?
+    const cached = await AiSuggestion.findOne({ blogId });
+    if (cached) {
+      console.log("⚡ Serving valid 24h Cache for:", blogId);
+      return res.json({ suggestions: cached.suggestions });
+    }
+
+    // 2️⃣ CACHE MISS: Generate new ones
+    const blog = await Blog.findById(blogId);
+    if (!blog) {
+      return res.status(404).json({ error: "Blog not found." });
+    }
+
+    const model = genAI.getGenerativeModel({ model: GEMINI_MODEL_ID });
+
+    const prompt = `
+      You are a helpful blog assistant. 
+      Read the following blog post title and content, then generate exactly 3 short, distinct comment suggestions.
+      
+      Viewpoints to cover:
+      1. Positive / Agreement.
+      2. Thought-provoking Question.
+      3. Constructive / Alternative Perspective.
+      
+      Blog Title: "${blog.title}"
+      Blog Content (Excerpt): "${blog.body ? blog.body.substring(0, 1000).replace(/<[^>]*>/g, '') : ''}..."
+
+      Requirements:
+      - Return ONLY a raw JSON array of strings.
+      - Keep them under 10 words each.
+      - No intro/outro text. Just the array.
+    `;
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    let text = response.text().trim();
+
+    // Clean up potential markdown formatting
+    text = text.replace(/```json/g, "").replace(/```/g, "").trim();
+
+    let suggestions = [];
+    try {
+      suggestions = JSON.parse(text);
+    } catch (e) {
+      console.error("Failed to parse AI response:", text);
+    }
+
+    if (!suggestions || suggestions.length === 0) {
+      const defaults = ["Great read! 👏", "Thanks for sharing.", "Interesting perspective."];
+      return res.json({ suggestions: defaults });
+    }
+
+    // 3️⃣ SAVE TO CACHE (Valid for 24h)
+    await AiSuggestion.create({
+      blogId: blog._id,
+      suggestions: suggestions
+    });
+    console.log("💾 Saved new AI suggestions to 24h cache.");
+
+    return res.json({ suggestions });
+  } catch (error) {
+    console.error("AI Comment Suggestions Error:", error);
+    // Fallback
+    return res.json({ suggestions: ["Great read! 👏", "Thanks for sharing.", "Interesting perspective."] });
   }
 });
 
