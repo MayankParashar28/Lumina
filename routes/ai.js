@@ -6,6 +6,8 @@ const User = require("../models/user"); // Import User model
 const Blog = require("../models/blog"); // Import Blog model
 
 const GOOGLE_API_KEY = process.env.GOOGLE_GEMINI_API_KEY;
+const GOOGLE_KEY_LIGHT = process.env.GOOGLE_GEMINI_KEY_LIGHT; // Secondary Key
+
 const GEMINI_MODEL_ID = process.env.GOOGLE_GEMINI_MODEL || "gemini-2.5-flash";
 
 if (!GOOGLE_API_KEY) {
@@ -13,6 +15,7 @@ if (!GOOGLE_API_KEY) {
 }
 
 const genAI = GOOGLE_API_KEY ? new GoogleGenerativeAI(GOOGLE_API_KEY) : null;
+const genAILight = GOOGLE_KEY_LIGHT ? new GoogleGenerativeAI(GOOGLE_KEY_LIGHT) : (genAI || null); // Fallback to main if missing
 
 // Middleware to Check AI Rate Limit
 const rateLimitAI = async (req, res, next) => {
@@ -106,12 +109,12 @@ router.post("/generate-tags", rateLimitAI, async (req, res) => {
     return res.status(400).json({ error: "Title is required for tag generation." });
   }
 
-  if (!genAI) {
+  if (!genAILight) {
     return res.status(500).json({ error: "AI service not configured." });
   }
 
   try {
-    const model = genAI.getGenerativeModel({ model: GEMINI_MODEL_ID });
+    const model = genAILight.getGenerativeModel({ model: GEMINI_MODEL_ID });
     const prompt = `Generate 5 relevant, comma-separated tags for a blog post titled "${title}"${body ? ` with this content: "${body.substring(0, 500)}..."` : ""}. Return ONLY the tags, no other text. Example: "Tech, AI, Future, Innovation, Coding"`;
 
     const result = await model.generateContent(prompt);

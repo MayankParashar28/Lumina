@@ -9,6 +9,7 @@ const marked = require("marked");
 const { checkSubscription } = require("../middleware/subscription");
 const { error } = require("console");
 const Notification = require("../models/Notification");
+const moderateContent = require("../utils/moderator"); // Hybrid Moderation
 const { response } = require("express");
 
 const dotenv = require("dotenv");
@@ -305,6 +306,17 @@ router.post("/like/:blogId", async (req, res) => {
 router.post("/comment/:blogId", async (req, res) => {
   const COMMENT_COOLDOWN = 5 * 60 * 1000; // 5 minutes in milliseconds
   try {
+    // 🛡️ Moderation Check
+    const moderation = await moderateContent(req.body.content);
+    if (!moderation.safe) {
+      if (req.xhr || req.headers.accept.includes('json')) {
+        return res.status(400).json({ error: `Comment Rejected: ${moderation.reason}` });
+      }
+      // Standard Form Fallback
+      req.flash("error", `Comment Rejected: ${moderation.reason}`);
+      return res.redirect("back");
+    }
+
     const blog = await Blog.findById(req.params.blogId);
     if (!blog) {
       req.flash("error", "Blog not found.");
@@ -426,6 +438,12 @@ router.post("/comment/:commentId/reply", async (req, res) => {
 
     const parentComment = await Comment.findById(req.params.commentId).populate("blogId");
     if (!parentComment) return res.status(404).send("Parent comment not found");
+
+    // 🛡️ Moderation Check
+    const moderation = await moderateContent(req.body.content);
+    if (!moderation.safe) {
+      return res.status(400).json({ error: `Reply Rejected: ${moderation.reason}` });
+    }
 
     // ✅ Threaded Reply: Create new Document
     const reply = await Comment.create({
@@ -755,6 +773,14 @@ router.post("/", upload.single("coverImage"), async (req, res) => {
   try {
     const { title, body, category, tags, useAI, aiCoverURL } = req.body;
 
+    // 🛡️ Moderation Check
+    // We combine Title + Body + Tags to check the full context
+    const fullContent = `${title} ${body} ${tags}`;
+    const moderation = await moderateContent(fullContent);
+    if (!moderation.safe) {
+      return res.status(400).send(`Content Rejected: ${moderation.reason}`);
+    }
+
     if (!req.user) {
       console.log("❌ Unauthorized User");
       return res.status(401).send("Unauthorized: Please log in first.");
@@ -818,7 +844,7 @@ router.post("/", upload.single("coverImage"), async (req, res) => {
     // ✅ Save Blog in Database
     const blog = await Blog.create({
       title,
-      finalBody,
+      body: finalBody,
       category,
       tags: tagArray,
       createdBy: req.user._id,
