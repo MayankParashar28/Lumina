@@ -59,15 +59,22 @@ router.get("/:id", async (req, res) => {
     return res.status(400).render("error", { message: "Invalid Blog ID." });
   }
   try {
-    const blog = await Blog.findById(req.params.id).populate("createdBy", "fullName profilePic");
+    // 🔥 Atomic Update: Increment view count without locking document
+    // We use findByIdAndUpdate to get the document AND update it in one go.
+    // { new: true } return the updated doc, { upsert: false } ensures we don't create one.
+    const blog = await Blog.findByIdAndUpdate(
+      req.params.id,
+      { $inc: { views: 1 } },
+      { new: true }
+    ).populate("createdBy", "fullName profilePic");
 
     if (!blog) {
       return res.status(404).render("error", { message: "Blog not found." });
     }
 
-    // Increase view count
-    blog.views += 1;
-    await blog.save();
+    // Legacy code removal:
+    // blog.views += 1;
+    // await blog.save();
 
     // Fetch comments (All comments for this blog)
     const allComments = await Comment.find({ blogId: req.params.id })
@@ -282,6 +289,7 @@ router.post("/like/:blogId", async (req, res) => {
         senderId: userId,
         message: `${req.user.fullName} ${isNewLike ? "liked" : "unliked"} your blog.`,
         type: "like",
+        blogId: blog._id, // Deep Link Support
         read: false,
         createdAt: new Date(),
       });
@@ -347,22 +355,25 @@ router.post("/comment/:blogId", async (req, res) => {
     });
 
     // ✅ Send Notification (if not the owner commenting)
+    // ✅ Send Notification (Async/Non-blocking)
     if (blog.createdBy.toString() !== userId.toString()) {
-      await Notification.create({
-        userId: blog.createdBy, // Blog owner's ID
-        senderId: userId, // Commenter's ID
+      // We don't await this so the user response isn't delayed
+      Notification.create({
+        userId: blog.createdBy,
+        senderId: userId,
         message: `${req.user.fullName} commented ${comment.content ? `: "${comment.content}"` : ""} on your blog.`,
         type: "comment",
+        blogId: blog._id, // Deep Link Support
         read: false,
         createdAt: new Date(),
-      });
-
-      const io = req.app.get("io");
-      if (io) {
-        io.to(`user:${blog.createdBy}`).emit("new_notification", {
-          message: `${req.user.fullName} commented on your blog.`
-        });
-      }
+      }).then(() => {
+        const io = req.app.get("io");
+        if (io) {
+          io.to(`user:${blog.createdBy}`).emit("new_notification", {
+            message: `${req.user.fullName} commented on your blog.`
+          });
+        }
+      }).catch(err => console.error("⚠️ Notification Error:", err));
     }
 
     // 🔴 Real-time Update: Emit new root comment
@@ -420,8 +431,22 @@ router.post("/comment/delete/:commentId", async (req, res) => {
       return res.redirect("back");
     }
 
-    await Comment.findByIdAndDelete(req.params.commentId);
-    req.flash("success", "Comment deleted.");
+    // 🧠 Smart Delete: Soft delete if replies exist, Hard delete if leaf node
+    const hasChildren = await Comment.exists({ parentId: req.params.commentId });
+
+    if (hasChildren) {
+      // Soft Delete: Preserve thread structure
+      await Comment.findByIdAndUpdate(req.params.commentId, {
+        content: "[This comment was deleted]",
+        isDeleted: true
+      });
+      req.flash("success", "Comment deleted (thread preserved).");
+    } else {
+      // Hard Delete: Clean up DB
+      await Comment.findByIdAndDelete(req.params.commentId);
+      req.flash("success", "Comment deleted.");
+    }
+
     return res.redirect(`/blog/${comment.blogId._id}`);
 
   } catch (error) {
@@ -462,6 +487,7 @@ router.post("/comment/:commentId/reply", async (req, res) => {
         senderId: req.user._id,
         message: `${req.user.fullName} replied: "${req.body.content}"`,
         type: "reply",
+        blogId: blog._id, // Deep Link Support
         read: false,
       });
 
@@ -694,17 +720,18 @@ router.post("/edit/:id", upload.single("coverImage"), async (req, res) => {
       blog.coverImageURL = req.body.aiCoverURL;
     }
 
-    // Generate new embedding if title or body changed
-    try {
-      const fullText = `${title} ${textBody}`;
-      const embedding = await generateEmbedding(fullText);
+    // Generate new embedding in background (Fire-and-forget)
+    // We do NOT await this, so the user gets a faster response.
+    generateEmbedding(`${title} ${textBody}`).then(async (embedding) => {
       if (embedding.length > 0) {
-        blog.embedding = embedding;
+        await Blog.findByIdAndUpdate(blog._id, { embedding });
+        // console.log("✅ Background Embedding Updated for:", blog.title);
       }
-    } catch (embError) {
-      console.error("⚠️ Failed to update embedding:", embError);
-    }
+    }).catch(err => {
+      console.error("⚠️ Background Embedding Error:", err);
+    });
 
+    // Save initial blog immediately
     await blog.save();
 
     req.flash("success", "Blog updated successfully!");
@@ -832,26 +859,27 @@ router.post("/", upload.single("coverImage"), async (req, res) => {
       return res.redirect("/blog/add-new"); // Redirect back to editor
     }
 
-    // ✅ Generate Embedding before saving
-    let embedding = [];
-    try {
-      const fullText = `${title} ${finalBody.replace(/<[^>]*>/g, '')}`;
-      embedding = await generateEmbedding(fullText);
-    } catch (embError) {
-      console.error("⚠️ AI Embedding Generation Failed:", embError);
-    }
-
-    // ✅ Save Blog in Database
+    // ✅ Save Blog in Database (Initially without embedding)
     const blog = await Blog.create({
       title,
       body: finalBody,
       category,
       tags: tagArray,
       createdBy: req.user._id,
-      coverImageURL: req.file ? req.file.path : aiCoverURL,
+      coverImageURL: req.file ? `/uploads/${req.file.filename}` : aiCoverURL,
       createdAt: new Date(),
-      embedding: embedding, // Save the vectors
+      embedding: [] // Will be populated in background
     });
+
+    // ⚡ Background AI: Generate Embedding (Fire-and-forget)
+    // This allows the user to see their post immediately while AI works in the background.
+    const fullText = `${title} ${finalBody.replace(/<[^>]*>/g, '')}`;
+    generateEmbedding(fullText).then(async (embedding) => {
+      if (embedding && embedding.length > 0) {
+        await Blog.findByIdAndUpdate(blog._id, { embedding });
+        // console.log(`✅ Background Embedding Complete for: ${blog.title}`);
+      }
+    }).catch(err => console.error("⚠️ Background Embedding Error:", err));
 
     // ✅ Save Notification for Blog Owner
     const selfNotification = new Notification({

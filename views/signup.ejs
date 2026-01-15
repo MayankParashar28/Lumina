@@ -10,54 +10,61 @@
 <body>
     <%- include('./partials/nav', { searchQuery: '' }) %>
 
-        <div class="page-container">
-            <header class="header text-center mb-4">
-                <h1 class="auth-title">Create Account</h1>
-                <p class="auth-subtitle">Where ideas come to life</p>
-            </header>
-
-            <div class="auth-card">
-                <h1>Join Our Community!</h1>
-
-
-
-                <form action="/user/signup" method="post" id="signup-form">
-                    <div class="form-group">
-                        <label for="fullname">Full Name</label>
-                        <input type="text" class="form-control" name="fullName" id="fullname"
-                            placeholder="Your full name" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="exampleInputEmail1">Email address</label>
-                        <input type="email" class="form-control" name="email" id="exampleInputEmail1"
-                            placeholder="your@email.com" required>
-                        <div class="form-text mt-1 text-muted">We'll never share your email with anyone else.
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="exampleInputPassword1">Password</label>
-                        <input type="password" class="form-control" name="password" id="exampleInputPassword1"
-                            placeholder="Create a strong password" required>
-                    </div>
-
-                    <button type="submit" class="submit-btn" id="submit-button">
-                        <span>Start Your Blogging Journey</span>
-                    </button>
-                </form>
-
-                <div class="google-auth-wrapper" style="margin-top: 20px; text-align: center;">
-                    <a href="/user/auth/google" class="btn-google"
-                        style="display: inline-flex; align-items: center; justify-content: center; width: 100%; border: 1px solid #ccc; background: white; color: #444; padding: 12px; border-radius: 5px; text-decoration: none; font-weight: 500; box-shadow: 0 1px 3px rgba(0,0,0,0.1); transition: all 0.2s;">
-                        <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google"
-                            style="width: 20px; height: 20px; margin-right: 10px;">
-                        Sign up with Google
-                    </a>
+        <div class="auth-split-wrapper">
+            <!-- Left Side: Image -->
+            <div class="auth-side-image-container">
+                <img src="/images/auth-side.png" alt="Creative Space" class="auth-side-image">
+                <div class="auth-image-overlay">
+                    <h2>Join the conversation of a lifetime.</h2>
+                    <p>Start your journey with Lumina and share your stories with a global community of thinkers and
+                        builders.</p>
                 </div>
+            </div>
 
-                <div class="auth-footer" style="margin-top: 20px;">
-                    Already have an account? <a href="/user/signin">Sign In</a>
+            <!-- Right Side: Form -->
+            <div class="auth-form-container">
+                <div class="auth-content-box">
+                    <header class="mb-5">
+                        <h1 class="auth-title">Create Account</h1>
+                        <p class="auth-subtitle">Where ideas come to life</p>
+                    </header>
+
+                    <form action="/user/signup" method="post" id="signup-form">
+                        <div class="form-group">
+                            <label for="fullname">Full Name</label>
+                            <input type="text" class="form-control" name="fullName" id="fullname"
+                                placeholder="Your full name" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="email">Email address</label>
+                            <input type="email" class="form-control" name="email" id="email"
+                                placeholder="your@email.com" required>
+                        </div>
+
+                        <div class="form-group mb-4">
+                            <label for="password">Password</label>
+                            <input type="password" class="form-control" name="password" id="password"
+                                placeholder="Create a strong password" required>
+                        </div>
+
+                        <button type="submit" class="submit-btn" id="submit-button">
+                            Start Your Blogging Journey
+                        </button>
+                    </form>
+
+                    <div class="google-auth-wrapper">
+                        <a href="/user/auth/google"
+                            class="btn-google d-flex align-items-center justify-content-center text-decoration-none">
+                            <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" width="20"
+                                height="20" class="me-2">
+                            <span>Continue with Google</span>
+                        </a>
+                    </div>
+
+                    <div class="auth-footer text-center mt-5">
+                        Already have an account? <a href="/user/signin">Sign In</a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -65,7 +72,7 @@
         <%- include('./partials/footer') %>
 
             <script>
-                // Add ripple effect to button (Preserved)
+                // Ripple Effect
                 document.getElementById("submit-button").addEventListener("click", function (e) {
                     const button = this;
                     const ripple = document.createElement("span");
@@ -74,45 +81,24 @@
                     ripple.style.backgroundColor = "rgba(255, 255, 255, 0.4)";
                     ripple.style.transform = "scale(0)";
                     ripple.style.animation = "ripple 0.6s linear";
+                    ripple.style.pointerEvents = "none";
 
                     button.appendChild(ripple);
 
-                    const x = e.clientX - button.getBoundingClientRect().left;
-                    const y = e.clientY - button.getBoundingClientRect().top;
+                    const rect = button.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
 
                     ripple.style.left = `${x}px`;
                     ripple.style.top = `${y}px`;
+                    ripple.style.width = ripple.style.height = `${Math.max(rect.width, rect.height) * 2}px`;
+                    ripple.style.marginLeft = ripple.style.marginTop = `${-Math.max(rect.width, rect.height)}px`;
 
-                    setTimeout(() => {
-                        ripple.remove();
-                    }, 600);
+                    setTimeout(() => ripple.remove(), 600);
                 });
 
-                // Form submission handler (Preserved)
-                document.getElementById("signup-form").addEventListener("submit", function (e) {
-                    // e.preventDefault(); // Original had this but then submitted after timeout. 
-                    // Keeping it simple: let it submit naturally or use the original logic if critical.
-                    // Original logic:
-                    /*
-                    e.preventDefault();
-                    this.classList.add("submitted");
-                    setTimeout(() => {
-                        this.submit();
-                    }, 300);
-                    */
-                    // Since we removed the specific "submitted" animation class from CSS, 
-                    // we can probably just let it submit normally. 
-                    // But to be safe and "don't change any function", I'll keep it but comment out the class add if it causes issues.
-                    // Actually, let's just let it submit to avoid breaking if the animation is missing.
-                });
-
-                // Add style for ripple animation dynamically
                 const style = document.createElement('style');
-                style.innerHTML = `
-            @keyframes ripple {
-                to { transform: scale(4); opacity: 0; }
-            }
-        `;
+                style.innerHTML = `@keyframes ripple { to { transform: scale(2.5); opacity: 0; } }`;
                 document.head.appendChild(style);
             </script>
 </body>

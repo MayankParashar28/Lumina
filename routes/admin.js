@@ -2,14 +2,40 @@ const { Router } = require("express");
 const User = require("../models/user");
 const Blog = require("../models/blog");
 const Comment = require("../models/comment");
-const Announcement = require("../models/announcement");
+const ModerationLog = require("../models/moderationLog"); // 🛡️ Import Model
+
 const { checkForAdmin } = require("../middleware/admin");
 
 const router = Router();
 
+// Middleware to check if user is admin
+const adminAuth = (req, res, next) => {
+    if (req.user && req.user.role === "ADMIN") {
+        return next();
+    }
+    return res.status(403).render("error", { message: "Access Denied: Admins Only" });
+};
+
 // 🛡️ Apply Admin Middleware to all routes here
 router.use(checkForAdmin);
 
+// 🛡️ Moderation Logs Route
+router.get("/moderation", adminAuth, async (req, res) => {
+    try {
+        const logs = await ModerationLog.find()
+            .populate("userId", "fullName email profilePic")
+            .sort({ createdAt: -1 })
+            .limit(50); // Show last 50 events
+
+        res.render("admin/moderation", {
+            user: req.user,
+            logs: logs
+        });
+    } catch (error) {
+        console.error("Error fetching moderation logs:", error);
+        res.status(500).render("error", { message: "Failed to load logs" });
+    }
+});
 // 📊 Admin Dashboard
 router.get("/", async (req, res) => {
     try {
@@ -36,8 +62,7 @@ router.get("/", async (req, res) => {
         const users = await User.find(userQuery).sort({ createdAt: -1 }).limit(50); // Increased limit for search
         const blogs = await Blog.find().populate("createdBy", "fullName").sort({ createdAt: -1 }).limit(20);
 
-        // 📢 Fetch Active Announcement (for Admin UI)
-        const activeAnnouncement = await Announcement.findOne({ isActive: true });
+
 
         res.render("admin/dashboard", {
             user: req.user,
@@ -46,8 +71,7 @@ router.get("/", async (req, res) => {
             commentCount,
             users,
             blogs,
-            searchQuery, // ✅ Pass search query
-            activeAnnouncement // ✅ Pass to view
+            searchQuery // ✅ Pass search query
         });
     } catch (error) {
         console.error("Admin Dashboard Error:", error);
@@ -82,48 +106,7 @@ router.post("/user/role/:id", async (req, res) => {
     }
 });
 
-// � Create Announcement
-router.post("/announcement", async (req, res) => {
-    try {
-        const { message, type, duration } = req.body;
 
-        // Deactivate all previous announcements
-        await Announcement.updateMany({}, { isActive: false });
-
-        let expiresAt = null;
-        if (duration && duration !== "always") {
-            // Duration is in hours
-            expiresAt = new Date(Date.now() + parseInt(duration) * 60 * 60 * 1000);
-        }
-
-        await Announcement.create({
-            message,
-            type: type || "info",
-            isActive: true,
-            expiresAt
-        });
-
-        req.flash("success", "Announcement posted globally!");
-        res.redirect("/admin");
-    } catch (error) {
-        console.error("Announcement Error:", error);
-        req.flash("error", "Failed to post announcement.");
-        res.redirect("/admin");
-    }
-});
-
-// ❌ Delete/Deactivate Announcement
-router.post("/announcement/delete/:id", async (req, res) => {
-    try {
-        await Announcement.findByIdAndDelete(req.params.id);
-        req.flash("success", "Announcement removed.");
-        res.redirect("/admin");
-    } catch (error) {
-        console.error("Delete Announcement Error:", error);
-        req.flash("error", "Failed to remove announcement.");
-        res.redirect("/admin");
-    }
-});
 
 // �🚫 Delete User (Ban)
 router.post("/user/delete/:id", async (req, res) => {

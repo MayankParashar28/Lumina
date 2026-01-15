@@ -156,21 +156,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// 📢 Middleware: Fetch Global Announcement
-const Announcement = require("./models/announcement");
-app.use(async (req, res, next) => {
-  try {
-    const announcement = await Announcement.findOne({
-      isActive: true,
-      $or: [{ expiresAt: null }, { expiresAt: { $gt: new Date() } }]
-    }).sort({ createdAt: -1 });
-    res.locals.announcement = announcement || null;
-  } catch (err) {
-    console.error("Announcement Middleware Error:", err);
-    res.locals.announcement = null;
-  }
-  next();
-});
+
 
 app.get('/user/edit-profile', (req, res) => {
   res.render('editprofile', {
@@ -189,16 +175,22 @@ app.get("/", async (req, res) => {
     if (!req.user) {
       const blogs = await Blog.find()
         .sort({ createdAt: -1 })
-        .populate("createdBy", "fullName");
+        .select("-body")
+        .populate("createdBy", "fullName profilePic") // Added profilePic for consistency if needed
+        .lean();
 
       const featuredBlogs = await Blog.find({ featured: true })
         .sort({ createdAt: -1 })
-        .populate("createdBy", "fullName");
+        .select("-body")
+        .populate("createdBy", "fullName profilePic")
+        .lean();
 
       const trendingBlogs = await Blog.find()
         .sort({ views: -1 })
         .limit(3)
-        .populate("createdBy", "fullName");
+        .select("-body")
+        .populate("createdBy", "fullName profilePic")
+        .lean();
 
       return res.render("main", {
         blogs,
@@ -305,17 +297,49 @@ app.get("/", async (req, res) => {
       }
     }
 
+    // Pagination Setup
+    const page = parseInt(req.query.page) || 1;
+    const limit = 8; // Number of blogs per page
+    const skip = (page - 1) * limit;
+
     // Fallback: If no personalization (or it failed/empty), fetch standard
     if (blogs.length === 0) {
-      blogs = await Blog.find(filter).sort(sort).populate("createdBy", "fullName profilePic");
+      const totalBlogs = await Blog.countDocuments(filter);
+      const totalPages = Math.ceil(totalBlogs / limit);
+
+      blogs = await Blog.find(filter)
+        .sort(sort)
+        .skip(skip)
+        .limit(limit)
+        .select("-body") // 📉 Optimization: Don't load full text
+        .populate("createdBy", "fullName profilePic")
+        .lean(); // ⚡ Optimization: Return plain JSON
+
+      res.locals.pagination = { currentPage: page, totalPages }; // Pass to layout
+    } else {
+      // If personalized blogs exist, we should manually slice them for consistency?
+      // For now, let's just paginate the 'standard' flow as it's the main issue.
+      // If personalization returns 10 items, that's effectively one page.
+      res.locals.pagination = null;
     }
 
     const categories = await Blog.distinct("category");
     const tags = await Blog.distinct("tags");
+    const trendingTagsList = await Blog.getTrendingTags(); // 📈 Fetch Top Tags
 
     // Fetch featured and trending blogs
-    const featuredBlogs = await Blog.find({ featured: true }).limit(5);
-    const trendingBlogs = await Blog.find().sort({ views: -1 }).limit(3);
+    const featuredBlogs = await Blog.find({ featured: true })
+      .limit(5)
+      .select("-body")
+      .populate("createdBy", "fullName profilePic")
+      .lean();
+
+    const trendingBlogs = await Blog.find()
+      .sort({ views: -1 })
+      .limit(3)
+      .select("-body")
+      .populate("createdBy", "fullName profilePic")
+      .lean();
 
     // Render the home page
     res.render("home", {
@@ -323,6 +347,7 @@ app.get("/", async (req, res) => {
       blogs: blogs || [],
       featuredBlogs,
       trendingBlogs,
+      trendingTagsList, // Pass to view
       categories,
       tags,
       searchQuery,

@@ -4,7 +4,7 @@
 <head>
     <%- include('./partials/header') %>
         <title>Home - Lumina</title>
-        <link rel="stylesheet" href="/css/home.css?v=10">
+        <link rel="stylesheet" href="/css/home.css?v=18">
 </head>
 
 <body>
@@ -31,7 +31,16 @@
                             <%= cat %>
                         </button>
                         <% }) %>
+
                 </div>
+
+                <% if (typeof trendingTagsList !=='undefined' && trendingTagsList.length> 0) { %>
+                    <div class="feed-tags">
+                        <% trendingTagsList.forEach(tag=> { %>
+                            <a href="/?tag=<%= tag._id %>" class="tag-chip">#<%= tag._id %></a>
+                            <% }) %>
+                    </div>
+                    <% } %>
             </div>
 
             <div class="feed-divider"></div>
@@ -245,30 +254,32 @@
 
                         article.innerHTML = `
                             <div class="bento-glow"></div>
-                                <div class="card-image-wrapper">
-                                    ${blog.coverImageURL ? `<img src="${blog.coverImageURL}" alt="${blog.title}" loading="lazy">` : '<div class="placeholder-img"></div>'}
-                                    <div class="card-overlay">
-                                            <span class="read-time">${blog.readTime} min read</span>
-                                        </div>
-                                    </div>
-                                    <div class="card-content">
-                                        <div class="card-tags">
-                                            ${blog.category ? `<span class="tag-pill">${blog.category}</span>` : ''}
-                                        </div>
-                                        <h2 class="card-heading">${blog.title}</h2>
-                                        <div class="card-footer-minimal">
-                                            <div class="author-info">
-                                                ${blog.createdBy && blog.createdBy.profilePic ? `<img src="${blog.createdBy.profilePic}" alt="Author" class="author-avatar-small">` : '<div class="author-avatar-small placeholder"></div>'}
-                                                <span class="author-name">${blog.createdBy ? blog.createdBy.fullName : 'Unknown User'}</span>
-                                            </div>
-                                            <div class="interaction-stats">
-                                                <span><i class="bi bi-eye"></i> ${blog.views || 0}</span>
+                                <a href="/blog/${blog._id}" class="blog-card-link">
+                                    <div class="blog-card-inner">
+                                        <div class="card-image-wrapper">
+                                            ${blog.coverImageURL ? `<img src="${blog.coverImageURL}" alt="${blog.title}" loading="lazy">` : '<div class="placeholder-img"></div>'}
+                                            <div class="card-overlay">
+                                                <span class="read-time">${blog.readTime || 1} min read</span>
                                             </div>
                                         </div>
+                                        <div class="card-content">
+                                            <div class="card-tags">
+                                                ${blog.category ? `<span class="tag-pill">${blog.category}</span>` : ''}
+                                            </div>
+                                            <h2 class="card-heading">${blog.title}</h2>
+                                            <div class="card-footer-minimal">
+                                                <div class="author-info">
+                                                    ${blog.createdBy && blog.createdBy.profilePic ? `<img src="${blog.createdBy.profilePic}" alt="Author" class="author-avatar-small">` : '<div class="author-avatar-small placeholder"></div>'}
+                                                    <span class="author-name">${blog.createdBy ? blog.createdBy.fullName : 'Unknown User'}</span>
+                                                </div>
+                                                <div class="interaction-stats">
+                                                    <span><i class="bi bi-eye"></i> ${blog.views || 0}</span>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                            </a>
-                        `;
+                                </a>
+                            `;
                         fragment.appendChild(article);
                     });
 

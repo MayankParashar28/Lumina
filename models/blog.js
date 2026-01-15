@@ -72,9 +72,26 @@ const blogSchema = new mongoose.Schema(
 
 
 
-// Indexing for search functionality
-blogSchema.index({ title: "text", body: "text", tags: "text" });
+// Indexing for search functionality and performance
+blogSchema.index({ title: "text", body: "text", tags: "text" }); // Text Search
+blogSchema.index({ createdAt: -1 }); // Sorting by Newest
+blogSchema.index({ views: -1 });     // Sorting by Trending
+blogSchema.index({ category: 1 });   // Filtering by Category
 
+blogSchema.statics.getTrendingTags = async function () {
+  try {
+    const tags = await this.aggregate([
+      { $unwind: "$tags" },
+      { $group: { _id: "$tags", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 5 }
+    ]);
+    return tags;
+  } catch (err) {
+    console.error("Error fetching trending tags:", err);
+    return [];
+  }
+};
 
 
 // ✅ Prevents overwriting the model if already compiled

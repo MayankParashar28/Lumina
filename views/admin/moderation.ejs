@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <%- include('../partials/header') %>
+        <title>Moderation Logs - Lumina Admin</title>
+</head>
+
+<body class="bg-light">
+    <%- include('../partials/nav', { searchQuery: '' }) %>
+
+        <div class="container py-5" style="margin-top: 60px;">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 fw-bold">🛡️ Moderation Logs</h1>
+                <a href="/admin" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
+                </a>
+            </div>
+
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="bg-light text-muted small text-uppercase">
+                                <tr>
+                                    <th class="ps-4">Time</th>
+                                    <th>User</th>
+                                    <th style="width: 40%">Content</th>
+                                    <th>Reason</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody class="border-top-0">
+                                <% if (logs && logs.length> 0) { %>
+                                    <% logs.forEach(log=> { %>
+                                        <tr>
+                                            <!-- Time -->
+                                            <td class="ps-4 text-muted small">
+                                                <%= new Date(log.createdAt).toLocaleString() %>
+                                            </td>
+
+                                            <!-- User -->
+                                            <td>
+                                                <% if (log.userId) { %>
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <img src="<%= log.userId.profilePic || '/images/default.png' %>"
+                                                            class="rounded-circle" width="30" height="30" alt="">
+                                                        <div>
+                                                            <div class="fw-bold small">
+                                                                <%= log.userId.fullName %>
+                                                            </div>
+                                                            <div class="text-muted" style="font-size: 0.75rem;">
+                                                                <%= log.userId.email %>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <% } else { %>
+                                                        <span
+                                                            class="badge bg-secondary text-white small">Anonymous</span>
+                                                        <div class="text-muted small mt-1">
+                                                            <%= log.ipAddress || 'Unknown IP' %>
+                                                        </div>
+                                                        <% } %>
+                                            </td>
+
+                                            <!-- Content (Masked/Truncated) -->
+                                            <td>
+                                                <div class="p-2 bg-light rounded-3 text-break small font-monospace text-secondary"
+                                                    style="max-height: 80px; overflow-y: auto;">
+                                                    <%= log.content %>
+                                                </div>
+                                            </td>
+
+                                            <!-- Reason -->
+                                            <td>
+                                                <% if (log.flaggedWords && log.flaggedWords.length> 0) { %>
+                                                    <span
+                                                        class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                                                        🤬 <%= log.flaggedWords.join(", ") %>
+                                                </span>
+                                            <% } else { %>
+                                                <span class=" badge bg-warning-subtle text-warning border
+                                                            border-warning-subtle">
+                                                            🤖 AI Flagged
+                                                    </span>
+                                                    <% } %>
+                                                        <div class="text-muted small mt-1" style="font-size: 0.8rem;">
+                                                            <%= log.reason %>
+                                                        </div>
+                                            </td>
+
+                                            <!-- Status -->
+                                            <td>
+                                                <span class="badge bg-danger">BLOCKED</span>
+                                            </td>
+                                        </tr>
+                                        <% }) %>
+                                            <% } else { %>
+                                                <tr>
+                                                    <td colspan="5" class="text-center py-5 text-muted">
+                                                        <i
+                                                            class="bi bi-shield-check fs-1 d-block mb-3 text-success"></i>
+                                                        No moderation events found. Everyone is behaving nicely! 😇
+                                                    </td>
+                                                </tr>
+                                                <% } %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <%- include('../partials/footer') %>
+</body>
+
+</html>

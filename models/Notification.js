@@ -24,6 +24,13 @@ const notificationSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
+    blogId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "blog",
+    },
+    targetUrl: {
+        type: String, // Calculated URL for easier frontend rendering (optional but helpful)
+    },
     read: {
         type: Boolean,
         default: false,

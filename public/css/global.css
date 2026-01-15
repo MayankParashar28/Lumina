@@ -32,8 +32,7 @@ body {
 }
 
 /* 🌊 Lenis Required CSS */
-html.lenis,
-html.lenis body {
+html.lenis {
     height: auto;
 }
 
@@ -540,15 +539,13 @@ input.form-control:focus {
     width: 100%;
     background-color: var(--bg-color);
     border-top: 1px solid var(--border-color);
-    padding: 1.5rem 2rem;
+    padding: 3rem 2rem;
     margin-top: auto;
-    font-family: 'Inter', system-ui, sans-serif;
 }
 
 .footer-content-minimal {
-    width: 100%;
-    padding: 0 1rem;
-    /* minimal padding */
+    max-width: 1200px;
+    margin: 0 auto;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -557,45 +554,63 @@ input.form-control:focus {
 .footer-left {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 1.2rem;
 }
 
 .footer-logo-text {
-    font-weight: 700;
+    font-size: 1.5rem;
+    font-weight: 900;
     color: var(--text-color);
-    letter-spacing: -0.03em;
+    letter-spacing: -0.05em;
+    text-transform: uppercase;
 }
 
 .footer-copyright {
-    color: #666;
-    font-size: 0.9rem;
+    color: #888;
+    font-size: 0.85rem;
+    font-weight: 500;
 }
 
 .footer-center {
     display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.footer-tagline {
+    font-size: 0.9rem;
+    color: #666;
+    margin: 0;
+    font-weight: 400;
+}
+
+.footer-links {
+    display: flex;
     gap: 2rem;
 }
 
-.footer-center a {
-    color: #666;
+.footer-links a {
+    color: #444;
     text-decoration: none;
     font-size: 0.9rem;
-    transition: color 0.2s;
+    font-weight: 600;
+    transition: all 0.2s;
 }
 
-.footer-center a:hover {
+.footer-links a:hover {
     color: var(--text-color);
 }
 
 .footer-right {
     display: flex;
-    gap: 1.2rem;
+    gap: 1.5rem;
 }
 
 .footer-right a {
     color: var(--text-color);
-    font-size: 1rem;
-    opacity: 0.6;
+    font-size: 1.2rem;
+    opacity: 0.4;
     transition: opacity 0.2s;
 }
 
@@ -605,48 +620,24 @@ input.form-control:focus {
 
 @media (max-width: 768px) {
     .site-footer-minimal {
-        padding: 0.7rem !important;
-        /* Reduced padding */
+        padding: 2.5rem 1.5rem;
     }
 
     .footer-content-minimal {
         flex-direction: column;
-        gap: 0.3rem;
-        /* Tighter gap */
+        gap: 2rem;
         text-align: center;
-        padding-bottom: 0.3rem;
     }
 
     .footer-left {
         flex-direction: column;
-        gap: 0.2rem;
-    }
-
-    .footer-center {
-        align-items: center;
         gap: 0.5rem;
-        /* Reduced gap */
-    }
-
-    .footer-tagline {
-        font-size: 0.75rem !important;
-        margin-bottom: 0.2rem !important;
     }
 
     .footer-links {
-        justify-content: center;
+        gap: 1rem;
         flex-wrap: wrap;
-        gap: 0.8rem !important;
-        margin-top: 0 !important;
-    }
-
-    .footer-links a {
-        font-size: 0.8rem;
-    }
-
-    .footer-right {
         justify-content: center;
-        margin-top: 0.5rem;
     }
 }
 

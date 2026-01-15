@@ -14,103 +14,116 @@
     <%- include('./partials/nav', { searchQuery: '' }) %>
 
         <div class="profile-container classic-portfolio">
-            <!-- Author Header -->
-            <header class="author-header">
-                <div class="profile-image-wrapper">
-                    <img src="<%= optimizeImage(user.profilePic, { width: 300, height: 300 }) %>" alt="Profile Picture"
-                        class="profile-pic">
-                </div>
+            <!-- Author Header (Premium) -->
+            <div class="profile-hero-bg">
+                <header class="author-header">
+                    <div class="profile-image-wrapper">
+                        <img src="<%= optimizeImage(user.profilePic, { width: 300, height: 300 }) %>"
+                            alt="Profile Picture" class="profile-pic">
+                    </div>
 
-                <h1 class="author-name">
-                    <%= user.fullName %>
-                </h1>
+                    <h1 class="author-name">
+                        <%= user.fullName %>
+                    </h1>
 
-                <p class="member-since">
-                    Member since <%= new Date(user.createdAt).getFullYear() %>
-                </p>
 
-                <!-- Minimal Stats Row -->
-                <div class="author-stats-row">
-                    <span>
-                        <%= blogCount || 0 %> Stories
-                    </span>
-                    <span class="divider">/</span>
-                    <span>
-                        <%= totalLikes || 0 %> Likes
-                    </span>
-                    <span class="divider">/</span>
-                    <span>
-                        <%= user.followers ? user.followers.length : 0 %> Followers
-                    </span>
-                </div>
 
-                <!-- Socials -->
-                <div class="social-links-minimal">
-                    <% if (user.socials) { %>
-                        <% if (user.socials.linkedin) { %> <a href="<%= user.socials.linkedin %>"
-                                target="_blank">LinkedIn</a>
+                    <p class="member-since">
+                        Member since <%= new Date(user.createdAt).getFullYear() %>
+                    </p>
+
+                    <!-- Minimal Stats Row (Pill Style) -->
+                    <div class="author-stats-row">
+                        <span>
+                            <%= blogCount || 0 %> Stories
+                        </span>
+                        <span class="divider">/</span>
+                        <span>
+                            <%= totalLikes || 0 %> Likes
+                        </span>
+                        <span class="divider">/</span>
+                        <span>
+                            <%= user.followers ? user.followers.length : 0 %> Followers
+                        </span>
+                    </div>
+
+                    <!-- Socials (Round Buttons) -->
+                    <div class="social-links-minimal">
+                        <% if (user.website) { %>
+                            <a href="<%= user.website %>" target="_blank" class="social-btn" title="Website">
+                                <i class="fas fa-globe"></i>
+                            </a>
                             <% } %>
-                                <% if (user.socials.twitter) { %> <a href="<%= user.socials.twitter %>"
-                                        target="_blank">Twitter</a>
-                                    <% } %>
-                                        <% if (user.socials.github) { %> <a href="<%= user.socials.github %>"
-                                                target="_blank">GitHub</a>
-                                            <% } %>
-                                                <% if (user.socials.instagram) { %> <a
-                                                        href="<%= user.socials.instagram %>"
-                                                        target="_blank">Instagram</a>
-                                                    <% } %>
+
+                                <% if (user.socials) { %>
+                                    <% if (user.socials.linkedin) { %>
+                                        <a href="<%= user.socials.linkedin %>" target="_blank" class="social-btn"
+                                            title="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+                                        <% } %>
+                                            <% if (user.socials.twitter) { %>
+                                                <a href="<%= user.socials.twitter %>" target="_blank" class="social-btn"
+                                                    title="Twitter"><i class="fab fa-twitter"></i></a>
+                                                <% } %>
+                                                    <% if (user.socials.github) { %>
+                                                        <a href="<%= user.socials.github %>" target="_blank"
+                                                            class="social-btn" title="GitHub"><i
+                                                                class="fab fa-github"></i></a>
                                                         <% } %>
+                                                            <% if (user.socials.instagram) { %>
+                                                                <a href="<%= user.socials.instagram %>" target="_blank"
+                                                                    class="social-btn" title="Instagram"><i
+                                                                        class="fab fa-instagram"></i></a>
+                                                                <% } %>
+                                                                    <% } %>
+                    </div>
+
+                    <!-- Public Actions (Follow) -->
+                    <div class="author-actions">
+                        <form method="POST" action="/user/follow/<%= user._id %>" style="display: inline;">
+                            <button type="submit"
+                                class="btn-action <%= (loggedInUser && user.followers && user.followers.includes(loggedInUser._id)) ? 'secondary' : 'primary' %>">
+                                <%= (loggedInUser && user.followers && user.followers.includes(loggedInUser._id))
+                                    ? 'Unfollow' : 'Follow Author' %>
+                            </button>
+                        </form>
+                    </div>
+                </header>
+
+                <div class="author-bio-editorial">
+                    <p>
+                        "<%= user.bio || "This author prefers to let their work speak for itself." %>"
+                    </p>
                 </div>
+            </div>
 
-                <!-- Public Actions (Follow) -->
-                <div class="author-actions">
-                    <form method="POST" action="/user/follow/<%= user._id %>" style="display: inline;">
-                        <button type="submit"
-                            class="action-btn-text <%= (loggedInUser && user.followers && user.followers.includes(loggedInUser._id)) ? 'text-danger' : '' %>">
-                            <%= (loggedInUser && user.followers && user.followers.includes(loggedInUser._id))
-                                ? 'Unfollow' : 'Follow Author' %>
-                        </button>
-                    </form>
-                </div>
-            </header>
-
-            <hr class="section-divider">
-
-            <!-- Editorial Bio -->
-            <section class="author-bio-editorial">
-                <h3>About the Author</h3>
-                <p>
-                    <%= user.bio || "This author prefers to let their work speak for itself." %>
-                </p>
-            </section>
-
-
-            <!-- Written Blogs -->
+            <!-- Written Blogs (2-Column Grid) -->
             <section class="reading-list">
-                <h3 class="section-label">Written Stories</h3>
+                <h3 class="section-label">Selected Stories</h3>
                 <% if (blogs && blogs.length> 0) { %>
-                    <ul class="clean-list">
+                    <div class="public-story-grid">
                         <% blogs.forEach(blog=> { %>
-                            <li>
-                                <a href="/blog/<%= blog._id %>" class="bookmark-card">
-                                    <div class="bookmark-img-wrapper">
-                                        <img src="<%= optimizeImage(blog.coverImageURL || '/images/default-cover.jpg', { width: 400, height: 250 }) %>"
-                                            alt="Cover" class="bookmark-img">
-                                    </div>
-                                    <div class="bookmark-info">
-                                        <span class="bookmark-title">
-                                            <%= blog.title %>
-                                        </span>
-                                        <span class="bookmark-meta">
-                                            Published <%= new Date(blog.createdAt).toLocaleDateString() %> · <%=
-                                                    blog.views || 0 %> Views
-                                        </span>
-                                    </div>
-                                </a>
-                            </li>
+                            <a href="/blog/<%= blog._id %>" class="public-story-card">
+                                <div class="public-story-image">
+                                    <img src="<%= optimizeImage(blog.coverImageURL || '/images/default-cover.jpg', { width: 600, height: 400 }) %>"
+                                        alt="Cover" loading="lazy">
+                                    <% if (blog.views> 100) { %>
+                                        <div class="card-overlay"
+                                            style="position: absolute; bottom: 10px; right: 10px; background: rgba(0,0,0,0.6); color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.7rem;">
+                                            Popular</div>
+                                        <% } %>
+                                </div>
+                                <div class="story-content">
+                                    <span class="public-story-meta">
+                                        <%= new Date(blog.createdAt).toLocaleDateString() %> · <%=
+                                                Math.ceil((blog.content ? blog.content.length : 0) / 1000) %> min read
+                                    </span>
+                                    <h2 class="public-story-title">
+                                        <%= blog.title %>
+                                    </h2>
+                                </div>
+                            </a>
                             <% }); %>
-                    </ul>
+                    </div>
                     <% } else { %>
                         <p class="empty-state">No stories written yet.</p>
                         <% } %>

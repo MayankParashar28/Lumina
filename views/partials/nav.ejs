@@ -1,88 +1,78 @@
 <nav class="floating-nav">
-  <% if (locals.announcement) { %>
-    <div class="announcement-bar alert-<%= locals.announcement.type %>">
-      <div class="container text-center">
-        <i class="bi bi-megaphone-fill me-2"></i>
-        <span>
-          <%= locals.announcement.message %>
-        </span>
-      </div>
-    </div>
-    <% } %>
-      <div class="nav-content">
-        <!-- Mobile Toggle -->
-        <button class="mobile-menu-btn" onclick="toggleMobileMenu()">
-          <i class="bi bi-list"></i>
-        </button>
+  <div class="nav-content">
+    <!-- Mobile Toggle -->
+    <button class="mobile-menu-btn" onclick="toggleMobileMenu()">
+      <i class="bi bi-list"></i>
+    </button>
 
-        <!-- Brand -->
-        <a class="nav-brand" href="/">
-          <span class="brand-name">Lumina</span>
+    <!-- Brand -->
+    <a class="nav-brand" href="/">
+      <span class="brand-name">Lumina</span>
+    </a>
+
+    <!-- Center Links -->
+    <ul class="nav-links">
+      <li>
+        <a href="/"
+          class="nav-link-custom <%= (locals.path === '/' || locals.path.startsWith('/blog')) ? 'active' : '' %>">
+          Blogs
+        </a>
+      </li>
+      <li>
+        <a href="/about" class="nav-link-custom <%= locals.path === '/about' ? 'active' : '' %>">
+          Mission
+        </a>
+      </li>
+    </ul>
+
+    <!-- Right Actions -->
+    <div class="nav-actions">
+
+      <% if (locals.user) { %>
+        <!-- Search (Restricted to logged in users) -->
+        <div class="search-trigger">
+          <button id="searchToggle" class="icon-btn">
+            <i class="bi bi-search"></i>
+          </button>
+          <form class="floating-search" method="GET" action="/" id="searchForm">
+            <input id="searchInput" type="text" name="searchQuery" placeholder="Search..." autocomplete="off">
+          </form>
+        </div>
+
+        <a href="/blog/add-new" class="icon-btn" title="Write">
+          <i class="bi bi-plus-lg"></i>
         </a>
 
-        <!-- Center Links -->
-        <ul class="nav-links">
-          <li>
-            <a href="/"
-              class="nav-link-custom <%= (locals.path === '/' || locals.path.startsWith('/blog')) ? 'active' : '' %>">
-              Blogs
-            </a>
-          </li>
-          <li>
-            <a href="/about" class="nav-link-custom <%= locals.path === '/about' ? 'active' : '' %>">
-              Mission
-            </a>
-          </li>
-        </ul>
+        <a href="/notifications" class="icon-btn position-relative">
+          <i class="bi bi-bell"></i>
+          <span id="notification-count" class="notification-dot" style="display: none;"></span>
+        </a>
 
-        <!-- Right Actions -->
-        <div class="nav-actions">
-
-          <% if (locals.user) { %>
-            <!-- Search (Restricted to logged in users) -->
-            <div class="search-trigger">
-              <button id="searchToggle" class="icon-btn">
-                <i class="bi bi-search"></i>
-              </button>
-              <form class="floating-search" method="GET" action="/" id="searchForm">
-                <input id="searchInput" type="text" name="searchQuery" placeholder="Search..." autocomplete="off">
-              </form>
+        <!-- Profile Dropdown (Simplified) -->
+        <div class="profile-dropdown">
+          <button class="profile-trigger">
+            <i class="bi bi-person-circle"></i>
+          </button>
+          <div class="dropdown-menu-custom">
+            <div class="dropdown-header">
+              <%= locals.user.fullName || locals.user.email %>
             </div>
-
-            <a href="/blog/add-new" class="icon-btn" title="Write">
-              <i class="bi bi-plus-lg"></i>
-            </a>
-
-            <a href="/notifications" class="icon-btn position-relative">
-              <i class="bi bi-bell"></i>
-              <span id="notification-count" class="notification-dot" style="display: none;"></span>
-            </a>
-
-            <!-- Profile Dropdown (Simplified) -->
-            <div class="profile-dropdown">
-              <button class="profile-trigger">
-                <i class="bi bi-person-circle"></i>
-              </button>
-              <div class="dropdown-menu-custom">
-                <div class="dropdown-header">
-                  <%= locals.user.fullName || locals.user.email %>
-                </div>
-                <% if (locals.user.role==='ADMIN' ) { %>
-                  <a href="/admin" class="dropdown-item fw-bold text-primary">Admin Panel</a>
-                  <% } %>
-                    <a href="/user/profile" class="dropdown-item">Profile</a>
-                    <a href="/user/logout" class="dropdown-item danger">Log Out</a>
-              </div>
-            </div>
-
-            <% } else { %>
-              <div class="auth-buttons">
-                <a href="/user/signin" class="nav-link-custom">Sign In</a>
-                <a href="/user/signup" class="btn-pill">Get Started</a>
-              </div>
+            <% if (locals.user.role==='ADMIN' ) { %>
+              <a href="/admin" class="dropdown-item fw-bold text-primary">Admin Panel</a>
               <% } %>
+                <a href="/user/profile" class="dropdown-item">Profile</a>
+                <a href="/user/logout" class="dropdown-item danger">Log Out</a>
+          </div>
         </div>
-      </div> <!-- Closing nav-content -->
+
+        <% } else { %>
+          <div class="auth-buttons">
+            <a href="/user/signin" class="nav-link-custom">Sign In</a>
+            <a href="/user/signup" class="btn-pill">Get Started</a>
+          </div>
+          <% } %>
+    </div>
+  </div> <!-- Closing nav-content -->
 </nav>
 
 <script>

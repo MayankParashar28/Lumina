@@ -265,6 +265,9 @@
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h1 class="fw-light m-0">Dashboard <span class="fs-5 text-muted ms-2">Admin Panel</span></h1>
                 <div class="d-flex gap-2">
+                    <a href="/admin/moderation" class="btn btn-sm btn-outline-danger">
+                        <i class="bi bi-shield-exclamation me-1"></i> Moderation Logs
+                    </a>
                     <button class="btn btn-sm btn-outline-primary" onclick="location.reload()"><i
                             class="bi bi-arrow-clockwise"></i> Refresh</button>
                 </div>
@@ -308,11 +311,7 @@
                     <button class="nav-link rounded-2" id="blogs-tab" data-bs-toggle="pill" data-bs-target="#blogs"
                         type="button" role="tab"><i class="bi bi-journal-text me-2"></i>Content</button>
                 </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link rounded-2" id="announcements-tab" data-bs-toggle="pill"
-                        data-bs-target="#announcements" type="button" role="tab"><i
-                            class="bi bi-megaphone me-2"></i>Announcements</button>
-                </li>
+
             </ul>
 
             <div class="tab-content" id="adminTabsContent">
@@ -443,96 +442,12 @@
                     </div>
                 </div>
 
-                <!-- 📢 Announcements Tab -->
-                <div class="tab-pane fade" id="announcements" role="tabpanel">
-                    <div class="card border-0 shadow-sm p-4">
-                        <h5 class="fw-bold mb-4">📢 Global Announcement</h5>
 
-                        <% if (activeAnnouncement) { %>
-                            <div
-                                class="alert alert-<%= activeAnnouncement.type %> d-flex justify-content-between align-items-center py-2 px-3 mb-4 rounded-3 small">
-                                <span><strong>Active:</strong>
-                                    <%= activeAnnouncement.message %>
-                                </span>
-                                <form action="/admin/announcement/delete/<%= activeAnnouncement._id %>" method="POST"
-                                    class="m-0" onsubmit="return confirm('Turn off?');">
-                                    <button type="submit"
-                                        class="btn btn-sm py-0 btn-outline-<%= activeAnnouncement.type %> border-0 text-decoration-underline">Turn
-                                        Off</button>
-                                </form>
-                            </div>
-                            <% } %>
-
-                                <form action="/admin/announcement" method="POST" id="announcementForm">
-                                    <div class="row g-3">
-                                        <div class="col-md-12">
-                                            <label class="form-label text-muted small mb-1"
-                                                style="font-size: 0.75rem;">Template</label>
-                                            <select id="announcementTemplate" class="form-select form-select-sm"
-                                                onchange="applyTemplate()">
-                                                <option value="">-- Select Template --</option>
-                                                <option value="maintenance|warning">🛠 System Maintenance</option>
-                                                <option value="deployment|info">🚀 New Features</option>
-                                                <option value="downtime|danger">⚠️ Technical issues</option>
-                                                <option value="welcome|success">🎉 Warm Welcome</option>
-                                            </select>
-                                        </div>
-                                        <div class="col-md-12">
-                                            <label class="form-label text-muted small mb-1"
-                                                style="font-size: 0.75rem;">Message</label>
-                                            <input type="text" name="message" id="announcementMessage"
-                                                class="form-control form-control-sm" placeholder="Message content..."
-                                                required>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label text-muted small mb-1"
-                                                style="font-size: 0.75rem;">Alert Type</label>
-                                            <select name="type" id="announcementType"
-                                                class="form-select form-select-sm">
-                                                <option value="info">Info (Blue)</option>
-                                                <option value="warning">Warning (Yellow)</option>
-                                                <option value="danger">Danger (Red)</option>
-                                                <option value="success">Success (Green)</option>
-                                            </select>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label text-muted small mb-1"
-                                                style="font-size: 0.75rem;">Duration</label>
-                                            <select name="duration" class="form-select form-select-sm">
-                                                <option value="always">Always On</option>
-                                                <option value="1">1 Hour</option>
-                                                <option value="12">12 Hours</option>
-                                                <option value="24">24 Hours</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <button type="submit" class="btn btn-primary btn-sm w-100 mt-4">
-                                        <i class="bi bi-megaphone-fill me-1"></i> Broadcast Now
-                                    </button>
-                                </form>
-                    </div>
-                </div>
             </div>
         </div>
 
         <%- include('../partials/footer') %>
-            <script>
-                function applyTemplate() {
-                    const template = document.getElementById('announcementTemplate').value;
-                    if (!template) return;
 
-                    const [msg, type] = template.split('|');
-                    const messages = {
-                        maintenance: "Lumina will be undergoing scheduled maintenance on Saturday. Expect minor downtime.",
-                        deployment: "New features have been deployed! Check out the improved Feed and AI tools.",
-                        downtime: "We are currently experiencing technical issues with image uploads. Our team is on it.",
-                        welcome: "Welcome to Lumina! Start sharing your stories with the world today."
-                    };
-
-                    document.getElementById('announcementMessage').value = messages[msg] || "";
-                    document.getElementById('announcementType').value = type;
-                }
-            </script>
 </body>
 
 </html>

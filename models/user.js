@@ -18,76 +18,73 @@ const userSchema = new Schema(
     },
     salt: {
       type: String,
+      select: false, // 🛡️ Security: Hide by default
     },
     password: {
       type: String,
       required: true,
+      select: false, // 🛡️ Security: Hide by default
     },
 
     bio: {
       type: String,
       default: "",
     },
-    socials: {
-      linkedin: {
-        type: String,
-        default: "",
-      },
-      twitter: {
-        type: String,
-        default: "",
-      },
-      github: {
-        type: String,
-        default: "",
-      },
-      instagram: {
-        type: String,
-        default: "",
-      },
-    },
-    profilePic: {
+    // 💼 Professional Details
+
+    website: {
       type: String,
-      default: function () {
-        return `https://api.dicebear.com/8.x/bottts/svg?seed=${encodeURIComponent(this.email)}`;
-      },
-    },
-    profileViews: {  // ✅ New field to track profile views
-      type: Number,
-      default: 0,
-    },
-    following: {
-      type: [Schema.Types.ObjectId],
-      ref: "user",
-      default: [],
-    },
-    followers: {
-      type: [Schema.Types.ObjectId],
-      ref: "user",
-      default: [],
-    },
-    totalLikes: {
-      type: Number,
-      default: 0,
+      default: "",
     },
 
-    joinedDate: {
-      type: Date,
-      default: Date.now,
+    // 🔔 Notification Preferences
+    notificationPreferences: {
+      emailOnComment: { type: Boolean, default: true },
+      emailOnFollow: { type: Boolean, default: true },
     },
-    isSubscribed: {
-      type: Boolean,
-      default: false
+
+
+
+    // 🚫 Account Status (Moderation)
+    status: {
+      type: String,
+      enum: ["active", "banned", "suspended"],
+      default: "active",
     },
+    // ... (lines 31-81 unchanged)
     stripeCustomerId: {
       type: String,
+      select: false,
     },
     subscriptionId: {
       type: String,
+      select: false,
     },
     lastProfileEdit: {
       type: Date,
     },
+    profilePic: {
+      type: String,
+      default: "/images/default-avatar.png",
+    },
+    socials: {
+      linkedin: { type: String, default: "" },
+      twitter: { type: String, default: "" },
+      github: { type: String, default: "" },
+      instagram: { type: String, default: "" },
+    },
+    followers: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "user",
+      },
+    ],
+    following: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "user",
+      },
+    ],
     bookmarks: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -106,15 +103,19 @@ const userSchema = new Schema(
     },
     verificationToken: {
       type: String,
+      select: false,
     },
     verificationTokenExpires: {
       type: Date,
+      select: false,
     },
     resetPasswordToken: {
       type: String,
+      select: false,
     },
     resetPasswordExpires: {
       type: Date,
+      select: false,
     },
     lastAiRequest: {
       type: Date, // Tracks when the user last used an AI feature
@@ -148,7 +149,8 @@ userSchema.statics.matchPasswordAndGenerateToken = async function (email, passwo
   // console.log("🔍 Received email:", email);
   // console.log("🔍 Received password:", password);
 
-  const user = await this.findOne({ email });
+  // 🔐 Explicitly select password and salt because they are hidden by default
+  const user = await this.findOne({ email }).select("+password +salt");
 
   if (!user) {
     // console.log("❌ User not found");

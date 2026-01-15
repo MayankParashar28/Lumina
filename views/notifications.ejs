@@ -23,9 +23,16 @@
                                     <img src="<%= (notification.senderId && notification.senderId.profilePic) ? notification.senderId.profilePic : '/images/default-user.png' %>"
                                         alt="Profile" width="40" height="40">
                                     <span class="message-content">
-                                        <strong class="message">
-                                            <%= notification.message %>
-                                        </strong>
+                                        <% let link='#' ; if(notification.type==='follow' )
+                                            link=`/user/profile/${notification.senderId._id}`; else
+                                            if(notification.blogId) link=`/blog/${notification.blogId}`; %>
+                                            <a href="<%= link %>"
+                                                class="notification-link <%= !notification.read ? 'fw-bold' : '' %>"
+                                                style="text-decoration: none; color: inherit; display: block;">
+                                                <strong class="message">
+                                                    <%= notification.message %>
+                                                </strong>
+                                            </a>
                                     </span>
                                 </div>
                                 <span class="time-ago" data-time="<%= notification.createdAt %>"></span>

@@ -93,9 +93,80 @@ body {
 .feed-filter {
     display: flex;
     gap: 0.8rem;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    /* Prevent wrapping for scroll */
+    overflow-x: auto;
+    /* Enable scroll */
     margin-top: 1rem;
     width: 100%;
+    padding-bottom: 0.1rem;
+    /* Reduced bottom padding */
+    align-items: center;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    /* Firefox */
+}
+
+.feed-filter::-webkit-scrollbar {
+    display: none;
+    /* Chrome/Safari */
+}
+
+
+.feed-tags {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 0.2rem;
+    /* Tight gap */
+    width: 100%;
+    align-items: center;
+    justify-content: flex-start;
+    /* Left align */
+    padding-bottom: 0.2rem;
+    /* Reduced bottom space */
+}
+
+.tags-label {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-color);
+    margin-right: 0.5rem;
+    opacity: 0.8;
+}
+
+.tag-chip {
+    border: 1px solid var(--border-color);
+    /* Match filter border */
+    background: transparent;
+    color: var(--text-color);
+    opacity: 0.7;
+    padding: 0.3rem 0.9rem;
+    border-radius: 99px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.tag-chip:hover {
+    opacity: 1;
+    background: var(--text-color);
+    /* Exact match to filter hover */
+    color: var(--bg-color);
+    border-color: var(--text-color);
+    transform: translateY(-1px);
+}
+
+
+.filter-divider {
+    width: 1px;
+    height: 32px;
+    background: var(--border-color);
+    margin: 0 0.5rem;
+    align-self: center;
+    flex-shrink: 0;
 }
 
 .filter-btn {
@@ -108,6 +179,14 @@ body {
     cursor: pointer;
     transition: all 0.2s ease;
     white-space: nowrap;
+    display: inline-flex;
+    /* Ensure flexible/inline behavior */
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    /* For <a> tags */
+    color: var(--text-color);
+    /* Default color */
 }
 
 .filter-btn.active,

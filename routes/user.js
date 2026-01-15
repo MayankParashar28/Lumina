@@ -112,7 +112,7 @@ router.get("/profile/:userId", async (req, res) => {
   }
 });
 
-//check bookmark
+// check bookmark status (for UI button)
 router.get("/check-bookmark/:blogId", async (req, res) => {
   if (!req.user) return res.json({ isBookmarked: false });
 
@@ -123,6 +123,59 @@ router.get("/check-bookmark/:blogId", async (req, res) => {
   } catch (error) {
     console.error("❌ Error checking bookmark:", error);
     res.status(500).json({ isBookmarked: false });
+  }
+});
+
+// 🔖 Toggle Bookmark Route
+router.post("/bookmark/:blogId", async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const { blogId } = req.params;
+    const user = await User.findById(req.user._id);
+
+    const isBookmarked = user.bookmarks.includes(blogId);
+
+    if (isBookmarked) {
+      // Remove
+      await User.findByIdAndUpdate(req.user._id, { $pull: { bookmarks: blogId } });
+    } else {
+      // Add
+      await User.findByIdAndUpdate(req.user._id, { $addToSet: { bookmarks: blogId } });
+    }
+
+    return res.json({ success: true, isBookmarked: !isBookmarked });
+
+  } catch (error) {
+    console.error("Bookmark Error:", error);
+    return res.status(500).json({ error: "Server Error" });
+  }
+});
+
+// 🔖 View Bookmarks Page
+router.get("/bookmarks", async (req, res) => {
+  if (!req.user) return res.redirect("/user/signin");
+
+  try {
+    const user = await User.findById(req.user._id).populate({
+      path: "bookmarks",
+      populate: { path: "createdBy", select: "fullName" } // Populate author of bookmarked blogs
+    });
+
+    // If a blog was deleted, it might be null in the array (if not handled by middleware). 
+    // Filter out nulls just in case.
+    const bookmarks = user.bookmarks.filter(b => b !== null);
+
+    res.render("bookmarks", {
+      user: req.user,
+      bookmarks,
+      currentPage: 'bookmarks' // for nav highlighting if needed
+    });
+  } catch (error) {
+    console.error("Error fetching bookmarks:", error);
+    res.redirect("/");
   }
 });
 

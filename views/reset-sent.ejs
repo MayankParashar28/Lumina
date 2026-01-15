@@ -10,38 +10,69 @@
 <body>
     <%- include('./partials/nav', { searchQuery: '' }) %>
 
-        <div class="page-container">
-            <header class="header text-center mb-4">
-                <h1 class="auth-title">Password Reset</h1>
-                <p class="auth-subtitle">Check your inbox for instructions</p>
-            </header>
-
-            <div class="auth-card" style="text-align: center;">
-                <div style="font-size: 3rem; margin-bottom: 1rem;">📨</div>
-                <h1>Email Sent!</h1>
-                <p style="margin-bottom: 20px; color: #666;">
-                    We've sent a password reset link to <strong>
-                        <%= email %>
-                    </strong>. <br>
-                    Please check your inbox (and spam folder) and click the link to create a new password.
-                </p>
-                <div class="alert alert-info" style="font-size: 0.9em; margin-bottom: 20px; color: #555;">
-                    ⏳ <strong>Note:</strong> The email may take <strong>2-3 minutes</strong> to arrive. Please be
-                    patient!
+        <div class="auth-split-wrapper">
+            <!-- Left Side: Image -->
+            <div class="auth-side-image-container">
+                <img src="/images/auth-side.png" alt="Creative Space" class="auth-side-image">
+                <div class="auth-image-overlay">
+                    <h2>The ink is dry.</h2>
+                    <p>Check your email for the next steps in your creative journey.</p>
                 </div>
+            </div>
 
-                <a href="/user/signin" class="btn btn-primary"
-                    style="background-color: #000; border: none; padding: 10px 20px; border-radius: 5px; color: #fff; text-decoration: none;">
-                    Back to Sign In
-                </a>
+            <!-- Right Side: Content -->
+            <div class="auth-form-container">
+                <div class="auth-content-box text-center">
+                    <div
+                        style="font-size: 4rem; margin-bottom: 2rem; animation: bounceIn 0.6s cubic-bezier(0.17, 0.67, 0.83, 0.67);">
+                        📨</div>
+                    <h1 class="auth-title mb-3">Email Sent!</h1>
+                    <p class="mb-4" style="color: #666; font-size: 1.1rem; line-height: 1.6;">
+                        We've sent a password reset link to <br><strong>
+                            <%= email %>
+                        </strong>. <br>
+                        Please check your inbox and click the link to continue.
+                    </p>
 
-                <div class="auth-footer" style="margin-top: 20px;">
-                    Didn't receive it? <a href="/user/forgot-password">Try again</a>
+                    <div class="alert alert-info py-3 px-4 mb-5"
+                        style="background: #f0f7ff; color: #0056b3; border-radius: 12px; font-weight: 600; font-size: 0.9rem;">
+                        ⏳ Note: The email may take 2-3 minutes to arrive.
+                    </div>
+
+                    <a href="/user/signin" class="submit-btn d-inline-block text-decoration-none">
+                        Back to Sign In
+                    </a>
+
+                    <div class="auth-footer mt-5">
+                        Didn't receive it? <a href="/user/forgot-password">Try again</a>
+                    </div>
                 </div>
             </div>
         </div>
 
         <%- include('./partials/footer') %>
+
+            <style>
+                @keyframes bounceIn {
+                    0% {
+                        transform: scale(0.3);
+                        opacity: 0;
+                    }
+
+                    50% {
+                        transform: scale(1.05);
+                        opacity: 1;
+                    }
+
+                    70% {
+                        transform: scale(0.9);
+                    }
+
+                    100% {
+                        transform: scale(1);
+                    }
+                }
+            </style>
 </body>
 
 </html>

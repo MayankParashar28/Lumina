@@ -31,6 +31,10 @@ const commentSchema = new mongoose.Schema(
       type: Number,
       default: 1,
     },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );

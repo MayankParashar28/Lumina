@@ -1,5 +1,6 @@
 const Filter = require("bad-words");
 const filter = new Filter();
+const ModerationLog = require("../models/moderationLog");
 
 // Default bad-words list might be missing some common terms depending on the version
 // We explicitly add them to be safe.
@@ -46,9 +47,25 @@ async function moderateContent(text) {
             }
         }
 
+        const reason = `Contains profane word: "${flaggedWord}" (Local Filter)`;
+
+        // 📝 Log to Database
+        try {
+            await ModerationLog.create({
+                content: text, // Save original text
+                reason: reason,
+                flaggedWords: [flaggedWord],
+                userId: context.userId || null,
+                ipAddress: context.ip || "Unknown",
+                actionTaken: "BLOCKED"
+            });
+        } catch (dbError) {
+            console.error("⚠️ Failed to save Moderation Log:", dbError.message);
+        }
+
         return {
             safe: false,
-            reason: `Contains profane word: "${flaggedWord}" (Local Filter)`
+            reason: reason
         };
     }
 
@@ -86,9 +103,24 @@ async function moderateContent(text) {
             const analysis = JSON.parse(aiText);
 
             if (!analysis.safe) {
+                const reason = analysis.reason || "Content flagged as unsafe by AI.";
+
+                // 📝 Log AI Flag to Database
+                try {
+                    await ModerationLog.create({
+                        content: text,
+                        reason: reason,
+                        userId: context.userId || null,
+                        ipAddress: context.ip || "Unknown",
+                        actionTaken: "BLOCKED"
+                    });
+                } catch (dbError) {
+                    console.error("⚠️ Failed to save AI Moderation Log:", dbError.message);
+                }
+
                 return {
                     safe: false,
-                    reason: analysis.reason || "Content flagged as unsafe by AI."
+                    reason: reason
                 };
             }
 

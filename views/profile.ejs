@@ -26,6 +26,8 @@
                     <%= user.fullName %>
                 </h1>
 
+
+
                 <p class="profile-bio">
                     <%= user.bio || "Sharing stories and ideas on Lumina." %>
                 </p>
@@ -39,21 +41,26 @@
 
                 <!-- Social Links -->
                 <div class="profile-socials">
-                    <% if (user.socials) { %>
-                        <% if (user.socials.linkedin) { %> <a href="<%= user.socials.linkedin %>" target="_blank"
-                                title="LinkedIn"><i class="fab fa-linkedin"></i></a>
-                            <% } %>
-                                <% if (user.socials.twitter) { %> <a href="<%= user.socials.twitter %>" target="_blank"
-                                        title="Twitter"><i class="fab fa-twitter"></i></a>
+                    <% if (user.website) { %>
+                        <a href="<%= user.website %>" target="_blank" title="Website"
+                            style="text-decoration: none; color: inherit;"><i class="fas fa-globe"></i></a>
+                        <% } %>
+
+                            <% if (user.socials) { %>
+                                <% if (user.socials.linkedin) { %> <a href="<%= user.socials.linkedin %>"
+                                        target="_blank" title="LinkedIn"><i class="fab fa-linkedin"></i></a>
                                     <% } %>
-                                        <% if (user.socials.github) { %> <a href="<%= user.socials.github %>"
-                                                target="_blank" title="GitHub"><i class="fab fa-github"></i></a>
+                                        <% if (user.socials.twitter) { %> <a href="<%= user.socials.twitter %>"
+                                                target="_blank" title="Twitter"><i class="fab fa-twitter"></i></a>
                                             <% } %>
-                                                <% if (user.socials.instagram) { %> <a
-                                                        href="<%= user.socials.instagram %>" target="_blank"
-                                                        title="Instagram"><i class="fab fa-instagram"></i></a>
+                                                <% if (user.socials.github) { %> <a href="<%= user.socials.github %>"
+                                                        target="_blank" title="GitHub"><i class="fab fa-github"></i></a>
                                                     <% } %>
-                                                        <% } %>
+                                                        <% if (user.socials.instagram) { %> <a
+                                                                href="<%= user.socials.instagram %>" target="_blank"
+                                                                title="Instagram"><i class="fab fa-instagram"></i></a>
+                                                            <% } %>
+                                                                <% } %>
                 </div>
 
                 <!-- Profile Actions -->
