@@ -13,7 +13,9 @@
     overflow: hidden;
     background: #fcfcfc;
     /* Softer backdrop */
-    padding: 2.5rem;
+    padding: 9rem 4rem 6rem 4rem;
+    /* Top padding clears navbar */
+    /* Increased padding to reduce image height */
     /* The "Frame" padding */
     display: flex;
     align-items: center;
