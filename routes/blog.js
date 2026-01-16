@@ -15,12 +15,60 @@ const { response } = require("express");
 const dotenv = require("dotenv");
 dotenv.config();
 
+const axios = require("axios"); // Import Axios for GIPHY Proxy
+
 const { generateEmbedding, cosineSimilarity } = require("../services/ai"); // Import AI Service
 
 const router = Router();
 
 const { storage } = require("../config/cloudConfig");
 const upload = multer({ storage: storage });
+
+// 👁️ Preview Blog
+router.post("/preview", async (req, res) => {
+  try {
+    const { title, body, aiCoverURL, coverImage } = req.body;
+
+    // Construct mock blog object
+    const mockBlog = {
+      _id: "preview-id",
+      title: title || "[Untitled Story]",
+      body: body || "<p>Start writing your story...</p>",
+      coverImageURL: aiCoverURL || coverImage || "", // Use AI URL or Placeholder (File upload preview is tricky without saving, simplified here)
+      createdBy: req.user,
+      createdAt: new Date(),
+      views: 0,
+      tags: [],
+      category: "Preview",
+      likes: 0,
+      likedBy: [],
+      comments: []
+    };
+
+    // Render the blog template with mock data
+    return res.render("blog", {
+      title: mockBlog.title,
+      metaDescription: "Preview Mode",
+      ogImage: mockBlog.coverImageURL,
+      user: req.user || null,
+      blog: mockBlog,
+      comments: [], // No comments in preview
+      isAuthenticated: !!req.user,
+      searchQuery: "",
+      moment: require("moment"),
+      createdByName: req.user ? req.user.fullName : "Author",
+      createdByProfilePic: req.user ? req.user.profilePic : "https://api.dicebear.com/7.x/initials/svg?seed=Author",
+      formattedDate: "Just now",
+      isBookmarked: false,
+      relatedBlogs: [],
+      isPreview: true // Flag to potentially hide confusing interactions
+    });
+
+  } catch (err) {
+    console.error("Preview Error:", err);
+    res.status(500).send("Preview generation failed");
+  }
+});
 
 // 📝 Create a Blog (GET Form)
 router.get("/add-new", async (req, res) => {
@@ -194,6 +242,11 @@ router.get("/:id", async (req, res) => {
 // 🤖 AI Recommendations API
 router.get("/recommendations/:id", async (req, res) => {
   try {
+    // 🛡️ Handle Preview Mode (No DB ID)
+    if (req.params.id === "preview-id") {
+      return res.json({ blogs: [] });
+    }
+
     const currentBlog = await Blog.findById(req.params.id).select("+embedding");
 
     // Fallback if no embedding
@@ -996,6 +1049,40 @@ router.get("/api/:id/summary", async (req, res) => {
   } catch (error) {
     console.error("❌ Summary API Error:", error);
     res.status(500).json({ error: "Failed to generate summary" });
+  }
+});
+
+
+// 🎞️ GIPHY Proxy Endpoint
+router.get("/api/giphy", async (req, res) => {
+  try {
+    const { q } = req.query;
+    const apiKey = process.env.GIPHY_API_KEY;
+
+    if (!apiKey) {
+      return res.status(500).json({ error: "GIPHY API Key missing on server" });
+    }
+
+    if (!q) {
+      return res.status(400).json({ error: "Query required" });
+    }
+
+    const response = await axios.get(`https://api.giphy.com/v1/gifs/search`, {
+      params: {
+        api_key: apiKey,
+        q: q,
+        limit: 10,
+        rating: 'g'
+      }
+    });
+
+    res.json(response.data);
+  } catch (error) {
+    console.error("❌ GIPHY Proxy Error:", error.message);
+    if (error.response) {
+      return res.status(error.response.status).json(error.response.data);
+    }
+    res.status(500).json({ error: "Failed to fetch from GIPHY" });
   }
 });
 

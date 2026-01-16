@@ -12,7 +12,7 @@ const storage = new CloudinaryStorage({
     cloudinary: cloudinary,
     params: {
         folder: 'lumina_uploads',
-        allowedFormats: ['png', 'jpg', 'jpeg', 'webp'],
+        allowedFormats: ['png', 'jpg', 'jpeg', 'webp', 'gif'],
         transformation: [{ width: 1200, crop: "limit" }, { quality: "auto" }, { fetch_format: "auto" }]
     },
 });

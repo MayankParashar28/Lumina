@@ -177,6 +177,11 @@ router.post("/generate-comment-suggestions", rateLimitAI, async (req, res) => {
   }
 
   try {
+    // 🛡️ Handle Preview Mode (No DB ID)
+    if (blogId === "preview-id") {
+      return res.json({ suggestions: ["Preview Comment 1", "Preview Comment 2", "Preview Comment 3"] });
+    }
+
     // 1️⃣ CACHE CHECK: Do we have fresh suggestions?
     const cached = await AiSuggestion.findOne({ blogId });
     if (cached) {

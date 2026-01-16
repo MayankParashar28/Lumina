@@ -51,6 +51,27 @@ body {
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
 }
 
+.btn-preview {
+    background: transparent;
+    color: #666;
+    border: 1px solid #ddd;
+    padding: 0.6rem 1.4rem;
+    border-radius: 99px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-preview:hover {
+    background: #f5f5f5;
+    color: #333;
+    border-color: #ccc;
+}
+
 /* --- Professional Cover Section --- */
 .cover-container {
     width: 100%;
@@ -372,6 +393,16 @@ body {
     background: #eee;
 }
 
+
+
+
+
+.meta-section {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
 .tag-input-wrapper {
     flex: 1;
     display: flex;
@@ -407,6 +438,30 @@ body {
     font-size: 0.75rem;
     font-weight: 600;
     cursor: pointer;
+}
+
+.btn-mini-preview {
+    background: #fff;
+    color: #666;
+    border: 1px solid #ddd;
+    padding: 6px 14px;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    margin-left: 10px;
+    /* Forced Gap */
+}
+
+.btn-mini-preview:hover {
+    color: #000;
+    border-color: #bbb;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 #editor {

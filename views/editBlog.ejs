@@ -68,8 +68,15 @@
                                     onclick="generateCoverWithAI()">
                                     <i class="fas fa-magic"></i> AI Generate Cover
                                 </button>
+
+                                <!-- GIPHY Search (New!) -->
+                                <button type="button" class="btn-cover-action btn-ai-glass" onclick="searchGiphy()"
+                                    style="color: #9333ea; border-color: #d8b4fe; background: #f3e8ff;">
+                                    <i class="fas fa-film"></i> Search GIF
+                                </button>
+
                                 <input type="hidden" id="aiCoverURL" name="aiCoverURL"
-                                    value="<%= blog.coverImageURL || '' %>">
+                                    value="<%= blog.coverImageURL && blog.coverImageURL.startsWith('http') ? blog.coverImageURL : '' %>">
                             </div>
                             <p class="cover-hint">Add a high-quality cover image to attract readers.</p>
                         </div>
@@ -153,7 +160,12 @@
                             <button type="button" class="btn-mini-ai" onclick="generateTags()">
                                 <i class="fas fa-bolt"></i> AI FIND TAGS
                             </button>
+
                         </div>
+                        <!-- Preview Button Moved Outside -->
+                        <button type="button" class="btn-mini-preview" onclick="previewStory()" title="Preview Story">
+                            <i class="far fa-eye"></i>
+                        </button>
                     </div>
                 </div>
 
@@ -405,6 +417,62 @@
                         };
                     }
 
+                    // GIPHY Search Logic
+                    async function searchGiphy() {
+                        const title = document.getElementById("title").value.trim();
+                        if (!title) {
+                            alert("Please add a title first so we can find a matching GIF!");
+                            return;
+                        }
+
+                        const btn = document.querySelector('button[onclick="searchGiphy()"]');
+                        const originalText = btn.innerHTML;
+                        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Searching...';
+                        btn.disabled = true;
+
+                        const searchQuery = encodeURIComponent(title + " aesthetic");
+
+                        try {
+                            const response = await fetch(`/blog/api/giphy?q=${searchQuery}`);
+                            const data = await response.json();
+
+                            if (!response.ok) {
+                                throw new Error(data.error || "Failed to fetch GIF");
+                            }
+
+                            if (!data.data || data.data.length === 0) {
+                                alert("No GIFs found for this title.");
+                                return;
+                            }
+
+                            // Pick a random one from top 10 for variety
+                            const randomGif = data.data[Math.floor(Math.random() * data.data.length)];
+                            const gifUrl = randomGif.images.original.url;
+
+                            // Use existing preview logic
+                            const preview = document.getElementById('coverPreview');
+                            const removeBtn = document.getElementById('removeCover');
+                            const controls = document.getElementById('coverControls');
+                            const aiInput = document.getElementById('aiCoverURL');
+                            const container = document.getElementById('coverContainer');
+
+                            preview.src = gifUrl;
+                            aiInput.value = gifUrl;
+
+                            preview.classList.remove('hidden');
+                            removeBtn.classList.remove('hidden');
+                            controls.classList.add('hidden');
+                            container.style.border = 'none';
+
+                        } catch (error) {
+                            console.error("GIPHY Error:", error);
+                            alert("Failed to fetch GIF from GIPHY.");
+                        } finally {
+                            btn.innerHTML = originalText;
+                            btn.disabled = false;
+                        }
+                    }
+
                     // Initialize empty resize (Title only)
                     window.addEventListener('load', () => {
                         autoResize(document.getElementById('title'));
@@ -654,6 +722,52 @@
                         // Show Modal
                         modal.classList.remove('hidden');
                     });
+
+                    // 👁️ Preview Logic
+                    function previewStory() {
+                        const title = document.getElementById('title').value;
+                        const body = quill.root.innerHTML;
+                        const aiCoverURL = document.getElementById('aiCoverURL').value; // Contains original URL or new AI URL
+                        const coverInput = document.getElementById('coverImage');
+
+                        // Function to submit form
+                        const submitPreview = (coverBase64 = "") => {
+                            const form = document.createElement("form");
+                            form.method = "POST";
+                            form.action = "/blog/preview";
+                            form.target = "_blank"; // Open in new tab
+
+                            const inputs = {
+                                title: title,
+                                body: body,
+                                aiCoverURL: aiCoverURL,
+                                coverImage: coverBase64
+                            };
+
+                            for (const [name, value] of Object.entries(inputs)) {
+                                const input = document.createElement("input");
+                                input.type = "hidden";
+                                input.name = name;
+                                input.value = value;
+                                form.appendChild(input);
+                            }
+
+                            document.body.appendChild(form);
+                            form.submit();
+                            document.body.removeChild(form);
+                        };
+
+                        // Handle Cover Image (Base64 if file, else just submit)
+                        if (coverInput.files && coverInput.files[0]) {
+                            const reader = new FileReader();
+                            reader.onload = function (e) {
+                                submitPreview(e.target.result);
+                            };
+                            reader.readAsDataURL(coverInput.files[0]);
+                        } else {
+                            submitPreview();
+                        }
+                    }
 
                     function updateCheckItem(id, isValid) {
                         const el = document.getElementById(id);
