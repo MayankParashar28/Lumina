@@ -539,7 +539,8 @@ input.form-control:focus {
     width: 100%;
     background-color: var(--bg-color);
     border-top: 1px solid var(--border-color);
-    padding: 3rem 2rem;
+    padding: 1.5rem 2rem;
+    /* Compact padding */
     margin-top: auto;
 }
 
@@ -549,52 +550,57 @@ input.form-control:focus {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    font-size: 0.9rem;
+    /* Global footer font size reduction */
 }
 
 .footer-left {
     display: flex;
     align-items: center;
-    gap: 1.2rem;
+    gap: 0.8rem;
 }
 
 .footer-logo-text {
-    font-size: 1.5rem;
-    font-weight: 900;
+    font-size: 1.1rem;
+    /* Smaller logo */
+    font-weight: 800;
     color: var(--text-color);
-    letter-spacing: -0.05em;
+    letter-spacing: -0.03em;
     text-transform: uppercase;
 }
 
 .footer-copyright {
     color: #888;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     font-weight: 500;
 }
 
 .footer-center {
     display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: 0.5rem;
+    /* Horizontal align if space allows, or tight vertical */
+    gap: 1.5rem;
 }
 
 .footer-tagline {
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     color: #666;
     margin: 0;
     font-weight: 400;
+    display: none;
+    /* Hide tagline for true compactness, per "concise" request */
 }
 
 .footer-links {
     display: flex;
-    gap: 2rem;
+    gap: 1.5rem;
 }
 
 .footer-links a {
-    color: #444;
+    color: #555;
     text-decoration: none;
-    font-size: 0.9rem;
-    font-weight: 600;
+    font-size: 0.85rem;
+    font-weight: 500;
     transition: all 0.2s;
 }
 
@@ -604,12 +610,12 @@ input.form-control:focus {
 
 .footer-right {
     display: flex;
-    gap: 1.5rem;
+    gap: 1rem;
 }
 
 .footer-right a {
     color: var(--text-color);
-    font-size: 1.2rem;
+    font-size: 1rem;
     opacity: 0.4;
     transition: opacity 0.2s;
 }
@@ -620,24 +626,31 @@ input.form-control:focus {
 
 @media (max-width: 768px) {
     .site-footer-minimal {
-        padding: 2.5rem 1.5rem;
+        padding: 1.5rem 1rem;
+        /* Even more compact on mobile */
     }
 
     .footer-content-minimal {
         flex-direction: column;
-        gap: 2rem;
+        gap: 1rem;
+        /* Tighter gap */
         text-align: center;
     }
 
     .footer-left {
         flex-direction: column;
-        gap: 0.5rem;
+        gap: 0.3rem;
     }
 
     .footer-links {
         gap: 1rem;
         flex-wrap: wrap;
         justify-content: center;
+    }
+
+    .footer-center {
+        flex-direction: column;
+        gap: 0.5rem;
     }
 }
 

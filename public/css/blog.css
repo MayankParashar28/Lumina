@@ -1589,8 +1589,15 @@ body {
 }
 
 @keyframes fadeUpReveal {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* --- Notification Badge (Global) --- */
@@ -1681,4 +1688,87 @@ body {
     text-transform: uppercase;
     font-weight: 600;
     letter-spacing: 0.05em;
+}
+
+/* --- Mobile Responsiveness for Comments --- */
+@media (max-width: 768px) {
+
+    /* Scoping strictly to comments-section to avoid bleeding */
+    .comments-section {
+        margin: 3rem 1rem !important;
+        padding: 1rem 0 !important;
+        max-width: 100% !important;
+    }
+
+    .comments-section .comment-card {
+        padding: 1rem !important;
+        gap: 1rem;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .comments-section .comment-content-col {
+        width: 100%;
+    }
+
+    .comments-section .comment-avatar-small {
+        width: 32px;
+        height: 32px;
+    }
+
+    /* Optimize Nested Replies */
+    .comments-section .nested-replies {
+        margin-left: 1rem !important;
+        padding-left: 0.8rem !important;
+        border-left: 2px solid #eee;
+        margin-top: 1rem;
+    }
+
+    .comments-section .nested-replies .comment-card {
+        padding: 0.8rem 0 !important;
+        margin-bottom: 0.5rem;
+    }
+
+    /* Connectors */
+    .comments-section .nested-replies .comment-card::before {
+        display: none;
+    }
+
+    /* Input Area */
+    .comments-section .comment-input-wrapper {
+        flex-direction: column;
+        gap: 0.8rem;
+    }
+
+    .comments-section .comment-avatar {
+        display: none;
+    }
+
+    .comments-section .input-box-wrapper {
+        width: 100%;
+        padding: 0.5rem;
+    }
+
+    /* Actions */
+    .comments-section .comment-actions {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .comments-section .reaction-bar {
+        width: 100%;
+        justify-content: space-between;
+    }
+}
+
+/* Extra Small Devices */
+@media (max-width: 480px) {
+    .comments-section .nested-replies {
+        margin-left: 0.5rem !important;
+        padding-left: 0.5rem !important;
+    }
+
+    .comments-section .comment-date {
+        font-size: 0.75rem;
+    }
 }

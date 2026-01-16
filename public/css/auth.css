@@ -221,6 +221,35 @@
 
     .auth-form-container {
         padding: 4rem 2rem;
+        min-height: 100vh;
+        min-height: 100dvh;
+        /* Modern mobile browser support */
+    }
+}
+
+/* Mobile Small (< 576px) */
+@media (max-width: 576px) {
+    .auth-form-container {
+        padding: 2rem 1.5rem;
+        justify-content: center;
+        /* Ensure vertical centering */
+    }
+
+    .auth-title {
+        font-size: 2rem;
+    }
+
+    .auth-subtitle {
+        font-size: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .submit-btn {
+        padding: 1rem;
     }
 }
 
@@ -748,6 +777,8 @@
 @media (max-width: 992px) {
     .auth-form-container {
         min-height: calc(100vh - 80px);
+        margin-top: 60px;
+        /* Ensure content starts below floating nav */
         /* Adjust for nav */
     }
 }
