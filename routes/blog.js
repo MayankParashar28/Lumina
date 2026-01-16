@@ -21,7 +21,7 @@ const { generateEmbedding, cosineSimilarity } = require("../services/ai"); // Im
 
 const router = Router();
 
-const { storage } = require("../config/cloudConfig");
+const { storage, cloudinary } = require("../config/cloudConfig");
 const upload = multer({ storage: storage });
 
 // 👁️ Preview Blog
@@ -791,8 +791,18 @@ router.post("/edit/:id", upload.single("coverImage"), async (req, res) => {
     }
 
     // Update Cover Image if new one uploaded or AI URL provided
+    // Update Cover Image if new one uploaded or AI URL provided
     if (req.file) {
-      blog.coverImageURL = req.file.path;
+      let finalUrl = req.file.path;
+      // Fix for strange relative paths
+      if (!finalUrl || !finalUrl.startsWith('http')) {
+        if (req.file.secure_url) {
+          finalUrl = req.file.secure_url;
+        } else if (req.file.filename) {
+          finalUrl = cloudinary.url(req.file.filename, { secure: true });
+        }
+      }
+      blog.coverImageURL = finalUrl;
     } else if (req.body.aiCoverURL) {
       blog.coverImageURL = req.body.aiCoverURL;
     }
@@ -945,7 +955,20 @@ router.post("/", upload.single("coverImage"), async (req, res) => {
       category,
       tags: tagArray,
       createdBy: req.user._id,
-      coverImageURL: req.file ? `/uploads/${req.file.filename}` : aiCoverURL,
+      coverImageURL: (() => {
+        if (req.file) {
+          let finalUrl = req.file.path;
+          if (!finalUrl || !finalUrl.startsWith('http')) {
+            if (req.file.secure_url) {
+              finalUrl = req.file.secure_url;
+            } else if (req.file.filename) {
+              finalUrl = cloudinary.url(req.file.filename, { secure: true });
+            }
+          }
+          return finalUrl;
+        }
+        return aiCoverURL;
+      })(),
       createdAt: new Date(),
       embedding: [], // Will be populated in background
       status: blogStatus

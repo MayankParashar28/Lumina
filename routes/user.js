@@ -207,7 +207,7 @@ router.get("/edit", async (req, res) => {
 });
 
 const multer = require("multer");
-const { storage } = require("../config/cloudConfig");
+const { storage, cloudinary } = require("../config/cloudConfig");
 const upload = multer({ storage: storage });
 
 // ... (existing code) ...
@@ -269,7 +269,30 @@ router.post("/edit-profile", upload.single("profilePic"), async (req, res) => {
 
     // ✅ Update Profile Pic if uploaded
     if (req.file) {
-      user.profilePic = req.file.path;
+      console.log("📸 Debug req.file:", req.file);
+
+      let finalUrl = req.file.path;
+
+      // Fix for strange relative paths (fallback to secure_url or manual construction)
+      if (!finalUrl || !finalUrl.startsWith('http')) {
+        console.warn("⚠️ req.file.path is invalid or relative, attempting fallbacks...");
+
+        if (req.file.secure_url) {
+          finalUrl = req.file.secure_url;
+        } else if (req.file.filename) {
+          // Manually construct the URL using the public ID (filename)
+          finalUrl = cloudinary.url(req.file.filename, {
+            secure: true,
+            transformation: [{ width: 300, crop: "fill" }] // Optional: force a transformation or keep raw
+          });
+          // Remove transformation from base URL if we want raw access, 
+          // but optimizeImage adds them anyway. Let's just get the base securely.
+          finalUrl = cloudinary.url(req.file.filename, { secure: true });
+        }
+      }
+
+      console.log("📸 Final Saved URL:", finalUrl);
+      user.profilePic = finalUrl;
     }
 
     user.lastProfileEdit = new Date(); // Update timestamp
