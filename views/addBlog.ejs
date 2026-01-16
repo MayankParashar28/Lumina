@@ -17,11 +17,7 @@
     <div class="editor-container">
       <form method="post" action="/blog" enctype="multipart/form-data" id="publishForm">
 
-        <!-- Minimal Header Actions -->
-        <div class="editor-actions">
-          <span id="word-count" class="word-counter">0 words</span>
-          <button type="submit" class="btn-publish">Publish</button>
-        </div>
+
 
         <!-- Title Section -->
         <div class="editor-section">
@@ -158,6 +154,14 @@
             <button type="button" class="btn-mini-preview" onclick="previewStory()" title="Preview Story">
               <i class="far fa-eye"></i>
             </button>
+          </div>
+
+          <!-- Moves Actions to Bottom -->
+          <div class="editor-actions" style="margin-top: 30px; justify-content: flex-end;">
+            <span id="word-count" class="word-counter" style="margin-right: auto;">0 words</span>
+            <button type="submit" name="action" value="draft" class="btn-secondary" style="margin-right: 10px;">Save
+              Draft</button>
+            <button type="submit" name="action" value="publish" class="btn-publish">Publish</button>
           </div>
         </div>
 
@@ -635,8 +639,32 @@
           }
 
           // Intercept Form Submission
+          let submitAction = 'publish';
+
+          // Capture click on buttons to know action
+          document.querySelectorAll('button[type="submit"]').forEach(btn => {
+            btn.addEventListener('click', () => {
+              submitAction = btn.value;
+            });
+          });
+
           document.getElementById('publishForm').addEventListener('submit', function (e) {
             e.preventDefault(); // Stop default submit
+
+            // If action is draft, skip validation and submit immediately
+            if (submitAction === 'draft') {
+              const hiddenOp = document.createElement('input');
+              hiddenOp.type = 'hidden';
+              hiddenOp.name = 'action';
+              hiddenOp.value = 'draft';
+              this.appendChild(hiddenOp);
+
+              // Populate body hidden input first
+              document.getElementById('body').value = quill.root.innerHTML;
+
+              this.submit();
+              return;
+            }
 
             const title = document.getElementById('title').value.trim();
             const bodyContent = quill.root.innerHTML;

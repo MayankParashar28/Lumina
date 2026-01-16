@@ -41,6 +41,11 @@ const blogSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    status: {
+      type: String,
+      enum: ["draft", "published"],
+      default: "published",
+    },
 
     likedBy: {
       type: [String],
@@ -77,6 +82,9 @@ blogSchema.index({ title: "text", body: "text", tags: "text" }); // Text Search
 blogSchema.index({ createdAt: -1 }); // Sorting by Newest
 blogSchema.index({ views: -1 });     // Sorting by Trending
 blogSchema.index({ category: 1 });   // Filtering by Category
+blogSchema.index({ createdBy: 1 });  // User Profile Feed
+blogSchema.index({ tags: 1 });       // Efficient Tag Filtering
+blogSchema.index({ status: 1 });     // Filtering Drafts vs Published
 
 blogSchema.statics.getTrendingTags = async function () {
   try {

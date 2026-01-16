@@ -328,13 +328,13 @@ app.get("/", async (req, res) => {
     const trendingTagsList = await Blog.getTrendingTags(); // 📈 Fetch Top Tags
 
     // Fetch featured and trending blogs
-    const featuredBlogs = await Blog.find({ featured: true })
+    const featuredBlogs = await Blog.find({ featured: true, status: "published" })
       .limit(5)
       .select("-body")
       .populate("createdBy", "fullName profilePic")
       .lean();
 
-    const trendingBlogs = await Blog.find()
+    const trendingBlogs = await Blog.find({ status: "published" })
       .sort({ views: -1 })
       .limit(3)
       .select("-body")

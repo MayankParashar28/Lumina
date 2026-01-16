@@ -91,13 +91,17 @@ body {
     align-items: center;
     transition: all 0.2s ease;
     position: relative;
-    /* For absolute timestamp */
+    cursor: pointer;
+    /* Indication of clickability */
 }
 
 #notifications li:hover {
     border-color: var(--text-color);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+    /* Slightly stronger shadow */
+    background-color: #fafafa;
+    /* Subtle highlight */
 }
 
 #notifications li.read {
@@ -168,9 +172,10 @@ body {
     cursor: pointer;
     transition: all 0.2s ease;
     white-space: nowrap;
-    flex-shrink: 0;
-    margin-left: auto;
-    line-height: 1.2;
+    z-index: 2;
+    /* Ensure it click catches above row */
+    margin-left: 1rem;
+    /* Spacing from text */
 }
 
 .mark-read-btn:hover {

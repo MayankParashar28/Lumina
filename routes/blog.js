@@ -100,6 +100,27 @@ router.get("/add-new", async (req, res) => {
   }
 });
 
+// 📄 View Drafts
+router.get("/drafts", async (req, res) => {
+  if (!req.user) return res.redirect("/user/signin");
+
+  try {
+    const drafts = await Blog.find({
+      createdBy: req.user._id,
+      status: "draft"
+    }).sort({ createdAt: -1 });
+
+    res.render("drafts", {
+      user: req.user,
+      blogs: drafts,
+      path: "/blog/drafts"
+    });
+  } catch (err) {
+    console.error("Error fetching drafts:", err);
+    res.redirect("/");
+  }
+});
+
 //  show blog
 router.get("/:id", async (req, res) => {
   const mongoose = require("mongoose");
@@ -343,6 +364,7 @@ router.post("/like/:blogId", async (req, res) => {
         message: `${req.user.fullName} ${isNewLike ? "liked" : "unliked"} your blog.`,
         type: "like",
         blogId: blog._id, // Deep Link Support
+        targetUrl: `/blog/${blog._id}`, // 🎯 Deep Link
         read: false,
         createdAt: new Date(),
       });
@@ -417,6 +439,7 @@ router.post("/comment/:blogId", async (req, res) => {
         message: `${req.user.fullName} commented ${comment.content ? `: "${comment.content}"` : ""} on your blog.`,
         type: "comment",
         blogId: blog._id, // Deep Link Support
+        targetUrl: `/blog/${blog._id}#comment-${comment._id}`, // 🎯 Deep Link
         read: false,
         createdAt: new Date(),
       }).then(() => {
@@ -540,7 +563,8 @@ router.post("/comment/:commentId/reply", async (req, res) => {
         senderId: req.user._id,
         message: `${req.user.fullName} replied: "${req.body.content}"`,
         type: "reply",
-        blogId: blog._id, // Deep Link Support
+        blogId: parentComment.blogId._id, // Deep Link Support
+        targetUrl: `/blog/${parentComment.blogId._id}#comment-${reply._id}`, // 🎯 Deep Link
         read: false,
       });
 
@@ -778,7 +802,7 @@ router.post("/edit/:id", upload.single("coverImage"), async (req, res) => {
     generateEmbedding(`${title} ${textBody}`).then(async (embedding) => {
       if (embedding.length > 0) {
         await Blog.findByIdAndUpdate(blog._id, { embedding });
-        // console.log("✅ Background Embedding Updated for:", blog.title);
+
       }
     }).catch(err => {
       console.error("⚠️ Background Embedding Error:", err);
@@ -913,6 +937,8 @@ router.post("/", upload.single("coverImage"), async (req, res) => {
     }
 
     // ✅ Save Blog in Database (Initially without embedding)
+    const blogStatus = req.body.action === "draft" ? "draft" : "published";
+
     const blog = await Blog.create({
       title,
       body: finalBody,
@@ -921,7 +947,8 @@ router.post("/", upload.single("coverImage"), async (req, res) => {
       createdBy: req.user._id,
       coverImageURL: req.file ? `/uploads/${req.file.filename}` : aiCoverURL,
       createdAt: new Date(),
-      embedding: [] // Will be populated in background
+      embedding: [], // Will be populated in background
+      status: blogStatus
     });
 
     // ⚡ Background AI: Generate Embedding (Fire-and-forget)
@@ -930,47 +957,53 @@ router.post("/", upload.single("coverImage"), async (req, res) => {
     generateEmbedding(fullText).then(async (embedding) => {
       if (embedding && embedding.length > 0) {
         await Blog.findByIdAndUpdate(blog._id, { embedding });
-        // console.log(`✅ Background Embedding Complete for: ${blog.title}`);
+
       }
     }).catch(err => console.error("⚠️ Background Embedding Error:", err));
 
-    // ✅ Save Notification for Blog Owner
-    const selfNotification = new Notification({
-      userId: req.user._id, // User receiving notification
-      senderId: req.user._id, // The uploader
-      type: "blog_upload",
-      message: `You successfully uploaded a new blog: "${title}"`,
-      read: false,  // Mark notification as unread initially
-      createdAt: new Date(),
-    });
-    await selfNotification.save();
-
-    // ✅ Notify All Followers
-    const user = await User.findById(req.user._id).populate("followers", "fullName profilePic");
-    if (!user || !user.fullName) {
-      console.error("❌ User not found or missing name field.");
-      return res.status(500).send("User data is incomplete.");
-    }
-
-    const followerNotifications = user.followers.map((follower) => ({
-      userId: follower._id, // Follower receiving the notification
-      senderId: req.user._id, // User who uploaded the blog
-      type: "blog_upload",
-      message: `${user.fullName} uploaded a new blog: "${title}"`,
-      read: false,
-      createdAt: new Date(),
-    }));
-
-    await Notification.insertMany(followerNotifications);
-
-    // 📢 Real-time Notify Followers
-    const io = req.app.get("io");
-    if (io) {
-      followerNotifications.forEach(n => {
-        io.to(`user:${n.userId}`).emit("new_notification", {
-          message: n.message
-        });
+    // ✅ Save Notification (Only if Published)
+    if (blogStatus === "published") {
+      const selfNotification = new Notification({
+        userId: req.user._id, // User receiving notification
+        senderId: req.user._id, // The uploader
+        type: "blog_upload",
+        message: `You successfully uploaded a new blog: "${title}"`,
+        blogId: blog._id, // Deep Link Support
+        targetUrl: `/blog/${blog._id}`, // 🎯 Deep Link
+        read: false,  // Mark notification as unread initially
+        createdAt: new Date(),
       });
+      await selfNotification.save();
+
+      // ✅ Notify All Followers
+      const user = await User.findById(req.user._id).populate("followers", "fullName profilePic");
+      if (user && user.fullName) {
+        const followerNotifications = user.followers.map((follower) => ({
+          userId: follower._id, // Follower receiving the notification
+          senderId: req.user._id, // User who uploaded the blog
+          type: "blog_upload",
+          message: `${user.fullName} uploaded a new blog: "${title}"`,
+          blogId: blog._id, // Deep Link Support
+          targetUrl: `/blog/${blog._id}`, // 🎯 Deep Link
+          read: false,
+          createdAt: new Date(),
+        }));
+
+        await Notification.insertMany(followerNotifications);
+
+        // 📢 Real-time Notify Followers
+        const io = req.app.get("io");
+        if (io) {
+          followerNotifications.forEach(n => {
+            io.to(`user:${n.userId}`).emit("new_notification", {
+              message: n.message
+            });
+          });
+        }
+      }
+    } else {
+      req.flash("success", "Draft saved successfully!");
+      return res.redirect("/blog/drafts");
     }
 
     req.flash("success", "Blog posted successfully!");
@@ -998,12 +1031,23 @@ router.get("/api/feed", async (req, res) => {
       filter.featured = true;
     }
 
+    let query = { status: "published" }; // Only show published blogs
+    if (categoryFilter !== "all") {
+      if (categoryFilter === "featured") {
+        query.featured = true;
+      } else if (categoryFilter === "trending") {
+        // Trending will be handled by sort, not query filter
+      } else {
+        query.category = { $regex: new RegExp(categoryFilter, "i") };
+      }
+    }
+
     let sort = { createdAt: -1 };
     if (categoryFilter === "trending") {
       sort = { views: -1 };
     }
 
-    const blogs = await Blog.find(filter)
+    const blogs = await Blog.find(query)
       .sort(sort)
       .skip(skip)
       .limit(limit)

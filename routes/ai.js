@@ -102,7 +102,7 @@ router.post("/generate-blog", rateLimitAI, async (req, res) => {
 
 router.post("/generate-tags", rateLimitAI, async (req, res) => {
   const { title, body } = req.body;
-  console.log("🤖 AI Tags Requested for Title:", title); // Debug log
+
 
 
   if (!title) {
@@ -115,7 +115,7 @@ router.post("/generate-tags", rateLimitAI, async (req, res) => {
 
   try {
     const model = genAILight.getGenerativeModel({ model: GEMINI_MODEL_ID });
-    const prompt = `Generate 5 relevant, comma-separated tags for a blog post titled "${title}"${body ? ` with this content: "${body.substring(0, 500)}..."` : ""}. Return ONLY the tags, no other text. Example: "Tech, AI, Future, Innovation, Coding"`;
+    const prompt = `Generate exactly 4 or 5 relevant, comma-separated tags for a blog post titled "${title}"${body ? ` with this content: "${body.substring(0, 500)}..."` : ""}. Return ONLY the tags, no other text. Example: "Tech, AI, Future, Innovation, Coding"`;
 
     const result = await model.generateContent(prompt);
     const aiText = result.response.text().trim();
@@ -185,7 +185,7 @@ router.post("/generate-comment-suggestions", rateLimitAI, async (req, res) => {
     // 1️⃣ CACHE CHECK: Do we have fresh suggestions?
     const cached = await AiSuggestion.findOne({ blogId });
     if (cached) {
-      console.log("⚡ Serving valid 24h Cache for:", blogId);
+
       return res.json({ suggestions: cached.suggestions });
     }
 
@@ -239,7 +239,7 @@ router.post("/generate-comment-suggestions", rateLimitAI, async (req, res) => {
       blogId: blog._id,
       suggestions: suggestions
     });
-    console.log("💾 Saved new AI suggestions to 24h cache.");
+
 
     return res.json({ suggestions });
   } catch (error) {

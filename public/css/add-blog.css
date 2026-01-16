@@ -16,10 +16,6 @@ body {
 
 /* --- Header Actions --- */
 .editor-actions {
-    position: fixed;
-    top: 120px;
-    /* Increased from 90px */
-    right: 5%;
     display: flex;
     align-items: center;
     gap: 1.5rem;

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <%- include('./partials/header') %>
+        <title>My Drafts - Lumina</title>
+        <link rel="stylesheet" href="/css/home.css?v=18">
+        <style>
+            .draft-badge {
+                position: absolute;
+                top: 10px;
+                right: 10px;
+                background: rgba(0, 0, 0, 0.7);
+                color: #fbbf24;
+                padding: 4px 12px;
+                border-radius: 20px;
+                font-size: 0.8rem;
+                font-weight: 600;
+                backdrop-filter: blur(4px);
+                z-index: 10;
+                display: flex;
+                align-items: center;
+                gap: 5px;
+            }
+
+            .empty-state {
+                text-align: center;
+                padding: 4rem 2rem;
+                color: #666;
+            }
+
+            .empty-state i {
+                font-size: 3rem;
+                margin-bottom: 1rem;
+                opacity: 0.5;
+            }
+        </style>
+</head>
+
+<body>
+    <%- include('./partials/nav', { searchQuery: '' }) %>
+
+        <div class="container" style="margin-top: 120px; max-width: 1400px;">
+            <div class="feed-header">
+                <h1 class="feed-title">My <span class="outline-text">Drafts</span></h1>
+                <p class="feed-description">
+                    Work in progress. Ideas waiting to come to life.
+                </p>
+            </div>
+
+            <div class="feed-divider"></div>
+
+            <% if (blogs && blogs.length> 0) { %>
+                <div class="bento-grid" style="margin-top: 2rem;">
+                    <% blogs.forEach((blog)=> { %>
+                        <article class="bento-item item-normal">
+                            <div class="bento-glow"></div>
+                            <a href="/blog/edit/<%= blog._id %>" class="blog-card-link">
+                                <div class="blog-card-inner">
+                                    <div class="card-image-wrapper">
+                                        <% if (blog.coverImageURL) { %>
+                                            <img src="<%= blog.coverImageURL %>" alt="<%= blog.title %>" loading="lazy">
+                                            <% } else { %>
+                                                <div class="placeholder-img"></div>
+                                                <% } %>
+                                                    <div class="draft-badge">
+                                                        <i class="fas fa-pen-nib"></i> Draft
+                                                    </div>
+                                    </div>
+                                    <div class="card-content">
+                                        <h2 class="card-heading">
+                                            <%= blog.title %>
+                                        </h2>
+                                        <div class="card-footer-minimal">
+                                            <span class="time-ago">Last edited <%= new
+                                                    Date(blog.updatedAt).toLocaleDateString() %></span>
+                                            <div class="interaction-stats">
+                                                <span style="color: var(--accent-primary);">Click to Edit <i
+                                                        class="fas fa-arrow-right"></i></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </a>
+                        </article>
+                        <% }) %>
+                </div>
+                <% } else { %>
+                    <div class="empty-state">
+                        <i class="fas fa-file-alt"></i>
+                        <h3>No drafts found</h3>
+                        <p>You have no pending drafts at the moment.</p>
+                        <a href="/blog/add-new" class="btn-primary mt-3">Start Writing</a>
+                    </div>
+                    <% } %>
+        </div>
+
+        <%- include('./partials/footer') %>
+            <%- include('./partials/script') %>
+</body>
+
+</html>

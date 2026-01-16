@@ -18,30 +18,35 @@
                 <% } else { %>
                     <ul id="notifications">
                         <% notifications.forEach(notification=> { %>
-                            <li id="notif-<%= notification._id %>" class="<%= notification.read ? 'read' : '' %>">
-                                <div class="notif-message">
-                                    <img src="<%= (notification.senderId && notification.senderId.profilePic) ? notification.senderId.profilePic : '/images/default-user.png' %>"
-                                        alt="Profile" width="40" height="40">
-                                    <span class="message-content">
-                                        <% let link='#' ; if(notification.type==='follow' )
-                                            link=`/user/profile/${notification.senderId._id}`; else
-                                            if(notification.blogId) link=`/blog/${notification.blogId}`; %>
-                                            <a href="<%= link %>"
-                                                class="notification-link <%= !notification.read ? 'fw-bold' : '' %>"
-                                                style="text-decoration: none; color: inherit; display: block;">
-                                                <strong class="message">
-                                                    <%= notification.message %>
-                                                </strong>
-                                            </a>
-                                    </span>
-                                </div>
-                                <span class="time-ago" data-time="<%= notification.createdAt %>"></span>
-                                <% if (!notification.read) { %>
-                                    <button class="mark-read-btn" data-id="<%= notification._id %>">Mark as
-                                        Read</button>
-                                    <% } %>
-                            </li>
-                            <% }) %>
+                            <% let link='#' ; if (notification.targetUrl) link=notification.targetUrl; else if
+                                (notification.type==='follow' ) link=`/user/profile/${notification.senderId._id}`; else
+                                if (notification.blogId) link=`/blog/${notification.blogId}`; %>
+                                <li id="notif-<%= notification._id %>"
+                                    class="<%= notification.read ? 'read' : 'unread' %> notification-item"
+                                    onclick="handleNotificationClick(event, '<%= notification._id %>', '<%= link %>')"
+                                    style="cursor: pointer;">
+
+                                    <div class="notif-message">
+                                        <img src="<%= (notification.senderId && notification.senderId.profilePic) ? notification.senderId.profilePic : '/images/default-user.png' %>"
+                                            alt="Profile" width="40" height="40" class="rounded-circle">
+
+                                        <span class="message-content">
+                                            <strong class="message-text">
+                                                <%= notification.message %>
+                                            </strong>
+                                        </span>
+                                    </div>
+                                    <span class="time-ago" data-time="<%= notification.createdAt %>"></span>
+
+                                    <!-- Restore Mark as Read Button -->
+                                    <% if (!notification.read) { %>
+                                        <button class="mark-read-btn"
+                                            onclick="handleNotificationClick(event, '<%= notification._id %>', '#', true)">
+                                            Mark as Read
+                                        </button>
+                                        <% } %>
+                                </li>
+                                <% }) %>
                     </ul>
                     <% } %>
         </div>
@@ -53,33 +58,39 @@
 
             <script> // Notification handling
                 // Function to mark notification as read
-                async function markAsRead(notificationId) {
-                    try {
-                        const response = await fetch(`/notifications/mark-read/${notificationId}`, {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" }
-                        });
+                // Function to mark notification as read AND navigate
+                async function handleNotificationClick(event, notificationId, targetUrl, skipNavigation = false) {
+                    // Stop event bubbling so row click doesn't trigger if button clicked
+                    if (event) event.stopPropagation();
 
-                        const data = await response.json();
+                    // 1. Optimistic UI update
+                    const notifElement = document.getElementById(`notif-${notificationId}`);
+                    if (notifElement) {
+                        notifElement.classList.add("read");
+                        notifElement.classList.remove("unread");
 
-                        if (data.success) {
-                            const notifElement = document.getElementById(`notif-${notificationId}`);
-                            if (notifElement) {
-                                notifElement.classList.add("read");
-                                const button = notifElement.querySelector(".mark-read-btn");
-                                if (button) button.remove(); // Hide the button after marking as read
-                            }
+                        // Hide the button immediately if clicked
+                        const btn = notifElement.querySelector('.mark-read-btn');
+                        if (btn) btn.style.display = 'none';
+                    }
 
-                            // Update notification count badge
-                            const notifCount = document.getElementById("notification-count");
-                            if (notifCount) notifCount.textContent = data.count;
-                        } else {
-                            alert("Failed to mark notification as read.");
-                        }
-                    } catch (error) {
-                        console.error("❌ Error marking notification as read:", error);
+                    // 2. Fire request in background
+                    fetch(`/notifications/mark-read/${notificationId}`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        keepalive: true
+                    }).catch(err => console.error("Mark read failed", err));
+
+                    // 3. Navigate to the content (unless skipped)
+                    if (!skipNavigation && targetUrl && targetUrl !== '#' && targetUrl !== 'undefined') {
+                        window.location.href = targetUrl;
                     }
                 }
+
+                /* 
+                   Legacy Mark as Read - Removed since whole item is clickable now
+                   async function markAsRead(notificationId) { ... }
+                */
 
                 function timeAgo(dateString) {
                     const date = new Date(dateString);

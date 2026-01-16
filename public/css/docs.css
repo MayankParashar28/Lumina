@@ -1,81 +1,88 @@
-/* Docs Layout - 3 Columns (Big Tech Style) */
+/* Docs Layout - 3 Columns (Fixed App-Shell via Flexbox) */
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    /* Critical: Force full viewport height */
+    overflow: hidden;
+    /* Critical: Prevent "body" scroll */
+}
+
 .docs-wrapper {
     max-width: 1440px;
     margin: 0 auto;
-    padding: 120px 40px 60px;
-    /* Increased top padding to 120px to clear navbar */
-    display: grid;
-    grid-template-columns: 240px 1fr 240px;
-    gap: 60px;
+    padding-top: 100px;
+    /* Space for Navbar */
+    height: 100%;
+    /* Fill the viewport */
+    display: flex;
+    /* Robust Layout Model */
+    flex-direction: row;
     position: relative;
-    align-items: start;
     font-family: 'Inter', sans-serif;
+    box-sizing: border-box;
+    overflow: hidden;
+    /* Ensure wrapper clips content */
 }
 
 /* --- Left Sidebar (Navigation) --- */
 .docs-sidebar-left {
-    position: sticky;
-    top: 120px;
-    /* Aligned with new padding */
-    padding-top: 10px;
-    border-right: 1px solid #f0f0f0;
-    height: calc(100vh - 120px);
+    width: 240px;
+    flex-shrink: 0;
+    /* Prevent resizing */
+    height: 100%;
+    /* Full height of wrapper */
     overflow-y: auto;
+    /* Independent Scroll */
+    padding-top: 10px;
+    padding-bottom: 40px;
+    padding-left: 20px;
     padding-right: 20px;
-}
-
-/* Custom Scrollbar for sidebar */
-.docs-sidebar-left::-webkit-scrollbar {
-    width: 4px;
-}
-
-.docs-sidebar-left::-webkit-scrollbar-thumb {
-    background-color: #ddd;
-    border-radius: 4px;
-}
-
-.docs-nav-group {
-    margin-bottom: 35px;
-}
-
-.docs-nav-title {
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 1.2px;
-    color: #888;
-    margin-bottom: 15px;
-    font-weight: 700;
-}
-
-.docs-nav-link {
-    display: block;
-    color: #555;
-    text-decoration: none;
-    padding: 8px 12px;
-    margin-left: -12px;
-    font-size: 0.95rem;
-    border-radius: 6px;
-    transition: all 0.2s ease;
-}
-
-.docs-nav-link:hover {
-    color: #111;
-    background-color: #f7f7f7;
-}
-
-.docs-nav-link.active {
-    color: #000;
-    font-weight: 600;
-    background-color: #f0f0f0;
+    border-right: 1px solid #f0f0f0;
 }
 
 /* --- Center Content (Main) --- */
 .docs-main {
+    flex: 1;
+    /* Take all remaining space */
+    min-width: 0;
+    /* Prevent flex overflow bug */
+    height: 100%;
+    /* Full height of wrapper */
+    overflow-y: auto;
+    /* Independent Scroll */
     padding-top: 10px;
-    padding-bottom: 100px;
-    min-height: 80vh;
+    padding-bottom: 40px;
+    padding-left: 60px;
+    padding-right: 60px;
+
+    /* Hide scrollbar for cleaner look (optional) */
+    scrollbar-width: none;
 }
 
+.docs-main::-webkit-scrollbar {
+    display: none;
+}
+
+/* --- Right Sidebar (Table of Contents) --- */
+.docs-sidebar-right {
+    width: 240px;
+    flex-shrink: 0;
+    /* Prevent resizing */
+    height: 100%;
+    /* Full height of wrapper */
+    overflow-y: auto;
+    /* Independent Scroll */
+    padding-top: 10px;
+    padding-bottom: 40px;
+    padding-right: 20px;
+    /* Padding inside scroll area */
+}
+
+
+/* --- Shared Styles --- */
 .docs-header {
     margin-bottom: 50px;
     padding-bottom: 30px;
@@ -131,12 +138,39 @@
     color: #000;
 }
 
-/* --- Right Sidebar (Table of Contents) --- */
-.docs-sidebar-right {
-    position: sticky;
-    top: 120px;
-    padding-top: 10px;
-    height: calc(100vh - 120px);
+.docs-nav-group {
+    margin-bottom: 35px;
+}
+
+.docs-nav-title {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: #888;
+    margin-bottom: 15px;
+    font-weight: 700;
+}
+
+.docs-nav-link {
+    display: block;
+    color: #555;
+    text-decoration: none;
+    padding: 8px 12px;
+    margin-left: -12px;
+    font-size: 0.95rem;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.docs-nav-link:hover {
+    color: #111;
+    background-color: #f7f7f7;
+}
+
+.docs-nav-link.active {
+    color: #000;
+    font-weight: 600;
+    background-color: #f0f0f0;
 }
 
 .toc-title {
@@ -170,26 +204,59 @@
     font-weight: 500;
 }
 
-/* Responsive */
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: #ddd;
+    border-radius: 4px;
+}
+
+
+/* --- Responsive (Mobile Fallback) --- */
 @media (max-width: 1024px) {
     .docs-wrapper {
-        grid-template-columns: 220px 1fr;
-        padding: 100px 30px 60px;
+        padding-left: 0;
+        padding-right: 0;
     }
 
     .docs-sidebar-right {
         display: none;
     }
+
+    .docs-main {
+        padding-right: 40px;
+    }
 }
 
 @media (max-width: 768px) {
+
+    /* Restore Body Scroll on Mobile for better UX */
+    html,
+    body {
+        height: auto;
+        overflow: auto;
+    }
+
     .docs-wrapper {
-        grid-template-columns: 1fr;
-        padding: 100px 20px 40px;
+        flex-direction: column;
+        height: auto;
+        overflow: visible;
+        padding-left: 20px;
+        padding-right: 20px;
     }
 
     .docs-sidebar-left {
         display: none;
+    }
+
+    .docs-main {
+        height: auto;
+        overflow: visible;
+        padding-left: 0;
+        padding-right: 0;
     }
 
     .docs-title {

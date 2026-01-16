@@ -43,5 +43,7 @@ const notificationSchema = new mongoose.Schema({
 
 // ⚡ Optimize Unread Count Query
 notificationSchema.index({ userId: 1, read: 1 });
+notificationSchema.index({ createdAt: 1 }, { expireAfterSeconds: 30 * 24 * 60 * 60 }); // 30 Days TTL
+notificationSchema.index({ userId: 1, createdAt: -1 }); // Fast Feed Generation
 
 module.exports = mongoose.model("Notification", notificationSchema);
