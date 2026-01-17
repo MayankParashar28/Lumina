@@ -605,7 +605,8 @@ body {
     }
 
     .feed-hero {
-        padding: 1rem 1rem 2rem;
+        padding: 120px 1rem 2rem;
+        /* Restore top padding to clear navbar */
     }
 
     .feed-title {

@@ -525,18 +525,20 @@ body {
 }
 
 /* --- Redesigned Fresh Ink Cards (Professional Theme Aligned) --- */
+/* --- Redesigned Fresh Ink Cards (Professional Theme Aligned) --- */
 .scroll-card {
-    min-width: 280px;
+    min-width: 400px;
+    /* Increased from 280px */
+    width: 400px;
     position: relative;
     cursor: pointer;
     perspective: 1000px;
     scroll-snap-align: center;
-    /* Snap to center */
-
     /* Global Theme Body */
     background: var(--bg-color);
     border: 1px solid var(--border-color);
-    padding: 1rem;
+    padding: 1.5rem;
+    /* Increased padding */
     border-radius: var(--border-radius);
     transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.4s ease;
 }
@@ -549,14 +551,27 @@ body {
 
 .card-image-wrapper {
     width: 100%;
-    height: 180px;
+    height: 260px;
+    /* Increased from 180px */
     overflow: hidden;
     position: relative;
     border-radius: 4px;
-    /* Sharper corners for pro look */
     border: none;
     transform-style: preserve-3d;
     transition: transform 0.5s ease;
+}
+
+/* Responsive Adjustments for Cards */
+@media (max-width: 768px) {
+    .scroll-card {
+        min-width: 320px;
+        width: 85vw;
+        /* Fluid on mobile */
+    }
+
+    .card-image-wrapper {
+        height: 200px;
+    }
 }
 
 .card-image-wrapper img {
