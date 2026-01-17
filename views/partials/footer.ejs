@@ -51,24 +51,31 @@
 <script src="https://unpkg.com/@studio-freight/lenis@1.0.42/dist/lenis.min.js"></script>
 <script>
     // Optimized for ZERO jerkiness
-    const lenis = new Lenis({
-        duration: 1.2,
-        // Linear-ish easing for consistent feel, avoiding "catch-up" stutter
-        easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-        direction: 'vertical',
-        gestureDirection: 'vertical',
-        smooth: true,
-        mouseMultiplier: 1,
-        smoothTouch: false, // Critical: Disable on touch to prevent scroll fighting
-        touchMultiplier: 2,
-    });
+    // Only disable on actual mobile viewports, not just touch devices (laptops can have touch)
+    const isMobile = window.innerWidth < 768;
 
-    // High-performance loop
-    function raf(time) {
-        lenis.raf(time);
+    if (!isMobile) {
+        const lenis = new Lenis({
+            duration: 1.2,
+            // Linear-ish easing for consistent feel, avoiding "catch-up" stutter
+            easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+            direction: 'vertical',
+            gestureDirection: 'vertical',
+            smooth: true,
+            mouseMultiplier: 1,
+            smoothTouch: false, // Critical: Disable on touch to prevent scroll fighting
+            touchMultiplier: 2,
+        });
+
+        // High-performance loop
+        function raf(time) {
+            lenis.raf(time);
+            requestAnimationFrame(raf);
+        }
         requestAnimationFrame(raf);
-    }
-    requestAnimationFrame(raf);
 
-    window.lenis = lenis;
+        window.lenis = lenis;
+    }
+
+
 </script>

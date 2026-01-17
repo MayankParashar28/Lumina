@@ -141,6 +141,19 @@ router.get("/:id", async (req, res) => {
       return res.status(404).render("error", { message: "Blog not found." });
     }
 
+    // 🔒 Private Blog Access Control
+    if (blog.status === "private") {
+      let isAllowed = false;
+      if (req.user) {
+        if (req.user.role === "ADMIN") isAllowed = true;
+        if (blog.createdBy && blog.createdBy._id.toString() === req.user._id.toString()) isAllowed = true;
+      }
+
+      if (!isAllowed) {
+        return res.status(404).render("404"); // Hide existence from others
+      }
+    }
+
     // Legacy code removal:
     // blog.views += 1;
     // await blog.save();
@@ -726,8 +739,8 @@ router.get("/edit/:id", async (req, res) => {
       return res.redirect("/");
     }
 
-    // Check Ownership
-    if (blog.createdBy.toString() !== req.user._id.toString()) {
+    // Check Ownership or Admin Role
+    if (blog.createdBy.toString() !== req.user._id.toString() && req.user.role !== "ADMIN") {
       req.flash("error", "Unauthorized to edit this blog.");
       return res.redirect(`/blog/${blog._id}`);
     }
@@ -752,7 +765,8 @@ router.post("/edit/:id", upload.single("coverImage"), async (req, res) => {
     const blog = await Blog.findById(req.params.id);
 
     if (!blog) return res.status(404).send("Blog not found");
-    if (blog.createdBy.toString() !== req.user._id.toString()) {
+    // Check Ownership or Admin Role
+    if (blog.createdBy.toString() !== req.user._id.toString() && req.user.role !== "ADMIN") {
       return res.status(403).send("Unauthorized");
     }
 
@@ -807,6 +821,61 @@ router.post("/edit/:id", upload.single("coverImage"), async (req, res) => {
       blog.coverImageURL = req.body.aiCoverURL;
     }
 
+    // ✅ Handle Status Update (Draft <-> Published)
+    if (req.body.action === "draft") {
+      blog.status = "draft";
+    } else if (req.body.action === "publish") {
+      // If transitioning from Draft -> Published, treat as new post (bump date & notify)
+      if (blog.status === "draft") {
+        blog.status = "published";
+        blog.createdAt = new Date(); // Bump to top of feed
+
+        // 🔔 Send "New Blog" Notifications (copy of POST / logic)
+        // Self Notification
+        const selfNotification = new Notification({
+          userId: req.user._id,
+          senderId: req.user._id,
+          type: "blog_upload",
+          message: `You published your draft: "${title}"`,
+          blogId: blog._id,
+          targetUrl: `/blog/${blog._id}`,
+          read: false,
+          createdAt: new Date(),
+        });
+        await selfNotification.save();
+
+        // Follower Notifications
+        const user = await User.findById(req.user._id).populate("followers", "fullName profilePic");
+        if (user && user.fullName && user.followers.length > 0) {
+          const followerNotifications = user.followers.map((follower) => ({
+            userId: follower._id,
+            senderId: req.user._id,
+            type: "blog_upload",
+            message: `${user.fullName} published a new blog: "${title}"`,
+            blogId: blog._id,
+            targetUrl: `/blog/${blog._id}`,
+            read: false,
+            createdAt: new Date(),
+          }));
+
+          await Notification.insertMany(followerNotifications);
+
+          // Real-time Notify
+          const io = req.app.get("io");
+          if (io) {
+            followerNotifications.forEach(n => {
+              io.to(`user:${n.userId}`).emit("new_notification", {
+                message: n.message
+              });
+            });
+          }
+        }
+      } else {
+        // Just ensure it's published (if it was already published, no change)
+        blog.status = "published";
+      }
+    }
+
     // Generate new embedding in background (Fire-and-forget)
     // We do NOT await this, so the user gets a faster response.
     generateEmbedding(`${title} ${textBody}`).then(async (embedding) => {
@@ -857,14 +926,14 @@ router.post("/delete/:blogId", async (req, res) => {
 // Category for Blogs
 router.get("/category/:category", async (req, res) => {
   const category = req.params.category;
-  const blogs = await Blog.find({ category });
+  const blogs = await Blog.find({ category, status: "published" });
   return res.render("home", { user: req.user, blogs });
 });
 
 // Tag for Blogs
 router.get("/tag/:tag", async (req, res) => {
   const tag = req.params.tag;
-  const blogs = await Blog.find({ tags: tag });
+  const blogs = await Blog.find({ tags: tag, status: "published" });
   return res.render("home", { user: req.user, blogs });
 });
 

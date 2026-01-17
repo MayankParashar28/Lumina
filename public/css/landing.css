@@ -110,10 +110,23 @@ body {
     position: relative;
     min-height: 100vh;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
+    /* Start from top to respect padding */
     justify-content: center;
     overflow: hidden;
-    padding-top: 80px;
+    padding-top: 150px;
+    /* More margin from top (Desktop) */
+}
+
+@media (max-width: 768px) {
+    .hero-section {
+        padding-top: 100px;
+        /* Reduced for mobile */
+        align-items: center;
+        /* Center vertically on mobile if needed, or keep flex-start */
+        min-height: auto;
+        /* Allow natural flow on mobile */
+    }
 }
 
 .hero-background-text {

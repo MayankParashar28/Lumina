@@ -1,11 +1,6 @@
 /* Professional B&W Notification Styles */
 
-body {
-    background-color: var(--bg-color);
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-}
+/* Body style removed to prevent conflict with global.css */
 
 /* Shared Animation from Blog */
 @keyframes fadeUpReveal {

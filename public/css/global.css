@@ -27,8 +27,25 @@ body {
     width: 100%;
     overflow-x: hidden;
     /* Prevent horizontal scroll */
-    overscroll-behavior: none;
-    /* Prevents bounce/jerk conflict */
+    overscroll-behavior: auto;
+    /* Allow default browser behavior for safety */
+    overflow-y: auto;
+}
+
+/* Mobile: Allow natural scroll behavior */
+@media (max-width: 768px) {
+
+    html,
+    body {
+        overscroll-behavior: auto !important;
+        height: auto !important;
+        min-height: 100dvh !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        display: flex !important;
+        flex-direction: column !important;
+        /* Restore flex for sticky footer, but keep scroll safely enabled */
+    }
 }
 
 /* 🌊 Lenis Required CSS */
@@ -52,19 +69,7 @@ html.lenis {
     pointer-events: none;
 }
 
-/* 📢 Announcement Bar */
-.announcement-bar {
-    width: 100%;
-    padding: 10px 0;
-    font-weight: 500;
-    font-size: 0.95rem;
-    position: relative;
-    z-index: 1100;
-    /* Above nav */
-    margin-bottom: 0;
-    border-radius: 0;
-    border: none;
-}
+
 
 h1,
 h2,

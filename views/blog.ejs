@@ -124,7 +124,7 @@
                                 </span> -->
                                 </button>
                             </div>
-                            <% if (user && String(user._id) !==String(blog.createdBy._id)) { %>
+                            <% if (user && blog.createdBy && String(user._id) !==String(blog.createdBy._id)) { %>
                                 <div class="action-item">
                                     <button class="action-icon-btn bookmark-btn-trigger" data-blog-id="<%= blog._id %>"
                                         title="Bookmark">
@@ -138,7 +138,8 @@
                                             <i class="fas fa-share-alt"></i>
                                         </button>
                                     </div>
-                                    <% if (user && blog.createdBy && String(user._id)===String(blog.createdBy.id)) { %>
+                                    <% if (user && ((blog.createdBy && String(user._id)===String(blog.createdBy.id)) ||
+                                        user.role==='ADMIN' )) { %>
                                         <div class="action-item edit-item">
                                             <a href="/blog/edit/<%= blog._id %>" class="action-icon-btn"
                                                 title="Edit Blog">

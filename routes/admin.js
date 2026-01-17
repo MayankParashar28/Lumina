@@ -55,12 +55,63 @@ router.get("/", async (req, res) => {
             };
         }
 
-        // 📊 Aggregation for Charts (Removed as per request)
-        // const sixMonthsAgo = new Date(); ...
+        // 🔍 Search Blogs
+        const blogSearchQuery = req.query.blogSearch || "";
+        let blogQuery = {};
+        if (blogSearchQuery) {
+            blogQuery = {
+                title: { $regex: blogSearchQuery, $options: "i" }
+            };
+        }
+
+        // 📊 Aggregation for Charts (Last 6 Months)
+        const sixMonthsAgo = new Date();
+        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5); // Go back 5 months + current
+        sixMonthsAgo.setDate(1); // Start of that month
+
+        const getMonthlyStats = async (Model) => {
+            const stats = await Model.aggregate([
+                { $match: { createdAt: { $gte: sixMonthsAgo } } },
+                {
+                    $group: {
+                        _id: { $month: "$createdAt" },
+                        count: { $sum: 1 }
+                    }
+                },
+                { $sort: { _id: 1 } }
+            ]);
+
+            // Map to array of 12 months (or just the last 6 dynamically)
+            // For simplicity, let's return the raw data and handle mapping in EJS or here.
+            // Let's normalize it to an array of counts ordered by month index
+            return stats;
+        };
+
+        const userGrowthRaw = await getMonthlyStats(User);
+        const blogGrowthRaw = await getMonthlyStats(Blog);
+
+        // Normalize Data for Chart.js (Labels & Data)
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const labels = [];
+        const userGrowthData = [];
+        const blogGrowthData = [];
+
+        for (let i = 0; i < 6; i++) {
+            const d = new Date();
+            d.setMonth(d.getMonth() - (5 - i));
+            const monthIndex = d.getMonth() + 1; // 1-based for Mongo ID
+            labels.push(monthNames[d.getMonth()]);
+
+            const userStat = userGrowthRaw.find(s => s._id === monthIndex);
+            userGrowthData.push(userStat ? userStat.count : 0);
+
+            const blogStat = blogGrowthRaw.find(s => s._id === monthIndex);
+            blogGrowthData.push(blogStat ? blogStat.count : 0);
+        }
 
         // Fetch latest users and blogs
         const users = await User.find(userQuery).sort({ createdAt: -1 }).limit(50); // Increased limit for search
-        const blogs = await Blog.find().populate("createdBy", "fullName").sort({ createdAt: -1 }).limit(20);
+        const blogs = await Blog.find(blogQuery).populate("createdBy", "fullName").sort({ createdAt: -1 }).limit(50);
 
 
 
@@ -71,7 +122,13 @@ router.get("/", async (req, res) => {
             commentCount,
             users,
             blogs,
-            searchQuery // ✅ Pass search query
+            users,
+            blogs,
+            users,
+            blogs,
+            searchQuery, // ✅ Pass user search query
+            blogSearchQuery, // ✅ Pass blog search query
+            analytics: { labels, userGrowthData, blogGrowthData } // 📊 Pass Chart Data
         });
     } catch (error) {
         console.error("Admin Dashboard Error:", error);
@@ -156,6 +213,37 @@ router.post("/blog/feature/:id", async (req, res) => {
     } catch (error) {
         console.error("Toggle Feature Error:", error);
         req.flash("error", "Failed to update status.");
+        res.redirect("/admin");
+    }
+});
+
+// 🔒 Toggle Private Status
+router.post("/blog/toggle-private/:id", async (req, res) => {
+    try {
+        const blog = await Blog.findById(req.params.id);
+        if (!blog) {
+            req.flash("error", "Blog not found.");
+            return res.redirect("/admin");
+        }
+
+        // Toggle between 'published' and 'private'
+        // If it's 'draft', we probably shouldn't mess with it, or maybe we treat draft as modifiable too?
+        // User asked "makeing private power on admin", usually implies taking a published blog and hiding it.
+        // Or making a private blog public.
+
+        if (blog.status === "private") {
+            blog.status = "published";
+            req.flash("success", `Blog "${blog.title}" is now Public.`);
+        } else {
+            blog.status = "private";
+            req.flash("success", `Blog "${blog.title}" is now Private 🔒.`);
+        }
+
+        await blog.save();
+        res.redirect("/admin");
+    } catch (error) {
+        console.error("Toggle Private Error:", error);
+        req.flash("error", "Failed to update privacy.");
         res.redirect("/admin");
     }
 });

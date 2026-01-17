@@ -267,6 +267,36 @@
                 .admin-container {
                     overflow: visible !important;
                     height: auto !important;
+                    min-height: 80vh;
+                    /* Ensure it fills screen on mobile too */
+                }
+            }
+
+            /* Global Admin Container Stability */
+            .admin-container {
+                min-height: 85vh;
+                /* Force footer to bottom */
+            }
+
+            .tab-pane {
+                display: none;
+                /* Default for non-fade */
+            }
+
+            .tab-pane.active {
+                display: block;
+                animation: fadeIn 0.3s ease;
+            }
+
+            @keyframes fadeIn {
+                from {
+                    opacity: 0;
+                    transform: translateY(5px);
+                }
+
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
                 }
             }
         </style>
@@ -289,7 +319,7 @@
 
             <!-- Stats Row (Always Visible) -->
             <div class="row g-3 mb-4">
-                <div class="col-md-4">
+                <div class="col-6 col-md-4">
                     <div class="stat-card p-3">
                         <div class="stat-number fs-3">
                             <%= userCount %>
@@ -297,7 +327,7 @@
                         <div class="stat-label small">Total Users</div>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-6 col-md-4">
                     <div class="stat-card p-3">
                         <div class="stat-number fs-3">
                             <%= blogCount %>
@@ -305,7 +335,7 @@
                         <div class="stat-label small">Published Blogs</div>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-6 col-md-4">
                     <div class="stat-card p-3">
                         <div class="stat-number fs-3">
                             <%= commentCount %>
@@ -326,9 +356,14 @@
                         type="button" role="tab"><i class="bi bi-journal-text me-2"></i>Content</button>
                 </li>
 
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link rounded-2" id="analytics-tab" data-bs-toggle="pill"
+                        data-bs-target="#analytics" type="button" role="tab"><i
+                            class="bi bi-graph-up-arrow me-2"></i>Analytics</button>
+                </li>
             </ul>
 
-            <div class="tab-content" id="adminTabsContent">
+            <div class="tab-content" id="adminTabsContent" style="min-height: 60vh;">
 
                 <!-- � Users Tab -->
                 <div class="tab-pane fade show active" id="users" role="tabpanel">
@@ -397,9 +432,40 @@
                 </div>
 
                 <!-- 📝 Content Tab -->
-                <div class="tab-pane fade" id="blogs" role="tabpanel">
+                <div class="tab-pane" id="analytics" role="tabpanel">
+                    <div class="row g-4 mb-4">
+                        <div class="col-md-6">
+                            <div class="card border-0 shadow-sm p-4">
+                                <h5 class="fw-bold mb-4">User Growth</h5>
+                                <div style="height: 300px; width: 100%;">
+                                    <canvas id="userGrowthChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card border-0 shadow-sm p-4">
+                                <h5 class="fw-bold mb-4">Content Velocity</h5>
+                                <div style="height: 300px; width: 100%;">
+                                    <canvas id="blogGrowthChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-pane" id="blogs" role="tabpanel">
                     <div class="card border-0 shadow-sm p-4">
-                        <h5 class="fw-bold mb-4">Content Moderation</h5>
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h5 class="fw-bold mb-0">Content Moderation</h5>
+                            <form class="d-flex gap-2" method="GET" action="/admin">
+                                <!-- Maintain active tab -->
+                                <input type="hidden" name="tab" value="blogs">
+                                <input type="text" name="blogSearch" class="form-control form-control-sm"
+                                    placeholder="Search blogs..."
+                                    value="<%= typeof blogSearchQuery !== 'undefined' ? blogSearchQuery : '' %>">
+                                <button type="submit" class="btn btn-sm btn-primary">Search</button>
+                            </form>
+                        </div>
                         <div class="table-responsive">
                             <table class="table-custom">
                                 <thead>
@@ -418,6 +484,13 @@
                                                     class="text-dark text-decoration-none fw-bold small">
                                                     <%= b.title %>
                                                 </a>
+                                                <% if (b.status==='draft' ) { %>
+                                                    <span class="badge bg-secondary ms-1"
+                                                        style="font-size: 0.6em;">Draft</span>
+                                                    <% } else if (b.status==='private' ) { %>
+                                                        <span class="badge bg-dark ms-1"
+                                                            style="font-size: 0.6em;">Private</span>
+                                                        <% } %>
                                             </td>
                                             <td data-label="Author">
                                                 <div class="d-flex align-items-center gap-2 small">
@@ -441,6 +514,15 @@
                                                             <i class="fas fa-star"></i>
                                                         </button>
                                                     </form>
+                                                    <form action="/admin/blog/toggle-private/<%= b._id %>"
+                                                        method="POST">
+                                                        <button
+                                                            class="btn btn-sm p-0 border-0 <%= b.status === 'private' ? 'text-dark' : 'text-muted' %>"
+                                                            title="<%= b.status === 'private' ? 'Make Public' : 'Make Private' %>">
+                                                            <i
+                                                                class="fas <%= b.status === 'private' ? 'fa-lock' : 'fa-lock-open' %>"></i>
+                                                        </button>
+                                                    </form>
                                                     <form action="/admin/blog/delete/<%= b._id %>" method="POST"
                                                         onsubmit="return confirm('Delete blog?');">
                                                         <button class="btn btn-sm p-0 border-0 text-danger"
@@ -461,6 +543,84 @@
         </div>
 
         <%- include('../partials/footer') %>
+
+            <!-- Chart.js -->
+            <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+            <script>
+                const analyticsIds = ['userGrowthChart', 'blogGrowthChart'];
+                // Assuming backend passes `analytics` object: { labels: [], userGrowthData: [], blogGrowthData: [] }
+                // We need to inject it safely.
+                // Use try-catch or safe parsing to avoid crashes if data is missing
+                let chartLabels = [], userData = [], blogData = [];
+                try {
+                    chartLabels = JSON.parse('<%- JSON.stringify(analytics.labels) %>');
+                    userData = JSON.parse('<%- JSON.stringify(analytics.userGrowthData) %>');
+                    blogData = JSON.parse('<%- JSON.stringify(analytics.blogGrowthData) %>');
+                } catch (e) {
+                    console.error("Chart Data Parse Error", e);
+                }
+
+                // Common Chart Options
+                const chartOptions = {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                borderDash: [5, 5]
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                };
+
+                // Render User Chart
+                if (document.getElementById('userGrowthChart')) {
+                    new Chart(document.getElementById('userGrowthChart'), {
+                        type: 'line',
+                        data: {
+                            labels: chartLabels,
+                            datasets: [{
+                                label: 'New Users',
+                                data: userData,
+                                borderColor: '#111',
+                                backgroundColor: 'rgba(17, 17, 17, 0.1)',
+                                borderWidth: 2,
+                                tension: 0.4,
+                                fill: true
+                            }]
+                        },
+                        options: chartOptions
+                    });
+                }
+
+                // Render Blog Chart
+                if (document.getElementById('blogGrowthChart')) {
+                    new Chart(document.getElementById('blogGrowthChart'), {
+                        type: 'bar',
+                        data: {
+                            labels: chartLabels,
+                            datasets: [{
+                                label: 'New Blogs',
+                                data: blogData,
+                                backgroundColor: '#666',
+                                borderRadius: 4
+                            }]
+                        },
+                        options: chartOptions
+                    });
+                }
+            </script>
 
 </body>
 

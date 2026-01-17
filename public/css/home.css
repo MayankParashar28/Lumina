@@ -5,6 +5,20 @@ body {
     overflow-x: hidden;
 }
 
+/* Mobile Scrolling Fix */
+@media (max-width: 768px) {
+    body {
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
+        height: auto;
+    }
+
+    .bento-feed-wrapper {
+        min-height: 100dvh;
+        height: auto;
+    }
+}
+
 /* View Transition Fine-tuning */
 ::view-transition-group(*) {
     animation-duration: 0.5s;
@@ -14,7 +28,8 @@ body {
 /* Feed Hero */
 /* Feed Hero */
 .feed-hero {
-    padding: 2rem 2rem 4rem;
+    padding: 150px 2rem 4rem;
+    /* Clear fixed navbar */
     display: flex;
     justify-content: space-between;
     align-items: flex-end;
@@ -550,10 +565,10 @@ body {
 }
 
 @media (max-width: 992px) {
-    #bento-grid {
+    .bento-grid {
         display: grid !important;
         /* Re-enable Grid */
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(2, 1fr) !important;
         /* 2 Columns */
         grid-auto-flow: dense;
         /* Fill gaps */
@@ -562,7 +577,7 @@ body {
     }
 
     /* Reset default item styles */
-    #bento-grid .bento-item {
+    .bento-grid .bento-item {
         width: 100% !important;
         margin-bottom: 0 !important;
         display: block !important;
@@ -574,8 +589,8 @@ body {
     }
 
     /* Featured/Important Items = Full Width */
-    #bento-grid .item-main,
-    #bento-grid .item-wide {
+    .bento-grid .item-main,
+    .bento-grid .item-wide {
         grid-column: span 2 !important;
         /* Full width */
         height: 280px !important;
@@ -583,8 +598,8 @@ body {
     }
 
     /* Standard Items = Half Width */
-    #bento-grid .item-normal,
-    #bento-grid .item-tall {
+    .bento-grid .item-normal,
+    .bento-grid .item-tall {
         grid-column: span 1 !important;
         /* Half width */
     }

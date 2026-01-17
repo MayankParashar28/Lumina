@@ -173,19 +173,19 @@ app.get("/", async (req, res) => {
   try {
     // If user is NOT logged in, render the Landing Page (formerly /main)
     if (!req.user) {
-      const blogs = await Blog.find()
+      const blogs = await Blog.find({ status: "published" })
         .sort({ createdAt: -1 })
         .select("-body")
         .populate("createdBy", "fullName profilePic") // Added profilePic for consistency if needed
         .lean();
 
-      const featuredBlogs = await Blog.find({ featured: true })
+      const featuredBlogs = await Blog.find({ featured: true, status: "published" })
         .sort({ createdAt: -1 })
         .select("-body")
         .populate("createdBy", "fullName profilePic")
         .lean();
 
-      const trendingBlogs = await Blog.find()
+      const trendingBlogs = await Blog.find({ status: "published" })
         .sort({ views: -1 })
         .limit(3)
         .select("-body")
@@ -209,7 +209,7 @@ app.get("/", async (req, res) => {
     const categoryFilter = req.query.category ? req.query.category.toLowerCase() : "";
     const tagFilter = req.query.tag ? req.query.tag.toLowerCase() : "";
 
-    let filter = {};
+    let filter = { status: "published" }; // ✅ Only show published blogs
     let sort = { views: 1, createdAt: -1 }; // ⚡ Cold Start: Show "Hidden Gems" (Low views + Recent)
 
     // Apply search query filter if provided
