@@ -10,33 +10,46 @@
 <body>
     <%- include('./partials/nav', { searchQuery: '' }) %>
 
-        <div class="page-container">
-            <header class="header text-center mb-4">
-                <h1 class="auth-title">Verify Your Email</h1>
-                <p class="auth-subtitle">One last step to join the community</p>
-            </header>
-
-            <div class="auth-card" style="text-align: center;">
-                <div style="font-size: 3rem; margin-bottom: 1rem;">📧</div>
-                <h1>Check Your Inbox!</h1>
-                <p style="margin-bottom: 20px; color: #666;">
-                    We've sent a verification link to <strong>
-                        <%= locals.email || 'your email address' %>
-                    </strong>. <br>
-                    Please check your inbox (and spam folder) and click the link to activate your account.
-                </p>
-                <div class="alert alert-info" style="font-size: 0.9em; margin-bottom: 20px; color: #555;">
-                    ⏳ <strong>Note:</strong> The email may take <strong>2-3 minutes</strong> to arrive. Please be
-                    patient!
+        <div class="auth-split-wrapper">
+            <!-- Left Side: Image -->
+            <div class="auth-side-image-container">
+                <img src="/images/auth-side.png" alt="Check Email" class="auth-side-image">
+                <div class="auth-image-overlay">
+                    <h2>You're almost there.</h2>
+                    <p>We've sent a magic link to your inbox. One click and you're part of the community.</p>
                 </div>
+            </div>
 
-                <a href="/user/signin" class="btn btn-primary"
-                    style="background-color: #000; border: none; padding: 10px 20px; border-radius: 5px; color: #fff; text-decoration: none;">
-                    Back to Sign In
-                </a>
+            <!-- Right Side: Content -->
+            <div class="auth-form-container">
+                <div class="auth-content-box text-center" style="padding-top: 120px;">
+                    <div style="font-size: 3rem; margin-bottom: 1.5rem;">📧</div>
 
-                <div class="auth-footer" style="margin-top: 20px;">
-                    Didn't receive it? <a href="/user/signup">Try registering again</a>
+                    <header class="mb-4">
+                        <h1 class="auth-title">Check Your Inbox!</h1>
+                        <p class="auth-subtitle mb-4">
+                            We've sent a verification link to<br>
+                            <strong>
+                                <%= locals.email || 'your email address' %>
+                            </strong>
+                        </p>
+                    </header>
+
+                    <div class="alert alert-info d-flex justify-content-center"
+                        style="font-size: 0.9em; margin-bottom: 2rem; color: #555;">
+                        <span class="me-2">⏳</span>
+                        <span><strong>Note:</strong> The email may take <strong>2-3 minutes</strong> to arrive. Please
+                            check
+                            your spam folder if you don't see it.</span>
+                    </div>
+
+                    <a href="/user/signin" class="submit-btn text-decoration-none d-inline-block w-100 text-center">
+                        Back to Sign In
+                    </a>
+
+                    <div class="auth-footer text-center mt-4">
+                        Didn't receive it? <a href="/user/signup">Try registering again</a>
+                    </div>
                 </div>
             </div>
         </div>
