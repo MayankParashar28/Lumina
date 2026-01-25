@@ -1216,9 +1216,11 @@ router.get("/api/giphy", async (req, res) => {
   } catch (error) {
     console.error("❌ GIPHY Proxy Error:", error.message);
     if (error.response) {
-      return res.status(error.response.status).json(error.response.data);
+      // Pass through GIPHY error message if available
+      const giphyMsg = error.response.data?.meta?.msg || error.response.data?.message;
+      return res.status(error.response.status).json({ error: giphyMsg || "GIPHY API Error" });
     }
-    res.status(500).json({ error: "Failed to fetch from GIPHY" });
+    res.status(500).json({ error: "Failed to connect to GIPHY" });
   }
 });
 

@@ -470,7 +470,7 @@
 
                         } catch (error) {
                             console.error("GIPHY Error:", error);
-                            alert("Failed to fetch GIF from GIPHY.");
+                            alert(error.message || "Failed to fetch GIF from GIPHY.");
                         } finally {
                             btn.innerHTML = originalText;
                             btn.disabled = false;
