@@ -2,4 +2,5 @@ User-agent: *
 Allow: /
 Disallow: /admin
 Disallow: /user/profile
+Disallow: /search
 Sitemap: https://lumina.blog/sitemap.xml
