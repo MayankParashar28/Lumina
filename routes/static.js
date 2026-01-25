@@ -6,7 +6,7 @@ const router = Router();
 router.get("/sitemap.xml", async (req, res) => {
     try {
         const blogs = await Blog.find({ status: "published" }).select("_id updatedAt");
-        const baseUrl = "https://lumina.blog";
+        const baseUrl = "https://lluminaa.vercel.app";
 
         let sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">

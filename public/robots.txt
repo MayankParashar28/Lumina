@@ -3,4 +3,4 @@ Allow: /
 Disallow: /admin
 Disallow: /user/profile
 Disallow: /search
-Sitemap: https://lumina.blog/sitemap.xml
+Sitemap: https://lluminaa.vercel.app/sitemap.xml
