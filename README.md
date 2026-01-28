@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🚀 Lumina
+#  Lumina
 
 ### **Learning-Powered Blogging and Intelligent Retrieval**
 
@@ -17,7 +17,7 @@
 
 ---
 
-## 📸 Screenshots
+##  Screenshots
 
 <div align="center">
 
@@ -40,7 +40,7 @@
 
 ---
 
-## 🏗️ System Architecture
+##  System Architecture
 
 ### 🔭 High-Level Overview
 
@@ -93,7 +93,7 @@ graph TB
     style MongoDB fill:#47a248,color:#fff
 ```
 
-### 🧬 Semantic Search Pipeline
+###  Semantic Search Pipeline
 
 ```mermaid
 sequenceDiagram
@@ -123,7 +123,7 @@ sequenceDiagram
     Frontend-->>User: Display relevant posts
 ```
 
-### 🔄 Data Flow Architecture
+###  Data Flow Architecture
 
 ```mermaid
 flowchart LR
@@ -153,39 +153,39 @@ flowchart LR
 
 ---
 
-## 📋 Table of Contents
+##  Table of Contents
 
-- [📸 Screenshots](#-screenshots)
-- [🏗️ System Architecture](#️-system-architecture)
-- [✨ Features](#-features)
-- [🔍 Search Innovation](#-search-innovation-our-competitive-edge)
-- [🛠️ Tech Stack](#️-tech-stack)
-- [🚀 Quick Start](#-quick-start)
-- [📊 Performance](#-performance)
-- [🔒 Security](#-security)
-- [🧪 Testing](#-testing)
-- [🤝 Contributing](#-contributing)
-- [📄 License](#-license)
+- [Screenshots](#-screenshots)
+- [System Architecture](#️-system-architecture)
+- [Features](#-features)
+- [Search Innovation](#-search-innovation-our-competitive-edge)
+- [Tech Stack](#️-tech-stack)
+- [Quick Start](#-quick-start)
+- [Performance](#-performance)
+- [Security](#-security)
+- [Testing](#-testing)
+- [Contributing](#-contributing)
+- [ License](#-license)
 
 ---
 
-## ✨ Features
+##  Features
 
-### 🧠 AI & Search
+###  AI & Search
 - **Semantic Search** using 768-dim vector embeddings
 - **Smart Recommendations** with cosine similarity
 - **AI Content Generation** via Google Gemini API
 - **Auto Summarization** with TL;DR extraction
 - **Related Posts** based on semantic proximity
 
-### ⚡ Real-Time & UX
+###  Real-Time & UX
 - **Live Notifications** via Socket.IO
 - **Instant Updates** for likes, comments, follows
 - **Dark/Light Themes** with smooth transitions
 - **Responsive Design** with Bento grid layout
 - **Infinite Scroll** with skeleton loading
 
-### 🛡️ Core Features
+###  Core Features
 - **Role-Based Access Control** (User, Creator, Admin)
 - **User Authentication** with SHA-256 hashing
 - **Admin Dashboard** for content moderation
@@ -195,7 +195,7 @@ flowchart LR
 
 ---
 
-## 🧠 Search & AI: Embeddings & Smart Recommendations
+##  Search & AI: Embeddings & Smart Recommendations
 
 ### 😵 The Discovery Crisis: Why Keywords Fail
 In an era of information overflow, traditional search engines suffer from **"Context Blindness."**
@@ -203,22 +203,22 @@ In an era of information overflow, traditional search engines suffer from **"Con
 - 🚫 **Missed Connections**: A search for *"scalable systems"* misses *"Microservices 101"* because keywords don't match.
 - 🚫 **Information Silos**: Valuable insights remain buried, leading to dead-end user journeys.
 
-### 💡 The Solution: RAG-Powered Cognitive Retrieval
+###  The Solution: RAG-Powered Cognitive Retrieval
 Lumina implements a high-performance **Retrieval-Augmented Generation (RAG)** architecture using **Google's Text Embedding 004**.
 We don't just index words; we vectorize *meaning*.
 
 1. **Semantic Understanding**: Transforms every article into a **768-dimensional vector** to map concepts.
 2. **Intent Bridging**: Connects abstract queries (e.g., *"future of tech"*) with concrete results (e.g., *"Generative AI Trends"*).
 3. **Adaptive Knowledge Graph**: Powers a "Smart Ecosystem" based on the *conceptual proximity* of your reading history.A fully database-driven CMS where every element is customizable.
-- 🧠 **Context-Aware Personalization**: The "Smart Feed" learns from user behavior to surface relevant content.
-- 📈 **Integrated Growth Tools**:
+-  **Context-Aware Personalization**: The "Smart Feed" learns from user behavior to surface relevant content.
+-  **Integrated Growth Tools**:
   - **Analytics**: Built-in view tracking and engagement metrics.
   - **SEO**: Automated meta-tag generation and sitemap bridging.
   - **Monetization**: Native support for **Stripe** subscriptions and Creator Tipping.
-- 🔌 **API-First Design**: Ready for integrations with CRM, Email Marketing, and Social Media automations.
-- 🛡️ **Enterprise-Grade Security**: Helmet.js headers, Rate Limiting, and XSS protection out of the box.
+-  **API-First Design**: Ready for integrations with CRM, Email Marketing, and Social Media automations.
+-  **Enterprise-Grade Security**: Helmet.js headers, Rate Limiting, and XSS protection out of the box.
 
-### 💻 Technical Implementation
+###  Technical Implementation
 
 ```javascript
 // Generate embedding for new blog
@@ -233,7 +233,7 @@ const results = blogs.map(b => ({
 })).sort((a, b) => b.score - a.score);
 ```
 
-### 🚀 Performance Impact
+###  Performance Impact
 
 | Metric | Traditional Search | Semantic Search |
 |--------|-------------------|-----------------|
@@ -242,7 +242,7 @@ const results = blogs.map(b => ({
 | **Discovery Rate** | 10% of content | **35% of content** ✅ |
 | **Query Time** | 120ms | **95ms** ✅ |
 
-### 🏆 Why This Wins
+###  Why This Wins
 
 - ✅ **Google Gemini Integration** - Showcases advanced AI usage
 - ✅ **Production-Scale** - Handles 10K+ documents efficiently
@@ -253,19 +253,19 @@ const results = blogs.map(b => ({
 
 ## ⚡ Engineering Spotlights
 
-### **1. 🖼️ Advanced Image Optimization**
+### **1.  Advanced Image Optimization**
 We treat images as first-class citizens for performance:
-- 🚀 **Format Selection**: Automatically serves **AVIF** or **WebP** based on browser support (80% smaller).
-- 🎨 **AI Compression**: Cloudinary's `quality: auto` balances visual fidelity and file size.
+-  **Format Selection**: Automatically serves **AVIF** or **WebP** based on browser support (80% smaller).
+-  **AI Compression**: Cloudinary's `quality: auto` balances visual fidelity and file size.
 - ⚡ **Lazy Loading**: Native `loading="lazy"` + Low-Quality Image Placeholders (LQIP).
 
 ### **2. 📱 Dynamic Feed & Infinite Scroll**
 A modern, app-like experience on the web:
-- 🧱 **Bento Grid Architecture**: A responsive masonry layout adapting content chunks to the viewport.
-- 🏎️ **O(1) Performance**: Cursor-based pagination ensures queries remain fast even with millions of posts.
+-  **Bento Grid Architecture**: A responsive masonry layout adapting content chunks to the viewport.
+-  **O(1) Performance**: Cursor-based pagination ensures queries remain fast even with millions of posts.
 
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 | Layer | Technology | Why? |
 |-------|-----------|------|
@@ -280,11 +280,11 @@ A modern, app-like experience on the web:
 
 ---
 
-## 🛠️ Tech Stack: The Complete Arsenal
+##  Tech Stack: The Complete Arsenal
 
 We utilized a battle-tested stack to ensure performance, security, and scalability.
 
-### 🎨 Frontend & User Experience
+###  Frontend & User Experience
 | Technology | Purpose |
 |:-----------|:--------|
 | **EJS (Embedded JS)** | Server-side rendering (SSR) for blazing fast FCP and SEO superiority. |
@@ -293,7 +293,7 @@ We utilized a battle-tested stack to ensure performance, security, and scalabili
 
 <br>
 
-### ⚙️ Backend & Architecture
+###  Backend & Architecture
 | Technology | Purpose |
 |:-----------|:--------|
 | **Node.js** | Event-driven runtime for handling concurrent I/O operations efficiently. |
@@ -304,7 +304,7 @@ We utilized a battle-tested stack to ensure performance, security, and scalabili
 
 <br>
 
-### 🧠 AI & Data Intelligence
+###  AI & Data Intelligence
 | Technology | Purpose |
 |:-----------|:--------|
 | **Google Gemini Flash** | High-speed LLM for content generation, rewriting, and summarization. |
@@ -315,7 +315,7 @@ We utilized a battle-tested stack to ensure performance, security, and scalabili
 
 <br>
 
-### 🏗️ Infrastructure & Tools
+###  Infrastructure & Tools
 | Technology | Purpose |
 |:-----------|:--------|
 | **Docker** | Containerization ensuring "Write once, run anywhere" consistency. |
@@ -324,7 +324,7 @@ We utilized a battle-tested stack to ensure performance, security, and scalabili
 | **Dotenv** | Environment variable management for 12-Factor App compliance. |
 
 
-## 🚀 Quick Start
+##  Quick Start
 
 
 
@@ -401,14 +401,14 @@ Cloudinary API Key (for image uploads)
 
 ---
 
-## 🔒 Security
+##  Security
 
-### 🔐 Authentication
+###  Authentication
 - SHA-256 password hashing with unique salts
 - Session-based auth with secure cookies
 - Rate limiting on sensitive endpoints
 
-### 🛡️ Rate Limits
+###  Rate Limits
 | Endpoint | Limit | Window |
 |----------|-------|--------|
 | Login/Signup | 5 req | 15 min |
@@ -416,7 +416,7 @@ Cloudinary API Key (for image uploads)
 | Blog Creation | 1 req | 30 min |
 | Comments | 1 req | 5 min |
 
-### 👮 Security Headers (Helmet.js)
+###  Security Headers (Helmet.js)
 - ✅ Content Security Policy (CSP)
 - ✅ HSTS (HTTP Strict Transport Security)
 - ✅ X-Frame-Options (Clickjacking protection)
@@ -424,7 +424,7 @@ Cloudinary API Key (for image uploads)
 
 ---
 
-## 🧪 Testing
+##  Testing
 
 ```bash
 npm test              # Unit tests
@@ -434,7 +434,7 @@ npm run test:e2e      # End-to-end tests
 
 ---
 
-## 🤝 Contributing
+##  Contributing
 
 We welcome contributions! Follow these steps:
 
@@ -444,7 +444,7 @@ We welcome contributions! Follow these steps:
 4. Push: `git push origin feature/amazing-feature`
 5. Open a Pull Request
 
-### 📝 Commit Convention
+###  Commit Convention
 Follow [Conventional Commits](https://www.conventionalcommits.org/):
 - `feat:` New feature
 - `fix:` Bug fix
@@ -454,7 +454,7 @@ Follow [Conventional Commits](https://www.conventionalcommits.org/):
 
 ---
 
-## 🗺️ Roadmap
+##  Roadmap
 
 - [ ] Hybrid search (Vector + Keyword)
 - [ ] Redis caching layer
@@ -466,13 +466,13 @@ Follow [Conventional Commits](https://www.conventionalcommits.org/):
 
 ---
 
-## 📄 License
+##  License
 
 MIT License - see [LICENSE](https://github.com/MayankParashar28/BlogiFy/blob/main/LICENSE)
 
 ---
 
-## 👨‍💻 Author
+##  Author
 
 **Mayank Parashar**
 
