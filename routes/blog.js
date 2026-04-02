@@ -1160,13 +1160,25 @@ router.get("/api/feed", async (req, res) => {
       .limit(limit)
       .populate("createdBy", "fullName profilePic");
 
+    const { optimizeImage } = require('../services/imageHelper');
+
     res.json({
       blogs: blogs.map(blog => {
         // Sanitize body for word count
         const plainBody = blog.body.replace(/<[^>]*>/g, '');
         const wordCount = plainBody.split(/\s+/).length;
+        
+        const bObj = blog.toObject();
+        // Optimize Images
+        if (bObj.coverImageURL) {
+          bObj.coverImageURL = optimizeImage(bObj.coverImageURL, { width: 600, crop: 'fill' });
+        }
+        if (bObj.createdBy && bObj.createdBy.profilePic) {
+          bObj.createdBy.profilePic = optimizeImage(bObj.createdBy.profilePic, { width: 48, crop: 'fill' });
+        }
+
         return {
-          ...blog.toObject(),
+          ...bObj,
           readTime: Math.ceil(wordCount / 200)
         };
       }),
