@@ -380,18 +380,15 @@
             const prompt = `${title}, ${selectedStyle}, detailed, aesthetically pleasing`;
             const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1200&height=600&nologo=true&seed=${seed}&model=flux`;
 
-            // Pre-load image to check success
-            const img = new Image();
-            img.src = imageUrl;
-            img.onload = () => {
+            const executeSuccess = (finalUrl) => {
               const preview = document.getElementById('coverPreview');
               const removeBtn = document.getElementById('removeCover');
               const controls = document.getElementById('coverControls'); // NEW
               const aiInput = document.getElementById('aiCoverURL');
               const container = document.getElementById('coverContainer'); // NEW
 
-              preview.src = imageUrl;
-              aiInput.value = imageUrl;
+              preview.src = finalUrl;
+              aiInput.value = finalUrl;
 
               preview.classList.remove('hidden');
               removeBtn.classList.remove('hidden');
@@ -400,6 +397,23 @@
 
               aiBtn.innerHTML = originalText;
               aiBtn.disabled = false;
+            };
+
+            // Pre-load image to check success
+            const img = new Image();
+            img.src = imageUrl;
+            img.onload = () => executeSuccess(imageUrl);
+            img.onerror = () => {
+              console.warn("Pollinations AI failed, falling back to random image generator...");
+              const fallbackUrl = `https://picsum.photos/seed/${seed}/1200/600`;
+              const fallbackImg = new Image();
+              fallbackImg.src = fallbackUrl;
+              fallbackImg.onload = () => executeSuccess(fallbackUrl);
+              fallbackImg.onerror = () => {
+                alert("AI Image Service is currently down. Please try uploading an image manually.");
+                aiBtn.innerHTML = originalText;
+                aiBtn.disabled = false;
+              };
             };
           }
 

@@ -818,7 +818,14 @@ router.post("/edit/:id", upload.single("coverImage"), async (req, res) => {
       }
       blog.coverImageURL = finalUrl;
     } else if (req.body.aiCoverURL) {
-      blog.coverImageURL = req.body.aiCoverURL;
+      try {
+        console.log("⬆️ Uploading generated AI Image to Cloudinary (Edit)...");
+        const result = await cloudinary.uploader.upload(req.body.aiCoverURL, { folder: "lumina_uploads" });
+        blog.coverImageURL = result.secure_url;
+      } catch (err) {
+        console.error("❌ Failed to save AI Image to Cloudinary. Falling back to hotlink.", err);
+        blog.coverImageURL = req.body.aiCoverURL;
+      }
     }
 
     // ✅ Handle Status Update (Draft <-> Published)
@@ -1018,26 +1025,34 @@ router.post("/", upload.single("coverImage"), async (req, res) => {
     // ✅ Save Blog in Database (Initially without embedding)
     const blogStatus = req.body.action === "draft" ? "draft" : "published";
 
+    let finalCoverImageURL = "";
+    if (req.file) {
+      finalCoverImageURL = req.file.path;
+      if (!finalCoverImageURL || !finalCoverImageURL.startsWith('http')) {
+        if (req.file.secure_url) {
+          finalCoverImageURL = req.file.secure_url;
+        } else if (req.file.filename) {
+          finalCoverImageURL = cloudinary.url(req.file.filename, { secure: true });
+        }
+      }
+    } else if (aiCoverURL) {
+      try {
+        console.log("⬆️ Uploading generated AI Image to Cloudinary...");
+        const result = await cloudinary.uploader.upload(aiCoverURL, { folder: "lumina_uploads" });
+        finalCoverImageURL = result.secure_url;
+      } catch (err) {
+        console.error("❌ Failed to save AI Image to Cloudinary. Falling back to hotlink.", err);
+        finalCoverImageURL = aiCoverURL;
+      }
+    }
+
     const blog = await Blog.create({
       title,
       body: finalBody,
       category,
       tags: tagArray,
       createdBy: req.user._id,
-      coverImageURL: (() => {
-        if (req.file) {
-          let finalUrl = req.file.path;
-          if (!finalUrl || !finalUrl.startsWith('http')) {
-            if (req.file.secure_url) {
-              finalUrl = req.file.secure_url;
-            } else if (req.file.filename) {
-              finalUrl = cloudinary.url(req.file.filename, { secure: true });
-            }
-          }
-          return finalUrl;
-        }
-        return aiCoverURL;
-      })(),
+      coverImageURL: finalCoverImageURL,
       createdAt: new Date(),
       embedding: [], // Will be populated in background
       status: blogStatus
