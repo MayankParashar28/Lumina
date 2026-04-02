@@ -289,7 +289,7 @@
                     const data = await res.json();
 
                     if (data.blogs && data.blogs.length > 0) {
-                        grid.innerHTML = data.blogs.map(blog => `
+                        grid.innerHTML = DOMPurify.sanitize(data.blogs.map(blog => `
                             <a href="/blog/${blog._id}" class="recommendation-card">
                                 <div class="recommendation-image-wrapper">
                                     <img src="${blog.coverImageURL || '/images/default-cover.jpg'}" class="recommendation-image" alt="${blog.title}">
@@ -299,7 +299,7 @@
                                     <span class="recommendation-meta">Based on similar content</span>
                                 </div>
                             </a>
-                        `).join("");
+                        `).join(""));
                     } else {
                         grid.innerHTML = '<p style="color: #999;">No similar stories found.</p>';
                     }

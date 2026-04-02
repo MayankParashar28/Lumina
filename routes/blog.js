@@ -1153,24 +1153,27 @@ router.post("/", upload.single("coverImage"), async (req, res) => {
 // ⚡ Local API: Get Paginated Blogs (Infinite Scroll)
 router.get("/api/feed", async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
+    const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = 5;
-    const categoryFilter = req.query.category || "all";
+    const categoryFilterRaw = String(req.query.category || "all").trim();
+
+    // 🔒 Security: Escape categoryFilter for safe RegExp use (ReDoS prevention)
+    const categoryFilter = categoryFilterRaw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
     const skip = (page - 1) * limit;
 
     let filter = {};
-    if (categoryFilter && categoryFilter !== "all" && categoryFilter !== "trending" && categoryFilter !== "featured") {
+    if (categoryFilterRaw && categoryFilterRaw !== "all" && categoryFilterRaw !== "trending" && categoryFilterRaw !== "featured") {
       filter.category = { $regex: new RegExp(categoryFilter, "i") };
     } else if (categoryFilter === "featured") {
       filter.featured = true;
     }
 
     let query = { status: "published" }; // Only show published blogs
-    if (categoryFilter !== "all") {
-      if (categoryFilter === "featured") {
+    if (categoryFilterRaw !== "all") {
+      if (categoryFilterRaw === "featured") {
         query.featured = true;
-      } else if (categoryFilter === "trending") {
+      } else if (categoryFilterRaw === "trending") {
         // Trending will be handled by sort, not query filter
       } else {
         query.category = { $regex: new RegExp(categoryFilter, "i") };
@@ -1178,7 +1181,7 @@ router.get("/api/feed", async (req, res) => {
     }
 
     let sort = { createdAt: -1 };
-    if (categoryFilter === "trending") {
+    if (categoryFilterRaw === "trending") {
       sort = { views: -1 };
     }
 

@@ -3,7 +3,6 @@
 
 <head>
     <%- include('./partials/header') %>
-        <title>Home - Lumina</title>
         <link rel="stylesheet" href="/css/home.css?v=18">
 </head>
 
@@ -156,6 +155,8 @@
         </div>
 
 
+        <!-- Sanitizer -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
         <script>
 
             let currentPage = 1;
@@ -248,7 +249,7 @@
                     if (blog.views > 10) dataCats.push('trending');
                     article.setAttribute('data-categories', JSON.stringify(dataCats));
 
-                    article.innerHTML = `
+                    article.innerHTML = DOMPurify.sanitize(`
                             <div class="bento-glow"></div>
                                 <a href="/blog/${blog._id}" class="blog-card-link">
                                     <div class="blog-card-inner">
@@ -275,7 +276,7 @@
                                         </div>
                                     </div>
                                 </a>
-                            `;
+                            `);
                     fragment.appendChild(article);
                 });
 

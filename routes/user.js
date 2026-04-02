@@ -222,7 +222,10 @@ router.post("/edit-profile", upload.single("profilePic"), async (req, res) => {
       return res.status(401).json({ error: "Unauthorized access!" });
     }
 
-    const { fullName, email, bio, socials = {} } = req.body;
+    let { fullName, email, bio, socials = {} } = req.body;
+    fullName = String(fullName || "").trim();
+    email = String(email || "").toLowerCase().trim();
+    bio = String(bio || "").trim();
     const user = await User.findById(req.user._id);
 
     if (!user) {
@@ -247,14 +250,14 @@ router.post("/edit-profile", upload.single("profilePic"), async (req, res) => {
     }
 
     // Update fields
-    user.fullName = fullName.trim();
+    user.fullName = fullName;
     // 🔒 Fixed: Email uniqueness check before allowing change
     if (email && email.trim() !== user.email) {
       const existingUser = await User.findOne({ email: email.trim() });
       if (existingUser) {
         return res.status(400).json({ error: "This email is already in use by another account." });
       }
-      user.email = email.trim();
+      user.email = email;
     }
 
     user.bio = bio ? bio.replace(/</g, "&lt;").replace(/>/g, "&gt;") : "";
@@ -751,7 +754,7 @@ router.get("/forgot-password", (req, res) => {
 });
 
 router.post("/forgot-password", emailLimiter, async (req, res) => {
-  const { email } = req.body;
+  const email = String(req.body.email || "").toLowerCase().trim();
   try {
     const user = await User.findOne({ email });
     if (!user) {

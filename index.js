@@ -114,7 +114,36 @@ app.use(express.static(path.resolve("./public"), {
 app.use((req, res, next) => {
   res.locals.user = req.user || null;
   res.locals.path = req.path;
+  res.locals.canonicalPath = req.path; // 🔍 SEO: Canonical URL for all pages
   app.locals.optimizeImage = optimizeImage;
+
+  // 🔍 SEO: Set default title & meta based on route patterns
+  const seoDefaults = {
+    '/': { title: 'Lumina - The Voice of the Bold', metaDescription: 'Discover fresh perspectives and trending stories on technology, creativity, and innovation. Join the community of bold thinkers.' },
+    '/user/signin': { title: 'Sign In - Lumina', metaDescription: 'Sign in to your Lumina account to read, write, and share stories with the world.', noIndex: true },
+    '/user/signup': { title: 'Sign Up - Lumina', metaDescription: 'Create your free Lumina account and start publishing your stories to a global audience.', noIndex: true },
+    '/user/forgot-password': { title: 'Forgot Password - Lumina', metaDescription: 'Reset your Lumina account password securely.', noIndex: true },
+    '/user/profile': { title: 'My Profile - Lumina', metaDescription: 'Manage your profile, view your stories, and track your reading activity.', noIndex: true },
+    '/user/edit-profile': { title: 'Edit Profile - Lumina', metaDescription: 'Update your Lumina profile settings, bio, and social links.', noIndex: true },
+    '/user/bookmarks': { title: 'My Bookmarks - Lumina', metaDescription: 'Your saved reading list on Lumina.', noIndex: true },
+    '/blog/add-new': { title: 'New Story - Lumina', metaDescription: 'Write and publish a new story on Lumina.', noIndex: true },
+    '/blog/drafts': { title: 'My Drafts - Lumina', metaDescription: 'Continue working on your unpublished drafts.', noIndex: true },
+    '/about': { title: 'About - Lumina', metaDescription: 'Learn about Lumina — the minimalist blogging platform where ideas come to life.' },
+    '/privacy': { title: 'Privacy Policy - Lumina', metaDescription: 'Read how Lumina protects your data and respects your privacy.' },
+    '/terms': { title: 'Terms of Service - Lumina', metaDescription: 'Review the terms and conditions for using the Lumina platform.' },
+    '/subscribe': { title: 'Subscribe - Lumina', metaDescription: 'Unlock AI-powered writing tools with a Lumina subscription.' },
+    '/notifications': { title: 'Notifications - Lumina', metaDescription: 'Stay updated with your latest interactions on Lumina.', noIndex: true },
+    '/admin': { title: 'Admin Dashboard - Lumina', metaDescription: 'Lumina admin control panel.', noIndex: true },
+    '/admin/moderation': { title: 'Moderation Logs - Lumina Admin', metaDescription: 'Review flagged content and moderation actions.', noIndex: true },
+  };
+
+  const defaults = seoDefaults[req.path];
+  if (defaults) {
+    if (!res.locals.title) res.locals.title = defaults.title;
+    if (!res.locals.metaDescription) res.locals.metaDescription = defaults.metaDescription;
+    if (defaults.noIndex) res.locals.noIndex = true;
+  }
+
   next();
 });
 
@@ -443,16 +472,84 @@ app.use("/notifications", notificationsRoute);
 app.use("/ai", aiRoute);
 
 
+// 🔍 SEO: Dynamic Sitemap
+app.get("/sitemap.xml", async (req, res) => {
+  try {
+    const BASE_URL = process.env.BASE_URL || 'https://lluminaa.vercel.app';
+    const Blog = require("./models/blog");
+    const User = require("./models/user");
+
+    // Static pages
+    const staticPages = ['/', '/about', '/privacy', '/terms', '/user/signin', '/user/signup'];
+
+    // Dynamic blog pages
+    const blogs = await Blog.find({ status: 'published' }).select('_id updatedAt').lean();
+    
+    // Public user profiles
+    const users = await User.find().select('_id updatedAt').lean();
+
+    let xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`;
+
+    // Add static pages
+    for (const page of staticPages) {
+      xml += `
+  <url>
+    <loc>${BASE_URL}${page}</loc>
+    <changefreq>${page === '/' ? 'daily' : 'monthly'}</changefreq>
+    <priority>${page === '/' ? '1.0' : '0.5'}</priority>
+  </url>`;
+    }
+
+    // Add blog pages
+    for (const blog of blogs) {
+      xml += `
+  <url>
+    <loc>${BASE_URL}/blog/${blog._id}</loc>
+    <lastmod>${new Date(blog.updatedAt || blog._id.getTimestamp()).toISOString()}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>`;
+    }
+
+    // Add user profile pages
+    for (const user of users) {
+      xml += `
+  <url>
+    <loc>${BASE_URL}/user/${user._id}</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
+  </url>`;
+    }
+
+    xml += `
+</urlset>`;
+
+    res.set('Content-Type', 'application/xml');
+    res.send(xml);
+  } catch (error) {
+    console.error("❌ Sitemap Error:", error);
+    res.status(500).send("Error generating sitemap");
+  }
+});
+
 // 404 Page
 app.get("*", (req, res) => {
-  res.status(404).render("404"); // 🔒 Fixed: Return correct 404 status
+  res.status(404).render("404", {
+    title: '404 - Page Not Found | Lumina',
+    metaDescription: 'The page you are looking for does not exist.',
+    noIndex: true
+  });
 });
 
 // Global Error Handler
 app.use((err, req, res, next) => {
   console.error("🔥 Global Error:", err.stack);
   res.status(500).render("error", {
-    message: "Something went wrong on our end. We are looking into it!"
+    message: "Something went wrong on our end. We are looking into it!",
+    title: 'Error - Lumina',
+    metaDescription: 'An error occurred while processing your request.',
+    noIndex: true
   });
 });
 

@@ -1,6 +1,21 @@
 User-agent: *
 Allow: /
 Disallow: /admin
+Disallow: /user/signin
+Disallow: /user/signup
 Disallow: /user/profile
+Disallow: /user/edit-profile
+Disallow: /user/bookmarks
+Disallow: /user/forgot-password
+Disallow: /user/reset-password
+Disallow: /blog/add-new
+Disallow: /blog/drafts
+Disallow: /blog/edit/
+Disallow: /blog/preview
+Disallow: /blog/api/
+Disallow: /captcha
+Disallow: /notifications
 Disallow: /search
+Disallow: /ai/
+
 Sitemap: https://lluminaa.vercel.app/sitemap.xml
