@@ -82,7 +82,7 @@
                                 <div class="blog-card-inner">
                                     <div class="card-image-wrapper">
                                         <% if (blog.coverImageURL) { %>
-                                            <img src="<%= typeof optimizeImage === 'function' ? optimizeImage(blog.coverImageURL, { width: 600, crop: 'fill' }) : blog.coverImageURL %>" alt="<%= blog.title %>" loading="lazy" onerror="this.onerror=null; this.src='/images/default-cover.jpg';">
+                                            <img src="<%= typeof optimizeImage === 'function' ? optimizeImage(blog.coverImageURL, { width: 600, crop: 'fill' }) : blog.coverImageURL %>" alt="<%= blog.title %>" loading="lazy" onerror="this.onerror=null; this.src='/images/default-cover.png';">
                                             <% } else { %>
                                                 <div class="placeholder-img"></div>
                                                 <% } %>
@@ -253,7 +253,7 @@
                                 <a href="/blog/${blog._id}" class="blog-card-link">
                                     <div class="blog-card-inner">
                                         <div class="card-image-wrapper">
-                                            ${blog.coverImageURL ? `<img src="${blog.coverImageURL}" alt="${blog.title}" loading="lazy" onerror="this.onerror=null; this.src='/images/default-cover.jpg';">` : '<div class="placeholder-img"></div>'}
+                                            ${blog.coverImageURL ? `<img src="${blog.coverImageURL}" alt="${blog.title}" loading="lazy" onerror="this.onerror=null; this.src='/images/default-cover.png';">` : '<div class="placeholder-img"></div>'}
                                             <div class="card-overlay">
                                                 <span class="read-time">${blog.readTime || 1} min read</span>
                                             </div>
