@@ -108,8 +108,8 @@
                         <% blogs.forEach(blog=> { %>
                             <a href="/blog/<%= blog._id %>" class="story-card">
                                 <div class="story-image-wrapper">
-                                    <img src="<%= blog.coverImageURL || '/images/default-cover.jpg' %>"
-                                        alt="<%= blog.title %>" loading="lazy">
+                                    <img src="<%= typeof optimizeImage === 'function' ? optimizeImage(blog.coverImageURL, { width: 600, crop: 'fill' }) : blog.coverImageURL %>"
+                                        alt="<%= blog.title %>" loading="lazy" onerror="this.onerror=null; this.src='/images/default-cover.png';">
                                 </div>
                                 <div class="story-content">
                                     <span class="story-date">
@@ -149,8 +149,8 @@
                         <% bookmarks.forEach(blog=> { %>
                             <a href="/blog/<%= blog._id %>" class="story-card">
                                 <div class="story-image-wrapper">
-                                    <img src="<%= blog.coverImageURL || '/images/default-cover.jpg' %>"
-                                        alt="<%= blog.title %>" loading="lazy">
+                                    <img src="<%= typeof optimizeImage === 'function' ? optimizeImage(blog.coverImageURL, { width: 600, crop: 'fill' }) : blog.coverImageURL %>"
+                                        alt="<%= blog.title %>" loading="lazy" onerror="this.onerror=null; this.src='/images/default-cover.png';">
                                 </div>
                                 <div class="story-content">
                                     <span class="story-author">by <%= blog.createdBy ? blog.createdBy.fullName
