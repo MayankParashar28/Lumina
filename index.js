@@ -121,11 +121,15 @@ app.use((req, res, next) => {
 
 
 // Add session store error handling
+if (!process.env.SESSION_SECRET) {
+  throw new Error("❌ SESSION_SECRET is not defined in .env. Please add it to secure sessions.");
+}
+
 const sessionStore = MongoStore.create({
   mongoUrl: URI,
   ttl: 24 * 60 * 60,
   crypto: {
-    secret: process.env.SESSION_SECRET || 'your-secret-key'
+    secret: process.env.SESSION_SECRET
   },
   autoRemove: 'native',
   touchAfter: 24 * 3600
@@ -138,9 +142,9 @@ sessionStore.on('error', function (error) {
 // Session Configuration
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || 'your-secret-key',
+    secret: process.env.SESSION_SECRET,
     resave: false,
-    saveUninitialized: true,
+    saveUninitialized: false, // 🔒 Fixed: Don't create sessions for anonymous visitors
     store: sessionStore
   })
 );
@@ -441,8 +445,7 @@ app.use("/ai", aiRoute);
 
 // 404 Page
 app.get("*", (req, res) => {
-  res.render("404");
-  res.status(404);
+  res.status(404).render("404"); // 🔒 Fixed: Return correct 404 status
 });
 
 // Global Error Handler

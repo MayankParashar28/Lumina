@@ -207,8 +207,8 @@ router.get("/edit", async (req, res) => {
 });
 
 const multer = require("multer");
-const { storage, cloudinary } = require("../config/cloudConfig");
-const upload = multer({ storage: storage });
+const { storage, cloudinary, upload } = require("../config/cloudConfig");
+// upload is pre-configured with 5MB limit and MIME type validation
 
 // ... (existing code) ...
 
@@ -248,9 +248,14 @@ router.post("/edit-profile", upload.single("profilePic"), async (req, res) => {
 
     // Update fields
     user.fullName = fullName.trim();
-    // user.email = email.trim(); // Prevent email change for simplicity/security for now? Or keep it. 
-    // If allowing email change, should check for uniqueness catch block.
-    if (email) user.email = email.trim();
+    // 🔒 Fixed: Email uniqueness check before allowing change
+    if (email && email.trim() !== user.email) {
+      const existingUser = await User.findOne({ email: email.trim() });
+      if (existingUser) {
+        return res.status(400).json({ error: "This email is already in use by another account." });
+      }
+      user.email = email.trim();
+    }
 
     user.bio = bio ? bio.replace(/</g, "&lt;").replace(/>/g, "&gt;") : "";
 
@@ -576,7 +581,7 @@ router.get(
       profilePic: req.user.profilePic,
       role: req.user.role,
     };
-    const jwtToken = jwt.sign(payload, process.env.JWT_SECRET);
+    const jwtToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' }); // 🔒 Fixed: Added expiry
 
     // 🛡️ Security: Regenerate Session ID
     req.session.regenerate((err) => {
@@ -724,7 +729,7 @@ router.get("/verify/:token", verifyLimiter, async (req, res) => {
       profilePic: newUser.profilePic,
       role: newUser.role,
     };
-    const token = jwt.sign(payload, process.env.JWT_SECRET);
+    const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' }); // 🔒 Fixed: Added expiry
 
     res.cookie("token", token, {
       httpOnly: true,

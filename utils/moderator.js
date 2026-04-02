@@ -23,9 +23,10 @@ const MODEL_ID = process.env.GOOGLE_GEMINI_MODEL || "gemini-2.5-flash";
  * 2. Gemini AI Analysis (Smart & Contextual)
  * 
  * @param {string} text - The content to moderate.
+ * @param {object} context - Optional context (userId, ip) for moderation logs.
  * @returns {Promise<{safe: boolean, reason?: string}>}
  */
-async function moderateContent(text) {
+async function moderateContent(text, context = {}) {
     if (!text || !text.trim()) return { safe: true };
 
     // 1️⃣ LEVEL 1: Local Keyword Filter

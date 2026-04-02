@@ -21,8 +21,8 @@ const { generateEmbedding, cosineSimilarity } = require("../services/ai"); // Im
 
 const router = Router();
 
-const { storage, cloudinary } = require("../config/cloudConfig");
-const upload = multer({ storage: storage });
+const { storage, cloudinary, upload } = require("../config/cloudConfig");
+// upload is pre-configured with 5MB limit and MIME type validation
 
 // 👁️ Preview Blog
 router.post("/preview", async (req, res) => {
@@ -674,6 +674,11 @@ router.post("/comment/:commentId/react", async (req, res) => {
     if (!req.user) return res.status(401).json({ success: false, message: "Login required" });
 
     const { emoji } = req.body;
+    // 🔒 Fixed: Validate emoji to prevent arbitrary data storage
+    const ALLOWED_EMOJIS = ['❤️', '😂', '😮', '😢', '😡', '👍', '👎', '😲', '🤔', '🙌'];
+    if (!emoji || !ALLOWED_EMOJIS.includes(emoji)) {
+      return res.status(400).json({ success: false, message: "Invalid emoji reaction." });
+    }
     const userId = req.user._id.toString();
 
     // Use lean() to get POJO and avoid Schema Validation on load
@@ -818,11 +823,23 @@ router.post("/edit/:id", upload.single("coverImage"), async (req, res) => {
       }
       blog.coverImageURL = finalUrl;
     } else if (req.body.aiCoverURL) {
+      // 🔒 Fixed: Validate URL to prevent SSRF attacks
       try {
+        const parsedUrl = new URL(req.body.aiCoverURL);
+        const allowedHosts = ['pollinations.ai', 'picsum.photos', 'images.unsplash.com', 'res.cloudinary.com'];
+        const isAllowed = allowedHosts.some(host => parsedUrl.hostname === host || parsedUrl.hostname.endsWith('.' + host));
+        if (!isAllowed) {
+          req.flash("error", "Invalid cover image source URL.");
+          return res.redirect(`/blog/edit/${req.params.id}`);
+        }
         console.log("⬆️ Uploading generated AI Image to Cloudinary (Edit)...");
         const result = await cloudinary.uploader.upload(req.body.aiCoverURL, { folder: "lumina_uploads" });
         blog.coverImageURL = result.secure_url;
       } catch (err) {
+        if (err.code === 'ERR_INVALID_URL') {
+          req.flash("error", "Invalid cover image URL format.");
+          return res.redirect(`/blog/edit/${req.params.id}`);
+        }
         console.error("❌ Failed to save AI Image to Cloudinary. Falling back to hotlink.", err);
         blog.coverImageURL = req.body.aiCoverURL;
       }
@@ -918,8 +935,9 @@ router.post("/delete/:blogId", async (req, res) => {
       return res.status(404).json({ success: false, message: "Blog not found" });
     }
 
-    if (blog.createdBy.toString() !== req.user._id.toString()) {
-      return res.status(401).json({ success: false, message: "Unauthorized" });
+    // 🔒 Fixed: Allow admins to also delete blogs
+    if (blog.createdBy.toString() !== req.user._id.toString() && req.user.role !== "ADMIN") {
+      return res.status(403).json({ success: false, message: "Unauthorized" });
     }
 
     await blog.deleteOne();
@@ -961,19 +979,19 @@ router.get("/trending", async (req, res) => {
 router.post("/", upload.single("coverImage"), async (req, res) => {
   const BLOG_COOLDOWN = 10 * 60 * 1000; // 10 minutes in milliseconds
   try {
-    const { title, body, category, tags, useAI, aiCoverURL } = req.body;
-
-    // 🛡️ Moderation Check
-    // We combine Title + Body + Tags to check the full context
-    const fullContent = `${title} ${body} ${tags}`;
-    const moderation = await moderateContent(fullContent);
-    if (!moderation.safe) {
-      return res.status(400).send(`Content Rejected: ${moderation.reason}`);
+    // 🔒 Fixed: Auth check FIRST before any AI/processing happens
+    if (!req.user) {
+      return res.status(401).send("Unauthorized: Please log in first.");
     }
 
-    if (!req.user) {
-      console.log("❌ Unauthorized User");
-      return res.status(401).send("Unauthorized: Please log in first.");
+    const { title, body, category, tags, useAI, aiCoverURL } = req.body;
+
+    // 🛡️ Moderation Check (after auth to prevent free AI abuse)
+    // We combine Title + Body + Tags to check the full context
+    const fullContent = `${title} ${body} ${tags}`;
+    const moderation = await moderateContent(fullContent, { userId: req.user._id, ip: req.ip });
+    if (!moderation.safe) {
+      return res.status(400).send(`Content Rejected: ${moderation.reason}`);
     }
 
     // ✅ Check last blog post time of this user
@@ -1036,11 +1054,21 @@ router.post("/", upload.single("coverImage"), async (req, res) => {
         }
       }
     } else if (aiCoverURL) {
+      // 🔒 Fixed: Validate URL to prevent SSRF attacks
       try {
+        const parsedUrl = new URL(aiCoverURL);
+        const allowedHosts = ['pollinations.ai', 'picsum.photos', 'images.unsplash.com', 'res.cloudinary.com'];
+        const isAllowed = allowedHosts.some(host => parsedUrl.hostname === host || parsedUrl.hostname.endsWith('.' + host));
+        if (!isAllowed) {
+          return res.status(400).send("Invalid cover image source URL.");
+        }
         console.log("⬆️ Uploading generated AI Image to Cloudinary...");
         const result = await cloudinary.uploader.upload(aiCoverURL, { folder: "lumina_uploads" });
         finalCoverImageURL = result.secure_url;
       } catch (err) {
+        if (err.code === 'ERR_INVALID_URL') {
+          return res.status(400).send("Invalid cover image URL format.");
+        }
         console.error("❌ Failed to save AI Image to Cloudinary. Falling back to hotlink.", err);
         finalCoverImageURL = aiCoverURL;
       }

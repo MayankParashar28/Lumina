@@ -1,5 +1,6 @@
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const multer = require('multer');
 require('dotenv').config();
 
 cloudinary.config({
@@ -18,7 +19,22 @@ const storage = new CloudinaryStorage({
     },
 });
 
+// 🔒 Fixed: Add file size limit (5MB) and MIME type validation
+const upload = multer({
+    storage: storage,
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
+    fileFilter: (req, file, cb) => {
+        const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+        if (allowedMimes.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Only image files (JPEG, PNG, WEBP, GIF) are allowed.'), false);
+        }
+    }
+});
+
 module.exports = {
     cloudinary,
-    storage
+    storage,
+    upload // Export pre-configured multer instance
 };
