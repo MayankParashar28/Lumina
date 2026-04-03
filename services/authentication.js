@@ -1,4 +1,5 @@
 const jwt = require("jsonwebtoken");
+const logger = require("./logger"); // Structured Logging
 require("dotenv").config(); // Load environment variables
 
 const secret = process.env.JWT_SECRET;
@@ -19,7 +20,7 @@ function createTokenForUser(user) {
 
     return jwt.sign(payload, secret, { expiresIn });
   } catch (error) {
-    console.error("❌ Error creating token:", error);
+    logger.error("❌ Authentication Error:", error);
     return null;
   }
 }
@@ -29,7 +30,7 @@ function validateToken(token) {
   try {
     return jwt.verify(token, secret);
   } catch (error) {
-    console.error("❌ Invalid or expired token:", error.message);
+    logger.error("❌ Invalid or expired token:", error.message);
     return null;
   }
 }

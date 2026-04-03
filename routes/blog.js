@@ -18,8 +18,27 @@ dotenv.config();
 const axios = require("axios"); // Import Axios for GIPHY Proxy
 
 const { generateEmbedding, cosineSimilarity } = require("../services/ai"); // Import AI Service
+const logger = require("../services/logger"); // Structured Logging
+const rateLimit = require("express-rate-limit");
 
 const router = Router();
+
+// Rate Limiters
+const blogLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5, // Limit each IP to 5 blogs per hour
+  message: "Too many blogs created from this IP, please try again after an hour",
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const commentLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 30, // Limit each IP to 30 comments
+  message: "Too many comments from this IP, please try again after 15 minutes",
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 const { storage, cloudinary, upload } = require("../config/cloudConfig");
 // upload is pre-configured with 5MB limit and MIME type validation
@@ -65,8 +84,9 @@ router.post("/preview", async (req, res) => {
     });
 
   } catch (err) {
-    console.error("Preview Error:", err);
-    res.status(500).send("Preview generation failed");
+    logger.error("Preview Error:", err);
+    req.flash("error", "Generating preview failed. Please try again.");
+    return res.redirect("back");
   }
 });
 
@@ -95,7 +115,7 @@ router.get("/add-new", async (req, res) => {
       searchQuery: req.query.search || "",
     });
   } catch (err) {
-    console.error(err);
+    logger.error("Error rendering addBlog:", err);
     res.redirect("/");
   }
 });
@@ -108,7 +128,7 @@ router.get("/drafts", async (req, res) => {
     const drafts = await Blog.find({
       createdBy: req.user._id,
       status: "draft"
-    }).sort({ createdAt: -1 });
+    }).select("-body").sort({ createdAt: -1 }).lean();
 
     res.render("drafts", {
       user: req.user,
@@ -116,7 +136,7 @@ router.get("/drafts", async (req, res) => {
       path: "/blog/drafts"
     });
   } catch (err) {
-    console.error("Error fetching drafts:", err);
+    logger.error("Error fetching drafts:", err);
     res.redirect("/");
   }
 });
@@ -241,7 +261,7 @@ router.get("/:id", async (req, res) => {
           }
           await user.save();
         } catch (histError) {
-          console.error("⚠️ Failed to track history:", histError);
+          logger.error("⚠️ Failed to track history:", histError);
         }
       }
     }
@@ -268,7 +288,7 @@ router.get("/:id", async (req, res) => {
     });
 
   } catch (err) {
-    console.error("❌ Error fetching blog:", err.message);
+    logger.error("❌ Error fetching blog:", { error: err.message, stack: err.stack });
     return res.status(500).render("error", { message: "An error occurred while fetching the blog." });
   }
 });
@@ -285,14 +305,14 @@ router.get("/recommendations/:id", async (req, res) => {
 
     // Fallback if no embedding
     if (!currentBlog || !currentBlog.embedding || currentBlog.embedding.length === 0) {
-      const fallback = await Blog.find({ _id: { $ne: req.params.id } }).limit(3);
+      const fallback = await Blog.find({ _id: { $ne: req.params.id } }).select("-body").limit(3).lean();
       return res.json({ blogs: fallback });
     }
 
     const allBlogs = await Blog.find({
       _id: { $ne: req.params.id },
       embedding: { $exists: true, $ne: [] }
-    }).select("title coverImageURL embedding createdAt");
+    }).select("title coverImageURL embedding createdAt").lean();
 
     // Calculate similarities
     const scoredBlogs = allBlogs.map(blog => {
@@ -307,7 +327,7 @@ router.get("/recommendations/:id", async (req, res) => {
     res.json({ blogs: recommended });
 
   } catch (error) {
-    console.error("❌ Recommendation Error:", error);
+    logger.error("❌ Recommendation Error:", error);
     res.status(500).json({ error: "Failed to fetch recommendations" });
   }
 });
@@ -338,7 +358,7 @@ router.post("/bookmark/:blogId", async (req, res) => {
       return res.json({ success: true, bookmarked: true });
     }
   } catch (error) {
-    console.error("❌ Bookmarking Error:", error);
+    logger.error("❌ Bookmarking Error:", error);
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
@@ -393,13 +413,13 @@ router.post("/like/:blogId", async (req, res) => {
     res.json({ success: true, liked: isNewLike, likes: blog.likes });
 
   } catch (error) {
-    console.error("❌ Error in liking blog:", error);
+    logger.error("❌ Error in liking blog:", error);
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
 
 // Comment on a Blog
-router.post("/comment/:blogId", async (req, res) => {
+router.post("/comment/:blogId", commentLimiter, async (req, res) => {
   const COMMENT_COOLDOWN = 5 * 60 * 1000; // 5 minutes in milliseconds
   try {
     // 🛡️ Moderation Check
@@ -462,7 +482,7 @@ router.post("/comment/:blogId", async (req, res) => {
             message: `${req.user.fullName} commented on your blog.`
           });
         }
-      }).catch(err => console.error("⚠️ Notification Error:", err));
+        }).catch(err => logger.error("⚠️ Notification Error:", err));
     }
 
     // 🔴 Real-time Update: Emit new root comment
@@ -484,7 +504,7 @@ router.post("/comment/:blogId", async (req, res) => {
             commentId: comment._id
           });
         } else {
-          console.error("❌ EJS Render Error:", err);
+          logger.error("❌ EJS Render Error:", err);
         }
       });
     }
@@ -492,7 +512,7 @@ router.post("/comment/:blogId", async (req, res) => {
     req.flash("success", "Comment added successfully!");
     return res.redirect(`/blog/${req.params.blogId}`);
   } catch (error) {
-    console.error("❌ Error adding comment:", error.message);
+    logger.error("❌ Error adding comment:", { error: error.message, stack: error.stack });
     req.flash("error", "Something went wrong. Try again.");
     return res.redirect("back");
   }
@@ -539,7 +559,7 @@ router.post("/comment/delete/:commentId", async (req, res) => {
     return res.redirect(`/blog/${comment.blogId._id}`);
 
   } catch (error) {
-    console.error("❌ Error deleting comment:", error);
+    logger.error("❌ Error deleting comment:", error);
     req.flash("error", "Server error.");
     return res.redirect("back");
   }
@@ -627,7 +647,7 @@ router.post("/comment/:commentId/reply", async (req, res) => {
 
 
   } catch (error) {
-    console.error("❌ Error replying:", error);
+    logger.error("❌ Error replying:", error);
     if (req.xhr || req.headers.accept.includes('json')) {
       return res.status(500).json({ success: false, error: "Server Error" });
     }
@@ -663,7 +683,7 @@ router.post("/comment/:commentId/pin", async (req, res) => {
 
     return res.json({ success: true, isPinned: comment.isPinned });
   } catch (error) {
-    console.error("❌ Pin Error:", error);
+    logger.error("❌ Pin Error:", error);
     res.status(500).json({ success: false });
   }
 });
@@ -728,7 +748,7 @@ router.post("/comment/:commentId/react", async (req, res) => {
     return res.json({ success: true, reactionCounts });
 
   } catch (error) {
-    console.error("❌ Reaction Error:", error);
+    logger.error("❌ Reaction Error:", error);
     res.status(500).json({ success: false });
   }
 });
@@ -756,7 +776,7 @@ router.get("/edit/:id", async (req, res) => {
       searchQuery: req.query.search || "",
     });
   } catch (error) {
-    console.error("❌ Error fetching blog for edit:", error);
+    logger.error("❌ Error fetching blog for edit:", error);
     res.redirect("/");
   }
 });
@@ -832,7 +852,7 @@ router.post("/edit/:id", upload.single("coverImage"), async (req, res) => {
           req.flash("error", "Invalid cover image source URL.");
           return res.redirect(`/blog/edit/${req.params.id}`);
         }
-        console.log("⬆️ Uploading generated AI Image to Cloudinary (Edit)...");
+        logger.info("⬆️ Uploading generated AI Image to Cloudinary (Edit)...");
         const result = await cloudinary.uploader.upload(req.body.aiCoverURL, { folder: "lumina_uploads" });
         blog.coverImageURL = result.secure_url;
       } catch (err) {
@@ -908,7 +928,7 @@ router.post("/edit/:id", upload.single("coverImage"), async (req, res) => {
 
       }
     }).catch(err => {
-      console.error("⚠️ Background Embedding Error:", err);
+      logger.error("⚠️ Background Embedding Error:", err);
     });
 
     // Save initial blog immediately
@@ -918,8 +938,9 @@ router.post("/edit/:id", upload.single("coverImage"), async (req, res) => {
     return res.redirect(`/blog/${blog._id}`);
 
   } catch (error) {
-    console.error("❌ Error updating blog:", error);
-    res.status(500).send("Internal Server Error");
+    logger.error("❌ Error updating blog:", error);
+    req.flash("error", "Failed to update blog. Please try again.");
+    return res.redirect(`/blog/edit/${req.params.id}`);
   }
 });
 
@@ -943,40 +964,52 @@ router.post("/delete/:blogId", async (req, res) => {
     await blog.deleteOne();
     return res.redirect("/");
   } catch (error) {
-    console.error("❌ Error deleting blog:", error);
+    logger.error("❌ Error deleting blog:", error);
     return res.status(500).json({ success: false, message: "Server error" });
   }
 });
 
 // Category for Blogs
 router.get("/category/:category", async (req, res) => {
-  const category = req.params.category;
-  const blogs = await Blog.find({ category, status: "published" });
-  return res.render("home", { user: req.user, blogs });
+  try {
+    const category = req.params.category;
+    const blogs = await Blog.find({ category, status: "published" }).select("-body").populate("createdBy", "fullName profilePic").lean();
+    return res.render("home", { user: req.user, blogs });
+  } catch (err) {
+    logger.error("❌ Error fetching blogs by category:", err);
+    req.flash("error", "Failed to load blogs for this category.");
+    return res.redirect("/");
+  }
 });
 
 // Tag for Blogs
 router.get("/tag/:tag", async (req, res) => {
-  const tag = req.params.tag;
-  const blogs = await Blog.find({ tags: tag, status: "published" });
-  return res.render("home", { user: req.user, blogs });
+  try {
+    const tag = req.params.tag;
+    const blogs = await Blog.find({ tags: tag, status: "published" }).select("-body").populate("createdBy", "fullName profilePic").lean();
+    return res.render("home", { user: req.user, blogs });
+  } catch (err) {
+    logger.error("❌ Error fetching blogs by tag:", err);
+    req.flash("error", "Failed to load blogs for this tag.");
+    return res.redirect("/");
+  }
 });
 
 // 🔥 Fetch Featured Blogs
 router.get("/featured", async (req, res) => {
-  const featuredBlogs = await Blog.find({ featured: true });
+  const featuredBlogs = await Blog.find({ featured: true, status: "published" }).select("-body").populate("createdBy", "fullName profilePic").lean();
 
   return res.render("home", { user: req.user, blogs: featuredBlogs });
 });
 
 // 🚀 Fetch Trending Blogs (Most Viewed)
 router.get("/trending", async (req, res) => {
-  const trendingBlogs = await Blog.find().sort({ views: -1 }).limit(3);
+  const trendingBlogs = await Blog.find({ status: "published" }).sort({ views: -1 }).limit(3).select("-body").populate("createdBy", "fullName profilePic").lean();
   return res.render("home", { user: req.user, blogs: trendingBlogs });
 });
 
 // 📝 Create a Blog
-router.post("/", upload.single("coverImage"), async (req, res) => {
+router.post("/", blogLimiter, upload.single("coverImage"), async (req, res) => {
   const BLOG_COOLDOWN = 10 * 60 * 1000; // 10 minutes in milliseconds
   try {
     // 🔒 Fixed: Auth check FIRST before any AI/processing happens
@@ -1009,25 +1042,25 @@ router.post("/", upload.single("coverImage"), async (req, res) => {
     }
 
     if (!title || !category) {
-      console.log("❌ Missing Title or Category");
+      logger.warn("❌ Missing Title or Category");
       return res.status(400).send("Title and Category are required.");
     }
 
     const tagArray = tags ? tags.split(",").map(tag => tag.trim()) : [];
     if (tagArray.length === 0) {
-      console.log("❌ No Tags Provided");
+      logger.warn("❌ No Tags Provided");
       return res.status(400).send("At least one tag is required.");
     }
 
     if (!req.file && !aiCoverURL) {
-      console.log("❌ No Cover Image Uploaded");
+      logger.warn("❌ No Cover Image Uploaded");
       return res.status(400).send("No cover image uploaded.");
     }
 
     let finalBody = body?.trim() || "";
 
     if (!finalBody || finalBody.trim().length === 0) {
-      console.log("❌ Final Body Still Empty!");
+      logger.warn("❌ Final Body Still Empty!");
       return res.status(400).send("Blog content is required.");
     }
 
@@ -1062,7 +1095,7 @@ router.post("/", upload.single("coverImage"), async (req, res) => {
         if (!isAllowed) {
           return res.status(400).send("Invalid cover image source URL.");
         }
-        console.log("⬆️ Uploading generated AI Image to Cloudinary...");
+        logger.info("⬆️ Uploading generated AI Image to Cloudinary...");
         const result = await cloudinary.uploader.upload(aiCoverURL, { folder: "lumina_uploads" });
         finalCoverImageURL = result.secure_url;
       } catch (err) {
@@ -1094,7 +1127,7 @@ router.post("/", upload.single("coverImage"), async (req, res) => {
         await Blog.findByIdAndUpdate(blog._id, { embedding });
 
       }
-    }).catch(err => console.error("⚠️ Background Embedding Error:", err));
+    }).catch(err => logger.error("⚠️ Background Embedding Error:", err));
 
     // ✅ Save Notification (Only if Published)
     if (blogStatus === "published") {
@@ -1145,36 +1178,41 @@ router.post("/", upload.single("coverImage"), async (req, res) => {
     return res.redirect(`/blog/${blog._id}`);
 
   } catch (error) {
-    console.error("❌ Error creating blog:", error);
-    res.status(500).send("Internal Server Error");
+    logger.error("❌ Error creating blog:", error);
+    req.flash("error", "Failed to post your story. Please try again.");
+    return res.redirect("/blog/add-new");
   }
 });
 
 // ⚡ Local API: Get Paginated Blogs (Infinite Scroll)
+const feedCache = new Map();
+const CACHE_TTL = 30 * 1000; // 30 Seconds
+
 router.get("/api/feed", async (req, res) => {
   try {
     const page = Math.max(1, parseInt(req.query.page) || 1);
-    const limit = 5;
     const categoryFilterRaw = String(req.query.category || "all").trim();
 
-    // 🔒 Security: Escape categoryFilter for safe RegExp use (ReDoS prevention)
-    const categoryFilter = categoryFilterRaw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // 🛑 Check Cache First
+    const cacheKey = `${page}-${categoryFilterRaw}`;
+    const cachedData = feedCache.get(cacheKey);
 
-    const skip = (page - 1) * limit;
-
-    let filter = {};
-    if (categoryFilterRaw && categoryFilterRaw !== "all" && categoryFilterRaw !== "trending" && categoryFilterRaw !== "featured") {
-      filter.category = { $regex: new RegExp(categoryFilter, "i") };
-    } else if (categoryFilter === "featured") {
-      filter.featured = true;
+    if (cachedData && (Date.now() - cachedData.timestamp < CACHE_TTL)) {
+      // console.log("🚀 Serving Feed from Cache:", cacheKey);
+      return res.json(cachedData.data);
     }
 
-    let query = { status: "published" }; // Only show published blogs
+    const limit = 5;
+    // 🔒 Security: Escape categoryFilter for safe RegExp use (ReDoS prevention)
+    const categoryFilter = categoryFilterRaw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const skip = (page - 1) * limit;
+
+    let query = { status: "published" };
     if (categoryFilterRaw !== "all") {
       if (categoryFilterRaw === "featured") {
         query.featured = true;
       } else if (categoryFilterRaw === "trending") {
-        // Trending will be handled by sort, not query filter
+        // Trending handled by sort
       } else {
         query.category = { $regex: new RegExp(categoryFilter, "i") };
       }
@@ -1185,20 +1223,18 @@ router.get("/api/feed", async (req, res) => {
       sort = { views: -1 };
     }
 
+    // 🏎️ Optimized Query: Added .select() to exclude body
     const blogs = await Blog.find(query)
       .sort(sort)
       .skip(skip)
       .limit(limit)
+      .select("title coverImageURL category views createdAt createdBy tags featured readTime")
       .populate("createdBy", "fullName profilePic");
 
     const { optimizeImage } = require('../services/imageHelper');
 
-    res.json({
+    const responseData = {
       blogs: blogs.map(blog => {
-        // Sanitize body for word count
-        const plainBody = blog.body.replace(/<[^>]*>/g, '');
-        const wordCount = plainBody.split(/\s+/).length;
-        
         const bObj = blog.toObject();
         // Optimize Images
         if (bObj.coverImageURL) {
@@ -1210,13 +1246,22 @@ router.get("/api/feed", async (req, res) => {
 
         return {
           ...bObj,
-          readTime: Math.ceil(wordCount / 200)
+          // readTime is now pre-calculated in the model
+          readTime: bObj.readTime || 0 
         };
       }),
       hasMore: blogs.length === limit
+    };
+
+    // 📝 Save to Cache
+    feedCache.set(cacheKey, {
+      data: responseData,
+      timestamp: Date.now()
     });
+
+    res.json(responseData);
   } catch (error) {
-    console.error("❌ API Feed Error:", error);
+    logger.error("❌ API Feed Error:", error);
     res.status(500).json({ error: "Failed to fetch feed" });
   }
 });
@@ -1241,7 +1286,7 @@ router.get("/api/:id/summary", async (req, res) => {
       id: blog._id
     });
   } catch (error) {
-    console.error("❌ Summary API Error:", error);
+    logger.error("❌ Summary API Error:", error);
     res.status(500).json({ error: "Failed to generate summary" });
   }
 });
@@ -1272,7 +1317,7 @@ router.get("/api/giphy", async (req, res) => {
 
     res.json(response.data);
   } catch (error) {
-    console.error("❌ GIPHY Proxy Error:", error.message);
+    logger.error("❌ GIPHY Proxy Error:", error.message);
     if (error.response) {
       // Pass through GIPHY error message if available
       const giphyMsg = error.response.data?.meta?.msg || error.response.data?.message;

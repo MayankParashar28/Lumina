@@ -12,7 +12,7 @@
         <div class="auth-split-wrapper">
             <!-- Left Side: Image -->
             <div class="auth-side-image-container">
-                <img src="/images/auth-side.png" alt="Creative Space" class="auth-side-image">
+                <img loading="lazy" src="/images/auth-side.png" alt="Creative Space" class="auth-side-image">
                 <div class="auth-image-overlay">
                     <h2>Join the conversation of a lifetime.</h2>
                     <p>Start your journey with Lumina and share your stories with a global community of thinkers and
@@ -29,6 +29,7 @@
                     </header>
 
                     <form action="/user/signup" method="post" id="signup-form">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                         <div class="form-group">
                             <label for="fullname">Full Name</label>
                             <input type="text" class="form-control" name="fullName" id="fullname"
@@ -55,7 +56,7 @@
                     <div class="google-auth-wrapper">
                         <a href="/user/auth/google"
                             class="btn-google d-flex align-items-center justify-content-center text-decoration-none">
-                            <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" width="20"
+                            <img loading="lazy" src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" width="20"
                                 height="20" class="me-2">
                             <span>Continue with Google</span>
                         </a>

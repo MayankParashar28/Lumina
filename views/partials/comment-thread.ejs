@@ -10,7 +10,7 @@
 
                 <div class="comment-avatar-col">
                     <a href="/user/profile/<%= comment.createdBy ? comment.createdBy._id : '#' %>" class="profile-link">
-                        <img src="<%= comment.createdBy ? comment.createdBy.profilePic : 'https://api.dicebear.com/7.x/initials/svg?seed=Unknown' %>"
+                        <img loading="lazy" src="<%= comment.createdBy ? comment.createdBy.profilePic : 'https://api.dicebear.com/7.x/initials/svg?seed=Unknown' %>"
                             class="comment-avatar-small">
                     </a>
                 </div>
@@ -40,6 +40,7 @@
                                     <form action="/blog/comment/delete/<%= comment._id %>" method="POST"
                                         class="delete-form" onsubmit="return confirm('Delete?');"
                                         style="display:inline;">
+                                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                                         <button type="submit" class="btn-delete" title="Delete"><i
                                                 class="fas fa-trash-alt"></i></button>
                                     </form>
@@ -134,7 +135,7 @@
                         <form id="reply-form-<%= comment._id %>" class="reply-form hidden"
                             onsubmit="return handleReplySubmit(event, '<%= comment._id %>')">
                             <div class="reply-input-wrapper">
-                                <img src="<%= user.profilePic %>" class="reply-avatar">
+                                <img loading="lazy" src="<%= user.profilePic %>" class="reply-avatar">
                                 <textarea name="content" placeholder="Write a reply..." required rows="1"></textarea>
                                 <button type="submit" class="btn-submit-reply">Reply</button>
                             </div>

@@ -13,6 +13,7 @@ const svgCaptcha = require("svg-captcha");
 const mongoose = require("mongoose");
 const moment = require("moment");
 const flash = require("connect-flash");
+const csurf = require("csurf");
 const { cosineSimilarity } = require("./services/ai");
 const { optimizeImage } = require("./services/imageHelper");
 const aiRoute = require("./routes/ai");
@@ -64,9 +65,9 @@ async function pingMongoDB() {
   try {
     await testClient.connect();
     await testClient.db("admin").command({ ping: 1 });
-    console.log("✅ Pinged your MongoDB deployment successfully.");
+    logger.info("✅ Pinged your MongoDB deployment successfully.");
   } catch (err) {
-    console.error("❌ MongoDB ping failed:", err.message);
+    logger.error("❌ MongoDB ping failed:", err.message);
   } finally {
     await testClient.close();
   }
@@ -119,22 +120,22 @@ app.use((req, res, next) => {
 
   // 🔍 SEO: Set default title & meta based on route patterns
   const seoDefaults = {
-    '/': { title: 'Lumina - The Voice of the Bold', metaDescription: 'Discover fresh perspectives and trending stories on technology, creativity, and innovation. Join the community of bold thinkers.' },
-    '/user/signin': { title: 'Sign In - Lumina', metaDescription: 'Sign in to your Lumina account to read, write, and share stories with the world.', noIndex: true },
-    '/user/signup': { title: 'Sign Up - Lumina', metaDescription: 'Create your free Lumina account and start publishing your stories to a global audience.', noIndex: true },
-    '/user/forgot-password': { title: 'Forgot Password - Lumina', metaDescription: 'Reset your Lumina account password securely.', noIndex: true },
-    '/user/profile': { title: 'My Profile - Lumina', metaDescription: 'Manage your profile, view your stories, and track your reading activity.', noIndex: true },
-    '/user/edit-profile': { title: 'Edit Profile - Lumina', metaDescription: 'Update your Lumina profile settings, bio, and social links.', noIndex: true },
-    '/user/bookmarks': { title: 'My Bookmarks - Lumina', metaDescription: 'Your saved reading list on Lumina.', noIndex: true },
-    '/blog/add-new': { title: 'New Story - Lumina', metaDescription: 'Write and publish a new story on Lumina.', noIndex: true },
-    '/blog/drafts': { title: 'My Drafts - Lumina', metaDescription: 'Continue working on your unpublished drafts.', noIndex: true },
-    '/about': { title: 'About - Lumina', metaDescription: 'Learn about Lumina — the minimalist blogging platform where ideas come to life.' },
-    '/privacy': { title: 'Privacy Policy - Lumina', metaDescription: 'Read how Lumina protects your data and respects your privacy.' },
-    '/terms': { title: 'Terms of Service - Lumina', metaDescription: 'Review the terms and conditions for using the Lumina platform.' },
-    '/subscribe': { title: 'Subscribe - Lumina', metaDescription: 'Unlock AI-powered writing tools with a Lumina subscription.' },
-    '/notifications': { title: 'Notifications - Lumina', metaDescription: 'Stay updated with your latest interactions on Lumina.', noIndex: true },
-    '/admin': { title: 'Admin Dashboard - Lumina', metaDescription: 'Lumina admin control panel.', noIndex: true },
-    '/admin/moderation': { title: 'Moderation Logs - Lumina Admin', metaDescription: 'Review flagged content and moderation actions.', noIndex: true },
+    '/': { title: 'Lumina - The Voice of the Bold', metaDescription: 'Discover fresh perspectives and trending stories on technology, creativity, and innovation. Join the vibrant community of bold thinkers and creators today!...' },
+    '/user/signin': { title: 'Sign In - Lumina', metaDescription: 'Sign in to your Lumina account to read, write, and share your unique stories with the world. Join our growing community of passionate creators today!...', noIndex: true },
+    '/user/signup': { title: 'Sign Up - Lumina', metaDescription: 'Create your free Lumina account and start publishing your stories to a global audience. Experience a minimalist platform designed for focused writing!...', noIndex: true },
+    '/user/forgot-password': { title: 'Forgot Password - Lumina', metaDescription: 'Reset your Lumina account password securely to regain access to your profile, saved stories, and personalized reading recommendations from our platform!...', noIndex: true },
+    '/user/profile': { title: 'My Profile - Lumina', metaDescription: 'Manage your Lumina profile, view your published stories, track your reading activity, and connect with other writers in our vibrant creative community!...', noIndex: true },
+    '/user/edit-profile': { title: 'Edit Profile - Lumina', metaDescription: 'Update your Lumina profile settings, bio, and social links to customize how you present your stories and connect with our passionate reading community!...', noIndex: true },
+    '/user/bookmarks': { title: 'My Bookmarks - Lumina', metaDescription: 'Access your saved reading list on Lumina. Revisit your favorite stories, essays, and articles collected from our diverse community of brilliant writers!...', noIndex: true },
+    '/blog/add-new': { title: 'New Story - Lumina', metaDescription: 'Write and publish a new story on Lumina. Our distraction-free editor helps you focus on your ideas and share your unique perspective with the world!...', noIndex: true },
+    '/blog/drafts': { title: 'My Drafts - Lumina', metaDescription: 'Continue working on your unpublished drafts. Refine your ideas, preview your formatting, and prepare your next great story for publication on Lumina!...', noIndex: true },
+    '/about': { title: 'About - Lumina', metaDescription: 'Learn about Lumina — the minimalist blogging platform where ideas come to life. Discover our mission to empower creators and foster meaningful conversations!...', },
+    '/privacy': { title: 'Privacy Policy - Lumina', metaDescription: 'Read how Lumina protects your data and respects your privacy. Understand our commitment to securing your personal information and writing content securely!...', },
+    '/terms': { title: 'Terms of Service - Lumina', metaDescription: 'Review the terms and conditions for using the Lumina platform. Learn about our community guidelines and policies for publishing and interacting safely!...', },
+    '/subscribe': { title: 'Subscribe - Lumina', metaDescription: 'Unlock AI-powered writing tools with a Lumina subscription. Enhance your creative process with smart suggestions, automated summaries, and more features!...', },
+    '/notifications': { title: 'Notifications - Lumina', metaDescription: 'Stay updated with your latest interactions on Lumina. Track comments, likes, and follows from the community on your published stories and insightful replies!...', noIndex: true },
+    '/admin': { title: 'Admin Dashboard - Lumina', metaDescription: 'Access the Lumina admin control panel to manage users, review platform analytics, and oversee content moderation for a safe community experience online!...', noIndex: true },
+    '/admin/moderation': { title: 'Moderation Logs - Lumina Admin', metaDescription: 'Review flagged content and moderation actions on Lumina. Help maintain a positive, safe, and welcoming environment for all readers and passionate writers!...', noIndex: true },
   };
 
   const defaults = seoDefaults[req.path];
@@ -174,9 +175,19 @@ app.use(
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false, // 🔒 Fixed: Don't create sessions for anonymous visitors
-    store: sessionStore
+    store: sessionStore,
+    cookie: {
+      httpOnly: true,
+      secure: true,
+      sameSite: "strict",
+    }
   })
 );
+
+// CSRF Protection
+const csrfProtection = csurf({ cookie: false }); // Using session-based CSRF
+
+app.use(csrfProtection);
 
 app.use(passport.initialize());
 app.use(passport.session()); // Persistent login sessions
@@ -186,6 +197,7 @@ app.use((req, res, next) => {
   res.locals.success_msg = req.flash("success");
   res.locals.error_msg = req.flash("error");
   res.locals.error = res.locals.error_msg; // Alias for compatibility with signin/signup
+  res.locals.csrfToken = req.csrfToken(); // 🛡️ CSRF Token for all forms
   next();
 });
 
@@ -232,7 +244,7 @@ app.get("/", async (req, res) => {
         searchQuery: "",
         moment,
         title: "Lumina - The Voice of the Bold",
-        metaDescription: "A minimalist sanctuary where builders share insights and shape the future of tech."
+        metaDescription: "A minimalist sanctuary where builders share insights and shape the future of tech. Join us to read, write, and explore the bleeding edge of innovation!..."
       });
     }
 
@@ -277,7 +289,7 @@ app.get("/", async (req, res) => {
       try {
         // 1. Get embedding of blogs in history
         const historyIds = req.user.readingHistory.map(h => h.blogId);
-        const historyBlogs = await Blog.find({ _id: { $in: historyIds } }).select("embedding");
+        const historyBlogs = await Blog.find({ _id: { $in: historyIds } }).select("embedding").lean();
 
         // 2. Calculate User Vector (centroid)
         let validEmbeddings = historyBlogs.filter(b => b.embedding && b.embedding.length > 0);
@@ -295,14 +307,12 @@ app.get("/", async (req, res) => {
 
           // ⚡ OPTIMIZATION: Two-Stage Ranking
           // Stage 1: Candidate Generation (Fetch only ID + Embedding)
-          // Limit to recent blogs (e.g., last 90 days) for performance
           const ninetyDaysAgo = new Date();
           ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-
           const candidates = await Blog.find({
             createdAt: { $gte: ninetyDaysAgo },
             embedding: { $exists: true, $ne: [] }
-          }).select("_id embedding"); // Fetch strictly minimal data
+          }).select("_id embedding").lean(); // Fetch strictly minimal data
 
           // Stage 2: In-Memory Scoring
           const scoredCandidates = candidates.map(b => {
@@ -316,7 +326,9 @@ app.get("/", async (req, res) => {
           // Stage 3: Hydration (Fetch full details only for top 10)
           const topIds = scoredCandidates.slice(0, 10).map(c => c._id);
           const topBlogs = await Blog.find({ _id: { $in: topIds } })
-            .populate("createdBy", "fullName profilePic");
+            .select("-body")
+            .populate("createdBy", "fullName profilePic")
+            .lean();
 
           // Re-attach scores and preserve order
           blogs = topBlogs.map(blog => {
@@ -389,7 +401,7 @@ app.get("/", async (req, res) => {
       tagFilter,
       moment,
       title: "Home Feed - Lumina",
-      metaDescription: "Discover fresh perspectives and trending stories curated just for you."
+      metaDescription: "Discover fresh perspectives and trending stories curated just for you. Join the Lumina community to read, write, and connect with visionary creators!..."
     });
 
   } catch (error) {
@@ -537,7 +549,7 @@ app.get("/sitemap.xml", async (req, res) => {
 app.get("*", (req, res) => {
   res.status(404).render("404", {
     title: '404 - Page Not Found | Lumina',
-    metaDescription: 'The page you are looking for does not exist.',
+    metaDescription: 'The page you are looking for does not exist or has been removed. Explore the homepage to find fresh perspectives and trending stories on Lumina!...',
     noIndex: true
   });
 });
@@ -548,7 +560,7 @@ app.use((err, req, res, next) => {
   res.status(500).render("error", {
     message: "Something went wrong on our end. We are looking into it!",
     title: 'Error - Lumina',
-    metaDescription: 'An error occurred while processing your request.',
+    metaDescription: 'An error occurred while processing your request. We are looking into it! Return to the homepage to continue reading the latest innovative narratives!...',
     noIndex: true
   });
 });

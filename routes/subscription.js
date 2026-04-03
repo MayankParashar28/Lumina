@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const User = require("../models/user"); // Assuming you have a User model
+const logger = require("../services/logger"); // Structured Logging
 
 // Middleware to parse JSON (for webhook handling)
 router.use(express.json());
@@ -25,7 +26,7 @@ router.post("/create-checkout-session", async (req, res) => {
 
         res.json({ url: session.url });
     } catch (error) {
-        console.error("Stripe Error:", error);
+        logger.error("Stripe Error:", error);
         res.status(400).json({ error: error.message });
     }
 });
@@ -38,7 +39,7 @@ router.post("/webhook", express.raw({ type: "application/json" }), async (req, r
     try {
         event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
     } catch (err) {
-        console.error(`Webhook error: ${err.message}`);
+        logger.error(`Webhook error: ${err.message}`);
         return res.status(400).send(`Webhook error: ${err.message}`);
     }
 
@@ -50,7 +51,7 @@ router.post("/webhook", express.raw({ type: "application/json" }), async (req, r
             const userEmail = customer.email;
 
             if (!userEmail) {
-                console.error("❌ No email found for the customer");
+                logger.error("❌ No email found for the customer");
                 return res.status(400).json({ error: "No email found" });
             }
 
@@ -62,13 +63,13 @@ router.post("/webhook", express.raw({ type: "application/json" }), async (req, r
             );
 
             if (user) {
-                console.log(`✅ Subscription activated for ${userEmail}`);
+                logger.info(`✅ Subscription activated for ${userEmail}`);
             } else {
-                console.log(`❌ No user found with email: ${userEmail}`);
+                logger.warn(`❌ No user found with email: ${userEmail}`);
             }
 
         } catch (error) {
-            console.error("Error updating user subscription:", error);
+            logger.error("Error updating user subscription:", error);
             return res.status(500).json({ error: "Internal Server Error" });
         }
     }

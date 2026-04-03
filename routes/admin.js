@@ -3,6 +3,7 @@ const User = require("../models/user");
 const Blog = require("../models/blog");
 const Comment = require("../models/comment");
 const ModerationLog = require("../models/moderationLog"); // 🛡️ Import Model
+const logger = require("../services/logger"); // Structured Logging
 
 const { checkForAdmin } = require("../middleware/admin");
 
@@ -32,7 +33,7 @@ router.get("/moderation", adminAuth, async (req, res) => {
             logs: logs
         });
     } catch (error) {
-        console.error("Error fetching moderation logs:", error);
+        logger.error("Admin/Moderation Error:", error);
         res.status(500).render("error", { message: "Failed to load logs" });
     }
 });
@@ -110,8 +111,8 @@ router.get("/", async (req, res) => {
         }
 
         // Fetch latest users and blogs
-        const users = await User.find(userQuery).sort({ createdAt: -1 }).limit(50); // Increased limit for search
-        const blogs = await Blog.find(blogQuery).populate("createdBy", "fullName").sort({ createdAt: -1 }).limit(50);
+        const users = await User.find(userQuery).sort({ createdAt: -1 }).limit(50).lean(); // Increased limit for search
+        const blogs = await Blog.find(blogQuery).select("-body").populate("createdBy", "fullName").sort({ createdAt: -1 }).limit(50).lean();
 
 
 
@@ -131,7 +132,7 @@ router.get("/", async (req, res) => {
             analytics: { labels, userGrowthData, blogGrowthData } // 📊 Pass Chart Data
         });
     } catch (error) {
-        console.error("Admin Dashboard Error:", error);
+        logger.error("Admin/Moderation Error:", error);
         res.redirect("/");
     }
 });
@@ -157,7 +158,7 @@ router.post("/user/role/:id", async (req, res) => {
         req.flash("success", `User role updated to ${user.role}.`);
         res.redirect("/admin");
     } catch (error) {
-        console.error("Role Update Error:", error);
+        logger.error("Role Update Error:", error);
         req.flash("error", "Failed to update role.");
         res.redirect("/admin");
     }
@@ -179,7 +180,7 @@ router.post("/user/delete/:id", async (req, res) => {
         req.flash("success", "User has been banned and deleted.");
         res.redirect("/admin");
     } catch (error) {
-        console.error("Delete User Error:", error);
+        logger.error("Delete User Error:", error);
         res.redirect("/admin");
     }
 });
@@ -191,7 +192,7 @@ router.post("/blog/delete/:id", async (req, res) => {
         req.flash("success", "Blog removed by moderator.");
         res.redirect("/admin");
     } catch (error) {
-        console.error("Delete Blog Error:", error);
+        logger.error("Delete Blog Error:", error);
         res.redirect("/admin");
     }
 });
@@ -211,7 +212,7 @@ router.post("/blog/feature/:id", async (req, res) => {
         req.flash("success", `Blog "${blog.title}" is now ${blog.featured ? "Featured 🌟" : "Un-featured"}.`);
         res.redirect("/admin");
     } catch (error) {
-        console.error("Toggle Feature Error:", error);
+        logger.error("Toggle Feature Error:", error);
         req.flash("error", "Failed to update status.");
         res.redirect("/admin");
     }
@@ -242,7 +243,7 @@ router.post("/blog/toggle-private/:id", async (req, res) => {
         await blog.save();
         res.redirect("/admin");
     } catch (error) {
-        console.error("Toggle Private Error:", error);
+        logger.error("Toggle Private Error:", error);
         req.flash("error", "Failed to update privacy.");
         res.redirect("/admin");
     }

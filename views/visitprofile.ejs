@@ -15,7 +15,7 @@
             <div class="profile-hero-bg">
                 <header class="author-header">
                     <div class="profile-image-wrapper">
-                        <img src="<%= optimizeImage(user.profilePic, { width: 300, height: 300 }) %>"
+                        <img loading="lazy" src="<%= optimizeImage(user.profilePic, { width: 300, height: 300 }) %>"
                             alt="Profile Picture" class="profile-pic">
                     </div>
 
@@ -47,27 +47,27 @@
                     <!-- Socials (Round Buttons) -->
                     <div class="social-links-minimal">
                         <% if (user.website) { %>
-                            <a href="<%= user.website %>" target="_blank" class="social-btn" title="Website">
+                            <a href="<%= user.website %>" target="_blank" rel="noopener noreferrer" class="social-btn" title="Website">
                                 <i class="fas fa-globe"></i>
                             </a>
                             <% } %>
 
                                 <% if (user.socials) { %>
                                     <% if (user.socials.linkedin) { %>
-                                        <a href="<%= user.socials.linkedin %>" target="_blank" class="social-btn"
+                                        <a href="<%= user.socials.linkedin %>" target="_blank" rel="noopener noreferrer" class="social-btn"
                                             title="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
                                         <% } %>
                                             <% if (user.socials.twitter) { %>
-                                                <a href="<%= user.socials.twitter %>" target="_blank" class="social-btn"
+                                                <a href="<%= user.socials.twitter %>" target="_blank" rel="noopener noreferrer" class="social-btn"
                                                     title="Twitter"><i class="fab fa-twitter"></i></a>
                                                 <% } %>
                                                     <% if (user.socials.github) { %>
-                                                        <a href="<%= user.socials.github %>" target="_blank"
+                                                        <a href="<%= user.socials.github %>" target="_blank" rel="noopener noreferrer"
                                                             class="social-btn" title="GitHub"><i
                                                                 class="fab fa-github"></i></a>
                                                         <% } %>
                                                             <% if (user.socials.instagram) { %>
-                                                                <a href="<%= user.socials.instagram %>" target="_blank"
+                                                                <a href="<%= user.socials.instagram %>" target="_blank" rel="noopener noreferrer"
                                                                     class="social-btn" title="Instagram"><i
                                                                         class="fab fa-instagram"></i></a>
                                                                 <% } %>
@@ -77,6 +77,7 @@
                     <!-- Public Actions (Follow) -->
                     <div class="author-actions">
                         <form method="POST" action="/user/follow/<%= user._id %>" style="display: inline;">
+                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                             <button type="submit"
                                 class="btn-action <%= (loggedInUser && user.followers && user.followers.includes(loggedInUser._id)) ? 'secondary' : 'primary' %>">
                                 <%= (loggedInUser && user.followers && user.followers.includes(loggedInUser._id))
@@ -101,7 +102,7 @@
                         <% blogs.forEach(blog=> { %>
                             <a href="/blog/<%= blog._id %>" class="public-story-card">
                                 <div class="public-story-image">
-                                    <img src="<%= optimizeImage(blog.coverImageURL || '/images/default-cover.jpg', { width: 600, height: 400 }) %>"
+                                    <img loading="lazy" src="<%= optimizeImage(blog.coverImageURL || '/images/default-cover.jpg', { width: 600, height: 400 }) %>"
                                         alt="Cover" loading="lazy">
                                     <% if (blog.views> 100) { %>
                                         <div class="card-overlay"

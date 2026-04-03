@@ -81,7 +81,7 @@
                                 <div class="blog-card-inner">
                                     <div class="card-image-wrapper">
                                         <% if (blog.coverImageURL) { %>
-                                            <img src="<%= typeof optimizeImage === 'function' ? optimizeImage(blog.coverImageURL, { width: 600, crop: 'fill' }) : blog.coverImageURL %>" alt="<%= blog.title %>" loading="lazy" onerror="this.onerror=null; this.src='/images/default-cover.png';">
+                                            <img loading="lazy" src="<%= typeof optimizeImage === 'function' ? optimizeImage(blog.coverImageURL, { width: 600, crop: 'fill' }) : blog.coverImageURL %>" alt="<%= blog.title %>" loading="lazy" onerror="this.onerror=null; this.src='/images/default-cover.png';">
                                             <% } else { %>
                                                 <div class="placeholder-img"></div>
                                                 <% } %>
@@ -111,7 +111,7 @@
                                             <% if (blog.createdBy) { %>
                                                 <div class="author-info">
                                                     <% if (blog.createdBy.profilePic) { %>
-                                                        <img src="<%= typeof optimizeImage === 'function' ? optimizeImage(blog.createdBy.profilePic, { width: 48, crop: 'fill' }) : blog.createdBy.profilePic %>" alt="Author"
+                                                        <img loading="lazy" src="<%= typeof optimizeImage === 'function' ? optimizeImage(blog.createdBy.profilePic, { width: 48, crop: 'fill' }) : blog.createdBy.profilePic %>" alt="Author"
                                                             class="author-avatar-small" onerror="this.onerror=null; this.src='/images/default-avatar.png';">
                                                         <% } else { %>
                                                             <div class="author-avatar-small placeholder"></div>
@@ -266,7 +266,7 @@
                                             <h2 class="card-heading">${blog.title}</h2>
                                             <div class="card-footer-minimal">
                                                 <div class="author-info">
-                                                    ${blog.createdBy && blog.createdBy.profilePic ? `<img src="${blog.createdBy.profilePic}" alt="Author" class="author-avatar-small" onerror="this.onerror=null; this.src='/images/default-avatar.png';">` : '<div class="author-avatar-small placeholder"></div>'}
+                                                    ${blog.createdBy && blog.createdBy.profilePic ? `<img loading="lazy" src="${blog.createdBy.profilePic}" alt="Author" class="author-avatar-small" onerror="this.onerror=null; this.src='/images/default-avatar.png';">` : '<div class="author-avatar-small placeholder"></div>'}
                                                     <span class="author-name">${blog.createdBy ? blog.createdBy.fullName : 'Unknown User'}</span>
                                                 </div>
                                                 <div class="interaction-stats">

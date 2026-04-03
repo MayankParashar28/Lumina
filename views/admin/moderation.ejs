@@ -42,7 +42,7 @@
                                             <td>
                                                 <% if (log.userId) { %>
                                                     <div class="d-flex align-items-center gap-2">
-                                                        <img src="<%= log.userId.profilePic || '/images/default.png' %>"
+                                                        <img loading="lazy" src="<%= log.userId.profilePic || '/images/default.png' %>"
                                                             class="rounded-circle" width="30" height="30" alt="">
                                                         <div>
                                                             <div class="fw-bold small">

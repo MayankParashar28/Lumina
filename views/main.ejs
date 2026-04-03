@@ -154,7 +154,7 @@
                             <% blogs.slice(0, 3).forEach(blog=> { %>
                                 <div class="scroll-card">
                                     <div class="card-image-wrapper">
-                                        <img src="<%= optimizeImage(blog.coverImageURL, { width: 600, crop: 'fill' }) %>"
+                                        <img loading="lazy" src="<%= optimizeImage(blog.coverImageURL, { width: 600, crop: 'fill' }) %>"
                                             alt="<%= blog.title %>" onerror="this.onerror=null; this.src='/images/default-cover.png';">
                                         <div class="card-overlay">
                                             <a href="/blog/<%= blog._id %>" class="read-btn">READ</a>

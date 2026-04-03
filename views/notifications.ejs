@@ -27,7 +27,7 @@
                                     style="cursor: pointer;">
 
                                     <div class="notif-message">
-                                        <img src="<%= (notification.senderId && notification.senderId.profilePic) ? notification.senderId.profilePic : '/images/default-user.png' %>"
+                                        <img loading="lazy" src="<%= (notification.senderId && notification.senderId.profilePic) ? notification.senderId.profilePic : '/images/default-user.png' %>"
                                             alt="Profile" width="40" height="40" class="rounded-circle">
 
                                         <span class="message-content">

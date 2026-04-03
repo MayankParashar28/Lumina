@@ -8,6 +8,7 @@ const rateLimit = require("express-rate-limit");
 const crypto = require("crypto");
 const { sendVerificationEmail } = require("../services/emailService");
 const passport = require("passport");
+const logger = require("../services/logger"); // Structured Logging
 
 // Rate limit for authentication
 const authLimiter = rateLimit({
@@ -51,13 +52,17 @@ router.get("/profile/:userId", async (req, res) => {
     const { userId } = req.params;
 
     if (!userId.match(/^[0-9a-fA-F]{24}$/)) {
-      return res.status(400).send("Invalid user ID");
+      req.flash("error", "Invalid User ID.");
+      return res.redirect("/");
     }
 
     const user = await User.findById(userId).select("-password -salt -verificationToken -resetPasswordToken");
-    if (!user) return res.status(404).send("User not found");
+    if (!user) {
+      req.flash("error", "User not found.");
+      return res.redirect("/");
+    }
 
-    const blogs = await Blog.find({ createdBy: user._id }).sort({ createdAt: -1 });
+    const blogs = await Blog.find({ createdBy: user._id }).select("-body").sort({ createdAt: -1 }).lean();
 
     let isOwnProfile = false;
 
@@ -69,7 +74,7 @@ router.get("/profile/:userId", async (req, res) => {
           isOwnProfile = true;
         }
       } catch (err) {
-        console.error("❌ Token Verification Failed:", err);
+        logger.error("❌ Token Verification Failed:", err);
       }
     }
 
@@ -107,8 +112,9 @@ router.get("/profile/:userId", async (req, res) => {
     }
 
   } catch (error) {
-    console.error("❌ Error fetching profile:", error);
-    res.status(500).send("Server error");
+    logger.error("❌ Error fetching profile:", error);
+    req.flash("error", "Something went wrong while fetching the profile.");
+    return res.redirect("/");
   }
 });
 
@@ -121,7 +127,7 @@ router.get("/check-bookmark/:blogId", async (req, res) => {
     const isBookmarked = user.bookmarks.includes(req.params.blogId);
     res.json({ isBookmarked });
   } catch (error) {
-    console.error("❌ Error checking bookmark:", error);
+    logger.error("❌ Error checking bookmark:", error);
     res.status(500).json({ isBookmarked: false });
   }
 });
@@ -149,7 +155,7 @@ router.post("/bookmark/:blogId", async (req, res) => {
     return res.json({ success: true, isBookmarked: !isBookmarked });
 
   } catch (error) {
-    console.error("Bookmark Error:", error);
+    logger.error("Bookmark Error:", error);
     return res.status(500).json({ error: "Server Error" });
   }
 });
@@ -174,7 +180,7 @@ router.get("/bookmarks", async (req, res) => {
       currentPage: 'bookmarks' // for nav highlighting if needed
     });
   } catch (error) {
-    console.error("Error fetching bookmarks:", error);
+    logger.error("Error fetching bookmarks:", error);
     res.redirect("/");
   }
 });
@@ -201,7 +207,7 @@ router.get("/edit", async (req, res) => {
 
     res.render("editprofile", { user });
   } catch (err) {
-    console.error(err);
+    logger.error("Error in logout/profile fetch:", err);
     res.redirect("/user/profile");
   }
 });
@@ -277,13 +283,13 @@ router.post("/edit-profile", upload.single("profilePic"), async (req, res) => {
 
     // ✅ Update Profile Pic if uploaded
     if (req.file) {
-      console.log("📸 Debug req.file:", req.file);
+      logger.debug("📸 Debug req.file:", req.file);
 
       let finalUrl = req.file.path;
 
       // Fix for strange relative paths (fallback to secure_url or manual construction)
       if (!finalUrl || !finalUrl.startsWith('http')) {
-        console.warn("⚠️ req.file.path is invalid or relative, attempting fallbacks...");
+        logger.warn("⚠️ req.file.path is invalid or relative, attempting fallbacks...");
 
         if (req.file.secure_url) {
           finalUrl = req.file.secure_url;
@@ -299,7 +305,7 @@ router.post("/edit-profile", upload.single("profilePic"), async (req, res) => {
         }
       }
 
-      console.log("📸 Final Saved URL:", finalUrl);
+      logger.info("📸 Final Saved URL:", finalUrl);
       user.profilePic = finalUrl;
     }
 
@@ -311,21 +317,23 @@ router.post("/edit-profile", upload.single("profilePic"), async (req, res) => {
     return res.status(200).json({ success: "Profile updated successfully!" });
 
   } catch (error) {
-    console.error("Profile Edit Error:", error);
+    logger.error("Profile Edit Error:", error);
     return res.status(500).json({ error: "Something went wrong!" });
   }
 });
 //profile
 router.get("/profile", async (req, res) => {
   if (!req.cookies.token) {
-    return res.status(401).send("No token found, authentication failed.");
+    req.flash("error", "Authentication failed. Please sign in.");
+    return res.redirect("/user/signin");
   }
 
   try {
     const decoded = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
     const user = await User.findById(decoded._id).populate("bookmarks").select("-password -salt -verificationToken -resetPasswordToken");
     if (!user) {
-      return res.status(404).send("User not found");
+      req.flash("error", "User account not found.");
+      return res.redirect("/user/signin");
     }
 
     const userId = new mongoose.Types.ObjectId(user._id);
@@ -353,7 +361,7 @@ router.get("/profile", async (req, res) => {
     });
 
     // Fetch full blog details for display
-    const userBlogs = await Blog.find({ createdBy: userId }).sort({ createdAt: -1 });
+    const userBlogs = await Blog.find({ createdBy: userId }).select("-body").sort({ createdAt: -1 }).lean();
     const blogIds = userBlogs.map(blog => blog._id);
     const blogCount = userBlogs.length;
 
@@ -390,8 +398,9 @@ router.get("/profile", async (req, res) => {
     });
 
   } catch (error) {
-    console.error("❌ Error verifying token:", error);
-    res.status(500).send("Something went wrong");
+    logger.error("❌ Error verifying token:", error);
+    req.flash("error", "An error occurred while loading your profile.");
+    return res.redirect("/");
   }
 });
 
@@ -399,7 +408,7 @@ router.get("/profile", async (req, res) => {
 router.post("/follow/:userId", async (req, res) => {
   try {
     if (!req.user) {
-      console.error("❌ Error: User not logged in");
+      logger.error("❌ Error: User not logged in");
       req.flash("error", "You must be logged in to follow!");
       return res.redirect("back");
     }
@@ -408,20 +417,20 @@ router.post("/follow/:userId", async (req, res) => {
     const user = await User.findById(req.user._id).exec();
 
     if (!userToFollow) {
-      console.error(`❌ Error: User to follow not found (ID: ${req.params.userId})`);
+      logger.error(`❌ Error: User to follow not found (ID: ${req.params.userId})`);
       req.flash("error", "User not found!");
       return res.redirect("back");
     }
 
     if (!user) {
-      console.error(`❌ Error: Requesting user not found (ID: ${req.user._id})`);
+      logger.error(`❌ Error: Requesting user not found (ID: ${req.user._id})`);
       req.flash("error", "Something went wrong. Please try again!");
       return res.redirect("back");
     }
 
     // Ensure `user.following` is an array
     if (!Array.isArray(user.following)) {
-      console.warn(`⚠️ Warning: user.following is not an array for user ${user._id}`);
+      logger.warn(`⚠️ Warning: user.following is not an array for user ${user._id}`);
       user.following = [];
     }
 
@@ -440,7 +449,7 @@ router.post("/follow/:userId", async (req, res) => {
       ]);
 
       req.flash("success", `You have unfollowed ${userToFollow.fullName}.`);
-      console.log(`✅ ${user.fullName} unfollowed ${userToFollow.fullName}`);
+      logger.info(`✅ ${user.fullName} unfollowed ${userToFollow.fullName}`);
     } else {
       // ✅ Follow Logic
       await Promise.all([
@@ -467,16 +476,16 @@ router.post("/follow/:userId", async (req, res) => {
           message: `${user.fullName} started following you.`,
         });
       } else {
-        console.warn("⚠️ Warning: Socket.io is not initialized.");
+        logger.warn("⚠️ Warning: Socket.io is not initialized.");
       }
 
       req.flash("success", `You are now following ${userToFollow.fullName}!`);
-      console.log(`✅ ${user.fullName} started following ${userToFollow.fullName}`);
+      logger.info(`✅ ${user.fullName} started following ${userToFollow.fullName}`);
     }
 
     return res.redirect("back");
   } catch (err) {
-    console.error("❌ Follow Error:", err);
+    logger.error("❌ Follow Error:", err);
     req.flash("error", "Something went wrong. Please try again!");
     return res.redirect("back");
   }
@@ -485,7 +494,7 @@ router.post("/follow/:userId", async (req, res) => {
 router.get("/signin", authLimiter, redirectIfAuthenticated, (req, res) => {
   return res.render("signin", {
     title: "Sign In - Lumina",
-    metaDescription: "Welcome back to Lumina. Log in to continue your journey."
+    metaDescription: "Welcome back to Lumina. Log in to continue your journey and explore new stories, connect with writers, and share your own unique perspectives today!..."
   });
 });
 
@@ -526,7 +535,7 @@ router.post("/signin", authLimiter, async (req, res) => {
         await sendVerificationEmail(email, verificationToken);
         return res.render("verify-sent");
       } catch (error) {
-        console.error("Email Error:", error);
+        logger.error("Email Error:", error);
         return res.render("signin", { error: "Please verify your email. (Could not resend email)" });
       }
     }
@@ -543,15 +552,15 @@ router.post("/signin", authLimiter, async (req, res) => {
 
     // 🛡️ Security: Regenerate Session ID to prevent fixation attacks
     req.session.regenerate((err) => {
-      if (err) console.error("Session Regeneration Error:", err);
+      if (err) logger.error("Session Regeneration Error:", err);
 
       // Store new session data if needed (e.g., user info slightly)
       // For now, we rely on JWT, but this rotates the connect.sid
 
       res.cookie("token", token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+        secure: true,
+        sameSite: "Strict",
         path: "/",
         maxAge: 86400 * 1000,
       });
@@ -559,7 +568,7 @@ router.post("/signin", authLimiter, async (req, res) => {
       return res.redirect("/");
     });
   } catch (error) {
-    console.error("❌ Error during sign-in:", error);
+    logger.error("❌ Error during sign-in:", error);
     return res.status(401).render("signin", { error: "Invalid Email or Password" });
   }
 });
@@ -592,8 +601,8 @@ router.get(
 
       res.cookie("token", jwtToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+        secure: true,
+        sameSite: "Strict",
         path: "/",
         maxAge: 86400 * 1000,
       });
@@ -606,7 +615,7 @@ router.get(
 router.get("/signup", redirectIfAuthenticated, (req, res) => {
   return res.render("signup", {
     title: "Join Lumina - Start Writing",
-    metaDescription: "Create an account on Lumina to share your stories and connect with the world."
+    metaDescription: "Create an account on Lumina to share your stories, connect with the world, and join a vibrant community of passionate tech enthusiasts and creators!..."
   });
 });
 
@@ -641,14 +650,14 @@ router.post("/signup", authLimiter, async (req, res) => {
       await sendVerificationEmail(email, verificationToken);
       return res.render("verify-sent", { email });
     } catch (error) {
-      console.error("Email Error:", error);
+      logger.error("Email Error:", error);
       return res.render("signup", { error: "Error sending verification email." });
     }
   }
 
   // 🔒 Security: Validate Password Strength
-  if (password.length < 6) {
-    return res.render("signup", { error: "Password must be at least 6 characters long." });
+  if (password.length < 8) {
+    return res.render("signup", { error: "Password must be at least 8 characters long." });
   }
 
   // 🔒 Security: Validate Email Format
@@ -736,15 +745,15 @@ router.get("/verify/:token", verifyLimiter, async (req, res) => {
 
     res.cookie("token", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+      secure: true,
+      sameSite: "Strict",
       path: "/",
       maxAge: 86400 * 1000,
     });
 
     return res.redirect("/");
   } catch (error) {
-    console.error("Verification Error:", error);
+    logger.error("Verification Error:", error);
     return res.render("signin", { error: "Something went wrong during verification." });
   }
 });
@@ -781,13 +790,13 @@ router.post("/forgot-password", emailLimiter, async (req, res) => {
     return res.render("reset-sent", { email });
 
   } catch (error) {
-    console.error("Forgot Password Error:", error);
+    logger.error("Forgot Password Error:", error);
     req.flash("error", "Something went wrong.");
     return res.redirect("/user/forgot-password");
   }
 });
 
-router.get("/reset-password/:token", async (req, res) => {
+router.get("/reset-password/:token", verifyLimiter, async (req, res) => {
   try {
     const user = await User.findOne({
       resetPasswordToken: req.params.token,
@@ -801,7 +810,7 @@ router.get("/reset-password/:token", async (req, res) => {
 
     res.render("reset-password", { token: req.params.token });
   } catch (error) {
-    console.error("Reset Page Error:", error);
+    logger.error("Reset Page Error:", error);
     res.redirect("/user/forgot-password");
   }
 });
@@ -839,7 +848,7 @@ router.post("/reset-password/:token", verifyLimiter, async (req, res) => {
     req.flash("success", "Password has been updated! You can now sign in.");
     return res.redirect("/user/signin");
   } catch (error) {
-    console.error("Reset Password Error:", error);
+    logger.error("Reset Password Error:", error);
     req.flash("error", "Something went wrong.");
     return res.redirect("/user/forgot-password");
   }

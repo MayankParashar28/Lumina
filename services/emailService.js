@@ -1,5 +1,6 @@
 
 const nodemailer = require("nodemailer");
+const logger = require("./logger"); // Structured Logging
 
 const createTransporter = async () => {
   // Check if we have real credentials
@@ -14,7 +15,7 @@ const createTransporter = async () => {
   }
 
   // Fallback to Ethereal (Dev Mode)
-  console.log("⚠️ No real email credentials found. Using Ethereal (Fake Email) for testing.");
+  logger.warn("⚠️ No real email credentials found. Using Ethereal (Fake Email) for testing.");
   const testAccount = await nodemailer.createTestAccount();
 
   return nodemailer.createTransport({
@@ -80,11 +81,11 @@ const sendVerificationEmail = async (email, token) => {
     `,
   });
 
-  console.log("📨 Email sent: %s", info.messageId);
+  logger.info("📨 Email sent: %s", info.messageId);
 
   // If using Ethereal, print the preview URL
   if (nodemailer.getTestMessageUrl(info)) {
-    console.log("🔎 Preview URL: %s", nodemailer.getTestMessageUrl(info));
+    logger.info("🔎 Preview URL: %s", nodemailer.getTestMessageUrl(info));
   }
 };
 
@@ -139,7 +140,7 @@ const sendResetPasswordEmail = async (email, resetLink) => {
     `,
   });
 
-  console.log("📨 Reset Email sent: %s", info.messageId);
+  logger.info("📨 Reset Email sent: %s", info.messageId);
 
   if (nodemailer.getTestMessageUrl(info)) {
     console.log("🔎 Preview URL: %s", nodemailer.getTestMessageUrl(info));

@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const mongoose = require("mongoose");
 const Notification = require("../models/Notification");
+const logger = require("../services/logger"); // Structured Logging
 
 // 📌 Get all notifications for logged-in user
 router.get("/", async (req, res) => {
@@ -9,7 +10,7 @@ router.get("/", async (req, res) => {
     const userId = req.user?._id;
 
     if (!userId) {
-      console.log("❌ No userId found in request");
+      logger.warn("❌ No userId found in request");
       return res.status(401).json({ error: "Unauthorized" });
     }
 
@@ -26,7 +27,7 @@ router.get("/", async (req, res) => {
     });
 
   } catch (error) {
-    console.error("❌ Error fetching notifications:", error);
+    logger.error("❌ Error fetching notifications:", error);
     res.status(500).json({ error: "Error fetching notifications" });
   }
 });
@@ -37,7 +38,7 @@ router.post("/create", async (req, res) => {
     const { message, userId } = req.body;
 
     if (!userId) {
-      console.log("❌ No userId provided in request body");
+      logger.warn("❌ No userId provided in request body");
       return res.status(400).json({ error: "User ID is required" });
     }
 
@@ -53,7 +54,7 @@ router.post("/create", async (req, res) => {
     res.status(201).json({ message: "Notification created!", notification });
 
   } catch (error) {
-    console.error("❌ Error creating notification:", error);
+    logger.error("❌ Error creating notification:", error);
     res.status(500).json({ error: "Error creating notification" });
   }
 });
@@ -90,7 +91,7 @@ router.post("/mark-read/:id", async (req, res) => {
     return res.json({ success: true, count: unreadCount, notification });
 
   } catch (error) {
-    console.error("❌ Error marking notification as read:", error);
+    logger.error("❌ Error marking notification as read:", error);
     return res.status(500).json({ success: false, message: "Server error" });
   }
 });
@@ -112,7 +113,7 @@ router.get("/unread-count", async (req, res) => {
     return res.json({ count: unreadCount });
 
   } catch (error) {
-    console.error("❌ Error fetching unread notifications count:", error);
+    logger.error("❌ Error fetching unread notifications count:", error);
     return res.status(500).json({ error: "Server error" });
   }
 });

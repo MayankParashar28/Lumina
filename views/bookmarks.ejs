@@ -124,7 +124,7 @@
                             <div class="position-relative">
                                 <a href="/blog/<%= blog._id %>" class="bookmark-card">
                                     <% if(blog.coverImageURL) { %>
-                                        <img src="<%= blog.coverImageURL %>" alt="" class="bookmark-img">
+                                        <img loading="lazy" src="<%= blog.coverImageURL %>" alt="" class="bookmark-img">
                                         <% } %>
                                             <div class="bookmark-content">
                                                 <h3 class="bookmark-title">

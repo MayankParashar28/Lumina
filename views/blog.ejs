@@ -45,7 +45,7 @@
                     <% if (blog.createdBy) { %>
                         <a href="/user/profile/<%= blog.createdBy._id %>" class="author-info"
                             style="text-decoration: none; color: inherit;">
-                            <img src="<%= optimizeImage(createdByProfilePic, { width: 100, height: 100 }) %>"
+                            <img loading="lazy" src="<%= optimizeImage(createdByProfilePic, { width: 100, height: 100 }) %>"
                                 alt="<%= createdByName %>" class="author-avatar-sm">
                             <span class="author-name">
                                 <%= createdByName %>
@@ -54,6 +54,7 @@
                         <% if (user && blog.createdBy && String(user._id) !==String(blog.createdBy._id)) { %>
                             <form method="POST" action="/user/follow/<%= blog.createdBy._id %>"
                                 style="display: inline;">
+                                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                                 <button
                                     class="btn-follow <%= (user.following && user.following.includes(blog.createdBy.id)) ? 'followed' : '' %>"
                                     style="padding: 0.2rem 0.8rem; font-size: 0.75rem; min-width: auto; margin-left: 0.5rem;">
@@ -64,7 +65,7 @@
                             <% } %>
                                 <% } else { %>
                                     <div class="author-info">
-                                        <img src="<%= optimizeImage(createdByProfilePic, { width: 100, height: 100 }) %>"
+                                        <img loading="lazy" src="<%= optimizeImage(createdByProfilePic, { width: 100, height: 100 }) %>"
                                             alt="<%= createdByName %>" class="author-avatar-sm">
                                         <span class="author-name">
                                             <%= createdByName %>
@@ -85,7 +86,7 @@
             <!-- Hero Image -->
             <% if (blog.coverImageURL) { %>
                 <div class="hero-image-container">
-                    <img src="<%= optimizeImage(blog.coverImageURL, { width: 1200 }) %>" alt="<%= blog.title %>"
+                    <img loading="lazy" src="<%= optimizeImage(blog.coverImageURL, { width: 1200 }) %>" alt="<%= blog.title %>"
                         class="blog-hero-image" onerror="this.onerror=null; this.src='/images/default-cover.png';">
                 </div>
                 <% } %>
@@ -237,8 +238,9 @@
                 </script>
 
                 <form method="post" action="/blog/comment/<%= blog._id %>" class="comment-form">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                     <div class="comment-input-wrapper">
-                        <img src="<%= user.profilePic %>" class="comment-avatar">
+                        <img loading="lazy" src="<%= user.profilePic %>" class="comment-avatar">
                         <div class="input-box-wrapper">
                             <textarea name="content" class="comment-textarea" placeholder="Add to the discussion..."
                                 required rows="1"
@@ -292,7 +294,7 @@
                         grid.innerHTML = DOMPurify.sanitize(data.blogs.map(blog => `
                             <a href="/blog/${blog._id}" class="recommendation-card">
                                 <div class="recommendation-image-wrapper">
-                                    <img src="${blog.coverImageURL || '/images/default-cover.jpg'}" class="recommendation-image" alt="${blog.title}">
+                                    <img loading="lazy" src="${blog.coverImageURL || '/images/default-cover.jpg'}" class="recommendation-image" alt="${blog.title}">
                                 </div>
                                 <div class="recommendation-info">
                                     <h4>${blog.title}</h4>
@@ -326,7 +328,10 @@
                 btn.addEventListener('click', async () => {
                     const blogId = btn.dataset.blogId;
                     try {
-                        const response = await fetch(`/blog/bookmark/${blogId}`, { method: 'POST' });
+                        const response = await fetch(`/blog/bookmark/${blogId}`, {
+                            method: 'POST',
+                            headers: { 'x-csrf-token': '<%= csrfToken %>' }
+                        });
                         const data = await response.json();
 
                         if (data.success) {
@@ -352,7 +357,10 @@
                 btn.addEventListener('click', async () => {
                     const blogId = btn.dataset.blogId;
                     try {
-                        const response = await fetch(`/blog/like/${blogId}`, { method: 'POST' });
+                        const response = await fetch(`/blog/like/${blogId}`, {
+                            method: 'POST',
+                            headers: { 'x-csrf-token': '<%= csrfToken %>' }
+                        });
                         const data = await response.json();
 
                         if (data.likes !== undefined) {
@@ -426,7 +434,10 @@
                 try {
                     const res = await fetch(`/blog/comment/${commentId}/react`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'x-csrf-token': '<%= csrfToken %>'
+                        },
                         body: JSON.stringify({ emoji })
                     });
 
@@ -524,7 +535,10 @@
                 try {
                     const response = await fetch(`/blog/comment/${commentId}/pin`, {
                         method: "POST",
-                        headers: { "Content-Type": "application/json" }
+                        headers: {
+                            "Content-Type": "application/json",
+                            "x-csrf-token": "<%= csrfToken %>"
+                        }
                     });
                     const data = await response.json();
                     if (data.success) {
@@ -552,7 +566,8 @@
                         method: "POST",
                         headers: {
                             "Content-Type": "application/json",
-                            "Accept": "application/json"
+                            "Accept": "application/json",
+                            "x-csrf-token": "<%= csrfToken %>"
                         },
                         body: JSON.stringify({ content })
                     });

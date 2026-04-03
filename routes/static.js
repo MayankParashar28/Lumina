@@ -1,5 +1,6 @@
 const { Router } = require("express");
 const Blog = require("../models/blog");
+const logger = require("../services/logger"); // Structured Logging
 const router = Router();
 
 // Sitemap.xml Generation
@@ -47,7 +48,7 @@ router.get("/sitemap.xml", async (req, res) => {
         res.header("Content-Type", "application/xml");
         res.send(sitemap);
     } catch (err) {
-        console.error("Sitemap Generation Error:", err);
+        logger.error("Sitemap Generation Error:", err);
         res.status(500).end();
     }
 });

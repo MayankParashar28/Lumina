@@ -70,10 +70,24 @@ const blogSchema = new mongoose.Schema(
       type: [Number], // Store vector embeddings
       select: false,   // Don't return by default to save bandwidth
     },
+    readTime: {
+      type: Number,
+      default: 0,
+    },
 
   },
   { timestamps: true }
 );
+
+// ✅ Calculate readTime before saving
+blogSchema.pre("save", function (next) {
+  if (this.isModified("body") && this.body) {
+    const plainText = this.body.replace(/<[^>]*>/g, ""); // Remove HTML tags
+    const words = plainText.split(/\s+/).filter(word => word.length > 0).length;
+    this.readTime = Math.ceil(words / 200); // Average 200 words per minute
+  }
+  next();
+});
 
 
 

@@ -59,7 +59,7 @@
                                 <div class="blog-card-inner">
                                     <div class="card-image-wrapper">
                                         <% if (blog.coverImageURL) { %>
-                                            <img src="<%= blog.coverImageURL %>" alt="<%= blog.title %>" loading="lazy">
+                                            <img loading="lazy" src="<%= blog.coverImageURL %>" alt="<%= blog.title %>" loading="lazy">
                                             <% } else { %>
                                                 <div class="placeholder-img"></div>
                                                 <% } %>

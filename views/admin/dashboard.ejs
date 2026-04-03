@@ -391,7 +391,7 @@
                                         <tr>
                                             <td data-label="User">
                                                 <div class="d-flex align-items-center gap-3">
-                                                    <img src="<%= u.profilePic %>" class="rounded-circle" width="32"
+                                                    <img loading="lazy" src="<%= u.profilePic %>" class="rounded-circle" width="32"
                                                         height="32" alt="">
                                                     <span class="fw-bold small">
                                                         <%= u.fullName %>
@@ -414,6 +414,7 @@
                                                 <% if (u.role !=='ADMIN' ) { %>
                                                     <form action="/admin/user/delete/<%= u._id %>" method="POST"
                                                         onsubmit="return confirm('Delete this user permanently?');">
+                                                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                                                         <button class="btn btn-link text-danger p-0 border-0 small"><i
                                                                 class="fas fa-trash-alt"></i></button>
                                                     </form>
@@ -507,6 +508,7 @@
                                             <td data-label="Actions">
                                                 <div class="d-flex gap-2">
                                                     <form action="/admin/blog/feature/<%= b._id %>" method="POST">
+                                                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                                                         <button
                                                             class="btn btn-sm p-0 border-0 <%= b.featured ? 'text-warning' : 'text-muted' %>"
                                                             title="<%= b.featured ? 'Remove Featured' : 'Mark Featured' %>">
@@ -515,6 +517,7 @@
                                                     </form>
                                                     <form action="/admin/blog/toggle-private/<%= b._id %>"
                                                         method="POST">
+                                                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                                                         <button
                                                             class="btn btn-sm p-0 border-0 <%= b.status === 'private' ? 'text-dark' : 'text-muted' %>"
                                                             title="<%= b.status === 'private' ? 'Make Public' : 'Make Private' %>">
@@ -524,6 +527,7 @@
                                                     </form>
                                                     <form action="/admin/blog/delete/<%= b._id %>" method="POST"
                                                         onsubmit="return confirm('Delete blog?');">
+                                                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                                                         <button class="btn btn-sm p-0 border-0 text-danger"
                                                             title="Delete"><i class="fas fa-trash-alt"></i></button>
                                                     </form>

@@ -15,7 +15,7 @@
             <!-- Hero Header -->
             <header class="profile-header">
                 <div class="profile-avatar-wrapper">
-                    <img src="<%= optimizeImage(user.profilePic, { width: 300, height: 300 }) %>"
+                    <img loading="lazy" src="<%= optimizeImage(user.profilePic, { width: 300, height: 300 }) %>"
                         alt="<%= user.fullName %>" class="profile-avatar">
                 </div>
 
@@ -39,22 +39,22 @@
                 <!-- Social Links -->
                 <div class="profile-socials">
                     <% if (user.website) { %>
-                        <a href="<%= user.website %>" target="_blank" title="Website"
+                        <a href="<%= user.website %>" target="_blank" rel="noopener noreferrer" title="Website"
                             style="text-decoration: none; color: inherit;"><i class="fas fa-globe"></i></a>
                         <% } %>
 
                             <% if (user.socials) { %>
                                 <% if (user.socials.linkedin) { %> <a href="<%= user.socials.linkedin %>"
-                                        target="_blank" title="LinkedIn"><i class="fab fa-linkedin"></i></a>
+                                        target="_blank" rel="noopener noreferrer" title="LinkedIn"><i class="fab fa-linkedin"></i></a>
                                     <% } %>
                                         <% if (user.socials.twitter) { %> <a href="<%= user.socials.twitter %>"
-                                                target="_blank" title="Twitter"><i class="fab fa-twitter"></i></a>
+                                                target="_blank" rel="noopener noreferrer" title="Twitter"><i class="fab fa-twitter"></i></a>
                                             <% } %>
                                                 <% if (user.socials.github) { %> <a href="<%= user.socials.github %>"
-                                                        target="_blank" title="GitHub"><i class="fab fa-github"></i></a>
+                                                        target="_blank" rel="noopener noreferrer" title="GitHub"><i class="fab fa-github"></i></a>
                                                     <% } %>
                                                         <% if (user.socials.instagram) { %> <a
-                                                                href="<%= user.socials.instagram %>" target="_blank"
+                                                                href="<%= user.socials.instagram %>" target="_blank" rel="noopener noreferrer"
                                                                 title="Instagram"><i class="fab fa-instagram"></i></a>
                                                             <% } %>
                                                                 <% } %>
@@ -105,7 +105,7 @@
                         <% blogs.forEach(blog=> { %>
                             <a href="/blog/<%= blog._id %>" class="story-card">
                                 <div class="story-image-wrapper">
-                                    <img src="<%= typeof optimizeImage === 'function' ? optimizeImage(blog.coverImageURL, { width: 600, crop: 'fill' }) : blog.coverImageURL %>"
+                                    <img loading="lazy" src="<%= typeof optimizeImage === 'function' ? optimizeImage(blog.coverImageURL, { width: 600, crop: 'fill' }) : blog.coverImageURL %>"
                                         alt="<%= blog.title %>" loading="lazy" onerror="this.onerror=null; this.src='/images/default-cover.png';">
                                 </div>
                                 <div class="story-content">
@@ -146,7 +146,7 @@
                         <% bookmarks.forEach(blog=> { %>
                             <a href="/blog/<%= blog._id %>" class="story-card">
                                 <div class="story-image-wrapper">
-                                    <img src="<%= typeof optimizeImage === 'function' ? optimizeImage(blog.coverImageURL, { width: 600, crop: 'fill' }) : blog.coverImageURL %>"
+                                    <img loading="lazy" src="<%= typeof optimizeImage === 'function' ? optimizeImage(blog.coverImageURL, { width: 600, crop: 'fill' }) : blog.coverImageURL %>"
                                         alt="<%= blog.title %>" loading="lazy" onerror="this.onerror=null; this.src='/images/default-cover.png';">
                                 </div>
                                 <div class="story-content">

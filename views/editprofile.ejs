@@ -21,7 +21,7 @@
                         <div class="settings-left">
                             <div class="avatar-upload-container">
                                 <div class="avatar-wrapper">
-                                    <img src="<%= optimizeImage(user.profilePic || '/images/default-profile.png', { width: 300, height: 300 }) %>"
+                                    <img loading="lazy" src="<%= optimizeImage(user.profilePic || '/images/default-profile.png', { width: 300, height: 300 }) %>"
                                         id="avatarPreview" alt="Profile Picture">
                                     <label for="profilePic" class="avatar-overlay">
                                         <i class="fas fa-camera"></i>
@@ -126,6 +126,9 @@
                     try {
                         const response = await fetch("/user/edit-profile", {
                             method: "POST",
+                            headers: {
+                                "x-csrf-token": "<%= csrfToken %>"
+                            },
                             body: formData // No headers needed, browser sets multipart/form-data boundary automatically
                         });
 

@@ -14,7 +14,7 @@
   <%- include('./partials/nav', { searchQuery: searchQuery || "" }) %>
 
     <div class="editor-container">
-      <form method="post" action="/blog" enctype="multipart/form-data" id="publishForm">
+      <form method="post" action="/blog?_csrf=<%= csrfToken %>" enctype="multipart/form-data" id="publishForm">
 
 
 
@@ -44,7 +44,7 @@
         <div class="editor-section">
           <h3 class="section-label">Cover Image</h3>
           <div class="cover-container" id="coverContainer">
-            <img id="coverPreview" class="cover-preview hidden">
+            <img loading="lazy" id="coverPreview" class="cover-preview hidden">
 
             <div class="cover-controls" id="coverControls">
               <div class="cover-actions">

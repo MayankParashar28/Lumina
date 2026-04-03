@@ -12,7 +12,7 @@
         <div class="auth-split-wrapper">
             <!-- Left Side: Image -->
             <div class="auth-side-image-container">
-                <img src="/images/auth-side.png" alt="Creative Space" class="auth-side-image">
+                <img loading="lazy" src="/images/auth-side.png" alt="Creative Space" class="auth-side-image">
                 <div class="auth-image-overlay">
                     <h2>The best way to predict the future is to create it.</h2>
                     <p>Welcome back to Lumina. Your audience is waiting for your next big idea.</p>
@@ -28,6 +28,7 @@
                     </header>
 
                     <form action="/user/signin" method="post" id="signin-form">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                         <div class="form-group">
                             <label for="email">Email address</label>
                             <input type="email" class="form-control" name="email" id="email"
@@ -47,7 +48,7 @@
                         <div class="captcha-container">
                             <label>Verify you are human</label>
                             <div class="captcha-row">
-                                <img src="/captcha" alt="CAPTCHA" id="captcha-image" height="50">
+                                <img loading="lazy" src="/captcha" alt="CAPTCHA" id="captcha-image" height="50">
                                 <button type="button" class="refresh-btn" onclick="refreshCaptcha()">
                                     <i class="fas fa-sync-alt"></i>
                                 </button>
@@ -64,7 +65,7 @@
                     <div class="google-auth-wrapper">
                         <a href="/user/auth/google"
                             class="btn-google d-flex align-items-center justify-content-center text-decoration-none">
-                            <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" width="20"
+                            <img loading="lazy" src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" width="20"
                                 height="20" class="me-2">
                             <span>Continue with Google</span>
                         </a>

@@ -1,4 +1,5 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const logger = require("../services/logger"); // Structured Logging
 
 const GOOGLE_API_KEY = process.env.GOOGLE_GEMINI_API_KEY;
 const EMBEDDING_API_KEY = process.env.GOOGLE_EMBEDDING_API_KEY || GOOGLE_API_KEY;
@@ -16,7 +17,7 @@ const embedAI = EMBEDDING_API_KEY ? new GoogleGenerativeAI(EMBEDDING_API_KEY) : 
  */
 async function generateEmbedding(text) {
     if (!embedAI) {
-        console.warn("⚠️ Google Embedding API Key missing. Skipping embedding generation.");
+        logger.warn("⚠️ Google Embedding API Key missing. Skipping embedding generation.");
         return [];
     }
 
@@ -34,7 +35,7 @@ async function generateEmbedding(text) {
 
         return embedding.values;
     } catch (error) {
-        console.error("❌ Error generating embedding:", error.message);
+        logger.error("❌ Error generating embedding:", error.message);
         return [];
     }
 }
@@ -88,7 +89,7 @@ async function generateSummary(text) {
 
             return JSON.parse(jsonMatch[0].trim());
         } catch (error) {
-            console.error(`❌ Model ${modelId} failed:`, error.message);
+            logger.error(`❌ Model ${modelId} failed:`, error.message);
             lastError = error;
         }
     }

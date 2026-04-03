@@ -52,7 +52,7 @@
         <div class="profile-dropdown">
           <button class="profile-trigger" style="padding: 0; border: none; background: transparent;">
             <% if (locals.user && locals.user.profilePic) { %>
-              <img src="<%= typeof optimizeImage === 'function' ? optimizeImage(locals.user.profilePic, { width: 40, height: 40, crop: 'fill' }) : locals.user.profilePic %>" 
+              <img loading="lazy" src="<%= typeof optimizeImage === 'function' ? optimizeImage(locals.user.profilePic, { width: 40, height: 40, crop: 'fill' }) : locals.user.profilePic %>" 
                    alt="<%= locals.user.fullName %>" 
                    style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;"
                    onerror="this.onerror=null; this.src='/images/default-avatar.png';">
