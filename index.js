@@ -287,9 +287,9 @@ app.get("/", async (req, res) => {
     // 🧠 Personalization Logic: If no search/filter & user has history
     if (!searchQuery && !categoryFilter && !tagFilter && req.user.readingHistory && req.user.readingHistory.length > 0) {
       try {
-        // 1. Get embedding of blogs in history
+        // 1. Get embedding of blogs in history (select +embedding to override schema default)
         const historyIds = req.user.readingHistory.map(h => h.blogId);
-        const historyBlogs = await Blog.find({ _id: { $in: historyIds } }).select("embedding").lean();
+        const historyBlogs = await Blog.find({ _id: { $in: historyIds } }).select("+embedding").lean();
 
         // 2. Calculate User Vector (centroid)
         let validEmbeddings = historyBlogs.filter(b => b.embedding && b.embedding.length > 0);
@@ -310,9 +310,10 @@ app.get("/", async (req, res) => {
           const ninetyDaysAgo = new Date();
           ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
           const candidates = await Blog.find({
+            status: "published",
             createdAt: { $gte: ninetyDaysAgo },
             embedding: { $exists: true, $ne: [] }
-          }).select("_id embedding").lean(); // Fetch strictly minimal data
+          }).select("_id +embedding").lean(); // Fetch strictly minimal data
 
           // Stage 2: In-Memory Scoring
           const scoredCandidates = candidates.map(b => {
@@ -333,7 +334,7 @@ app.get("/", async (req, res) => {
           // Re-attach scores and preserve order
           blogs = topBlogs.map(blog => {
             const candidate = scoredCandidates.find(c => c._id.toString() === blog._id.toString());
-            return { ...blog.toObject(), score: candidate ? candidate.score : 0 };
+            return { ...blog, score: candidate ? candidate.score : 0 };
           }).sort((a, b) => b.score - a.score);
         }
       } catch (pError) {

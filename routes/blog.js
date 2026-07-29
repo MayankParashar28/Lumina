@@ -305,19 +305,28 @@ router.get("/recommendations/:id", async (req, res) => {
 
     // Fallback if no embedding
     if (!currentBlog || !currentBlog.embedding || currentBlog.embedding.length === 0) {
-      const fallback = await Blog.find({ _id: { $ne: req.params.id } }).select("-body").limit(3).lean();
+      const fallback = await Blog.find({ _id: { $ne: req.params.id }, status: "published" })
+        .select("title coverImageURL category createdBy readTime views createdAt")
+        .populate("createdBy", "fullName profilePic")
+        .limit(3)
+        .lean();
       return res.json({ blogs: fallback });
     }
 
     const allBlogs = await Blog.find({
       _id: { $ne: req.params.id },
+      status: "published",
       embedding: { $exists: true, $ne: [] }
-    }).select("title coverImageURL embedding createdAt").lean();
+    })
+      .select("title coverImageURL category createdBy readTime +embedding createdAt")
+      .populate("createdBy", "fullName profilePic")
+      .lean();
 
-    // Calculate similarities
+    // Calculate similarities & strip out heavy vector array before sending JSON response
     const scoredBlogs = allBlogs.map(blog => {
       const score = cosineSimilarity(currentBlog.embedding, blog.embedding);
-      return { ...blog.toObject(), score };
+      const { embedding, ...cleanBlog } = blog;
+      return { ...cleanBlog, score };
     });
 
     // Sort by score desc and take top 3

@@ -720,10 +720,10 @@ body {
 
 /* --- Enhanced Comment Section --- */
 .comments-section {
-    max-width: 1200px !important;
-    /* Match content width */
-    margin: 4rem auto;
-    padding-top: 2rem;
+    max-width: 1650px !important;
+    width: 95% !important;
+    margin: 2.5rem auto !important;
+    padding: 2rem 1.5rem 0;
     border-top: 1px solid var(--border-color);
 }
 
@@ -822,7 +822,9 @@ body {
     border-radius: 16px;
     transition: all 0.2s;
     position: relative;
-    /* Ensure badges work */
+    background: #ffffff;
+    border: 1px solid #f0f2f5;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
 }
 
 .comment-avatar-small {
@@ -830,18 +832,21 @@ body {
     height: 32px;
     border-radius: 50%;
     object-fit: cover;
+    flex-shrink: 0;
 }
 
 .comment-content-col {
     flex: 1;
+    min-width: 0;
 }
 
 .comment-header {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    margin-bottom: 0.3rem;
+    margin-bottom: 0.4rem;
     font-size: 0.9rem;
+    flex-wrap: wrap;
 }
 
 .comment-author {
@@ -1695,38 +1700,40 @@ body {
 
     /* Scoping strictly to comments-section to avoid bleeding */
     .comments-section {
-        margin: 3rem 1rem !important;
+        margin: 3rem 0.5rem !important;
         padding: 1rem 0 !important;
         max-width: 100% !important;
     }
 
     .comments-section .comment-card {
-        padding: 1rem !important;
-        gap: 1rem;
-        flex-direction: column;
+        padding: 0.8rem !important;
+        gap: 0.75rem;
+        flex-direction: row !important;
         align-items: flex-start;
     }
 
     .comments-section .comment-content-col {
         width: 100%;
+        min-width: 0;
     }
 
     .comments-section .comment-avatar-small {
-        width: 32px;
-        height: 32px;
+        width: 28px;
+        height: 28px;
+        flex-shrink: 0;
     }
 
     /* Optimize Nested Replies */
     .comments-section .nested-replies {
-        margin-left: 1rem !important;
-        padding-left: 0.8rem !important;
+        margin-left: 0.5rem !important;
+        padding-left: 0.6rem !important;
         border-left: 2px solid #eee;
-        margin-top: 1rem;
+        margin-top: 0.75rem;
     }
 
     .comments-section .nested-replies .comment-card {
-        padding: 0.8rem 0 !important;
-        margin-bottom: 0.5rem;
+        padding: 0.4rem 0 !important;
+        margin-bottom: 0.4rem;
     }
 
     /* Connectors */
@@ -1736,12 +1743,15 @@ body {
 
     /* Input Area */
     .comments-section .comment-input-wrapper {
-        flex-direction: column;
-        gap: 0.8rem;
+        flex-direction: row;
+        gap: 0.75rem;
     }
 
     .comments-section .comment-avatar {
-        display: none;
+        display: block;
+        width: 32px;
+        height: 32px;
+        flex-shrink: 0;
     }
 
     .comments-section .input-box-wrapper {
