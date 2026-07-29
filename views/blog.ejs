@@ -216,10 +216,16 @@
                         // Fetch Request
                         const fetchRequest = fetch('/ai/generate-comment-suggestions', {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'x-csrf-token': '<%= csrfToken %>'
+                            },
                             body: JSON.stringify({ blogId }),
                             credentials: 'include'
-                        }).then(res => res.json());
+                        }).then(res => {
+                            if (!res.ok) throw new Error("HTTP " + res.status);
+                            return res.json();
+                        });
 
                         // Race: AI vs Timeout
                         Promise.race([fetchRequest, timeout])

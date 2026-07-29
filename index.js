@@ -91,12 +91,45 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://code.jquery.com", "https://kit.fontawesome.com", "https://www.google.com", "https://www.gstatic.com", "https://cdn.quilljs.com", "https://unpkg.com"],
+      scriptSrc: [
+        "'self'",
+        "'unsafe-inline'",
+        "'unsafe-eval'",
+        "https://cdn.jsdelivr.net",
+        "https://cdnjs.cloudflare.com",
+        "https://code.jquery.com",
+        "https://kit.fontawesome.com",
+        "https://www.google.com",
+        "https://www.gstatic.com",
+        "https://www.googletagmanager.com",
+        "https://analytics.ahrefs.com",
+        "https://cdn.quilljs.com",
+        "https://unpkg.com"
+      ],
       scriptSrcAttr: ["'unsafe-inline'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com", "https://cdn.jsdelivr.net", "https://maxcdn.bootstrapcdn.com", "https://kit.fontawesome.com", "https://cdn.quilljs.com", "https://unpkg.com"],
+      styleSrc: [
+        "'self'",
+        "'unsafe-inline'",
+        "https://fonts.googleapis.com",
+        "https://cdnjs.cloudflare.com",
+        "https://cdn.jsdelivr.net",
+        "https://maxcdn.bootstrapcdn.com",
+        "https://kit.fontawesome.com",
+        "https://cdn.quilljs.com",
+        "https://unpkg.com"
+      ],
       fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com", "https://cdn.jsdelivr.net", "https://ka-f.fontawesome.com", "https://r2cdn.perplexity.ai"],
       imgSrc: ["'self'", "data:", "https:", "https://api.dicebear.com"],
-      connectSrc: ["'self'", "https://ka-f.fontawesome.com", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://unpkg.com"],
+      connectSrc: [
+        "'self'",
+        "https://ka-f.fontawesome.com",
+        "https://cdn.jsdelivr.net",
+        "https://cdnjs.cloudflare.com",
+        "https://unpkg.com",
+        "https://analytics.ahrefs.com",
+        "https://www.google-analytics.com",
+        "https://region1.google-analytics.com"
+      ],
     },
   },
 }));
@@ -178,8 +211,8 @@ app.use(
     store: sessionStore,
     cookie: {
       httpOnly: true,
-      secure: true,
-      sameSite: "strict",
+      secure: process.env.NODE_ENV === "production", // 🔒 Only require HTTPS in production so local HTTP dev works
+      sameSite: "lax",
     }
   })
 );
@@ -187,7 +220,12 @@ app.use(
 // CSRF Protection
 const csrfProtection = csurf({ cookie: false }); // Using session-based CSRF
 
-app.use(csrfProtection);
+app.use((req, res, next) => {
+  if (req.path === "/subscription/webhook" || req.path === "/ai/generate-comment-suggestions") {
+    return next();
+  }
+  csrfProtection(req, res, next);
+});
 
 app.use(passport.initialize());
 app.use(passport.session()); // Persistent login sessions
@@ -197,7 +235,7 @@ app.use((req, res, next) => {
   res.locals.success_msg = req.flash("success");
   res.locals.error_msg = req.flash("error");
   res.locals.error = res.locals.error_msg; // Alias for compatibility with signin/signup
-  res.locals.csrfToken = req.csrfToken(); // 🛡️ CSRF Token for all forms
+  res.locals.csrfToken = typeof req.csrfToken === "function" ? req.csrfToken() : ""; // 🛡️ CSRF Token for all forms
   next();
 });
 
@@ -557,7 +595,15 @@ app.get("*", (req, res) => {
 
 // Global Error Handler
 app.use((err, req, res, next) => {
-  console.error("🔥 Global Error:", err.stack);
+  if (err.code === "EBADCSRFTOKEN" || (err.message && err.message.includes("invalid csrf token"))) {
+    logger.warn(`⚠️ CSRF Token Error on ${req.method} ${req.originalUrl}`);
+    return res.status(403).render("error", {
+      message: "Session expired or invalid form token. Please refresh the page and try submitting again.",
+      title: "Session Expired - Lumina",
+      noIndex: true
+    });
+  }
+  logger.error("🔥 Global Error:", err.stack);
   res.status(500).render("error", {
     message: "Something went wrong on our end. We are looking into it!",
     title: 'Error - Lumina',
