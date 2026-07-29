@@ -49,7 +49,10 @@
 <meta name="twitter:description" content="<%= locals.metaDescription || 'A minimalist sanctuary where builders share insights and shape the future of tech. Join us to read, write, and explore the bleeding edge of innovation!...' %>">
 <meta name="twitter:image" content="<%= locals.ogImage ? locals.ogImage : BASE_URL + '/images/default-cover.png' %>">
 
-<link rel="icon" href="/favicon.ico" type="image/x-icon">
+<!-- Favicon Setup (Cache-Busting & Cross-Browser Compatibility) -->
+<link rel="icon" type="image/x-icon" href="/favicon.ico?v=2">
+<link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=2">
+<link rel="apple-touch-icon" href="/favicon.ico?v=2">
 
 <!-- Preconnect for Performance -->
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
