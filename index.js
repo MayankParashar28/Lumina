@@ -13,7 +13,7 @@ const svgCaptcha = require("svg-captcha");
 const mongoose = require("mongoose");
 const moment = require("moment");
 const flash = require("connect-flash");
-const csurf = require("@dr.pogodin/csurf").default; // Maintained fork of the archived `csurf`
+const { csrfSync } = require("csrf-sync"); // Maintained, CommonJS, session-based CSRF (Vercel/serverless-safe)
 const { cosineSimilarity } = require("./services/ai");
 const { optimizeImage } = require("./services/imageHelper");
 const aiRoute = require("./routes/ai");
@@ -224,8 +224,13 @@ app.use(
   })
 );
 
-// CSRF Protection
-const csrfProtection = csurf({ cookie: false }); // Using session-based CSRF
+// CSRF Protection — session-based; token comes from the _csrf form field or the
+// x-csrf-token header (matching every form/fetch in the app).
+const { generateToken, csrfSynchronisedProtection } = csrfSync({
+  getTokenFromRequest: (req) =>
+    (req.body && req.body._csrf) || req.headers["x-csrf-token"] || req.headers["csrf-token"],
+});
+const csrfProtection = csrfSynchronisedProtection;
 
 app.use((req, res, next) => {
   if (req.path === "/ai/generate-comment-suggestions") {
@@ -242,7 +247,7 @@ app.use((req, res, next) => {
   res.locals.success_msg = req.flash("success");
   res.locals.error_msg = req.flash("error");
   res.locals.error = res.locals.error_msg; // Alias for compatibility with signin/signup
-  res.locals.csrfToken = typeof req.csrfToken === "function" ? req.csrfToken() : ""; // 🛡️ CSRF Token for all forms
+  res.locals.csrfToken = generateToken(req); // 🛡️ CSRF Token for all forms
   next();
 });
 
