@@ -161,7 +161,10 @@
                     if (!confirm('Remove this story from your reading list?')) return;
 
                     try {
-                        const res = await fetch(`/user/bookmark/${blogId}`, { method: 'POST' });
+                        const res = await fetch(`/user/bookmark/${blogId}`, {
+                            method: 'POST',
+                            headers: { 'x-csrf-token': '<%= csrfToken %>' }
+                        });
                         const data = await res.json();
                         if (data.success) {
                             // Remove the card visually

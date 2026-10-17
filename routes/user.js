@@ -1,7 +1,6 @@
 const { Router } = require("express");
 const mongoose = require("mongoose"); // ✅ Import mongoose
 const Notification = require("../models/Notification");
-const createTokenForUser = require("../services/authentication");
 const router = Router();
 const jwt = require("jsonwebtoken");
 const rateLimit = require("express-rate-limit");
@@ -228,10 +227,11 @@ router.post("/edit-profile", upload.single("profilePic"), async (req, res) => {
       return res.status(401).json({ error: "Unauthorized access!" });
     }
 
-    let { fullName, email, bio, socials = {} } = req.body;
+    let { fullName, email, bio, website, socials = {} } = req.body;
     fullName = String(fullName || "").trim();
     email = String(email || "").toLowerCase().trim();
     bio = String(bio || "").trim();
+    website = String(website || "").trim();
     const user = await User.findById(req.user._id);
 
     if (!user) {
@@ -266,7 +266,9 @@ router.post("/edit-profile", upload.single("profilePic"), async (req, res) => {
       user.email = email;
     }
 
-    user.bio = bio ? bio.replace(/</g, "&lt;").replace(/>/g, "&gt;") : "";
+    // Store bio raw; EJS (<%= %>) escapes on output, so no manual entity-encoding here
+    user.bio = bio || "";
+    user.website = website || "";
 
     // Socials - parse if it comes as string or object (depends on body parser extended true/false)
     // EJS form sends socials[linkedin], express.urlencoded({extended: true}) parses it as object.
@@ -559,7 +561,7 @@ router.post("/signin", authLimiter, async (req, res) => {
 
       res.cookie("token", token, {
         httpOnly: true,
-        secure: true,
+        secure: process.env.NODE_ENV === "production",
         sameSite: "Strict",
         path: "/",
         maxAge: 86400 * 1000,
@@ -601,7 +603,7 @@ router.get(
 
       res.cookie("token", jwtToken, {
         httpOnly: true,
-        secure: true,
+        secure: process.env.NODE_ENV === "production",
         sameSite: "Strict",
         path: "/",
         maxAge: 86400 * 1000,
@@ -823,8 +825,8 @@ router.post("/reset-password/:token", verifyLimiter, async (req, res) => {
     return res.redirect(`/user/reset-password/${req.params.token}`);
   }
 
-  if (password.length < 6) {
-    req.flash("error", "Password must be at least 6 characters long.");
+  if (password.length < 8) {
+    req.flash("error", "Password must be at least 8 characters long.");
     return res.redirect(`/user/reset-password/${req.params.token}`);
   }
 

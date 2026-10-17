@@ -14,7 +14,7 @@ function createTokenForUser(user) {
     const payload = {
       _id: user._id,
       email: user.email,
-      profileImageUrl: user.profileImageUrl || "/default-profile.png", // Default profile image
+      profilePic: user.profilePic || "/images/default-avatar.png", // Default profile image
       role: user.role || "user",
     };
 

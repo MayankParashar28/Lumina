@@ -4,7 +4,6 @@
 <head>
     <%- include('./partials/header') %>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
         <link rel="stylesheet" href="/css/notifications.css">
 </head>
 
@@ -125,14 +124,6 @@
                     document.querySelectorAll(".time-ago").forEach(el => {
                         const timestamp = el.getAttribute("data-time");
                         el.textContent = timeAgo(timestamp);
-                    });
-
-                    // Existing mark as read logic
-                    document.querySelectorAll(".mark-read-btn").forEach(button => {
-                        button.addEventListener("click", function () {
-                            const notificationId = this.getAttribute("data-id");
-                            markAsRead(notificationId);
-                        });
                     });
                 });
             </script>

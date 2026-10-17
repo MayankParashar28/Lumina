@@ -431,6 +431,15 @@ router.post("/like/:blogId", async (req, res) => {
 router.post("/comment/:blogId", commentLimiter, async (req, res) => {
   const COMMENT_COOLDOWN = 5 * 60 * 1000; // 5 minutes in milliseconds
   try {
+    // 🔒 Require authentication before touching req.user
+    if (!req.user) {
+      if (req.xhr || (req.headers.accept && req.headers.accept.includes("json"))) {
+        return res.status(401).json({ error: "Please sign in to comment." });
+      }
+      req.flash("error", "Please sign in to comment.");
+      return res.redirect("/user/signin");
+    }
+
     // 🛡️ Moderation Check
     const moderation = await moderateContent(req.body.content);
     if (!moderation.safe) {

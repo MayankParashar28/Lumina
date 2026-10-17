@@ -241,7 +241,7 @@
             try {
               const response = await fetch("/ai/generate-title", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { "Content-Type": "application/json", "x-csrf-token": "<%= csrfToken %>" },
                 body: JSON.stringify({ body, tone })
               });
 
@@ -502,7 +502,7 @@
             try {
               const response = await fetch("/ai/generate-blog", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { "Content-Type": "application/json", "x-csrf-token": "<%= csrfToken %>" },
                 body: JSON.stringify({ title, tone })
               });
 
@@ -604,7 +604,7 @@
 
               const response = await fetch("/ai/generate-tags", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { "Content-Type": "application/json", "x-csrf-token": "<%= csrfToken %>" },
                 body: JSON.stringify({ title, body })
               });
 
@@ -737,6 +737,7 @@
               form.target = "_blank"; // Open in new tab
 
               const inputs = {
+                _csrf: "<%= csrfToken %>",
                 title: title,
                 body: body,
                 aiCoverURL: aiCoverURL,

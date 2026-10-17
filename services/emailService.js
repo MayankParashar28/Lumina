@@ -143,7 +143,7 @@ const sendResetPasswordEmail = async (email, resetLink) => {
   logger.info("📨 Reset Email sent: %s", info.messageId);
 
   if (nodemailer.getTestMessageUrl(info)) {
-    console.log("🔎 Preview URL: %s", nodemailer.getTestMessageUrl(info));
+    logger.info("🔎 Preview URL: %s", nodemailer.getTestMessageUrl(info));
   }
 };
 

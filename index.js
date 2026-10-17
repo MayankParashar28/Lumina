@@ -437,7 +437,6 @@ app.get("/", async (req, res) => {
       searchQuery,
       categoryFilter,
       tagFilter,
-      tagFilter,
       moment,
       title: "Home Feed - Lumina",
       metaDescription: "Discover fresh perspectives and trending stories curated just for you. Join the Lumina community to read, write, and connect with visionary creators!..."
@@ -522,67 +521,6 @@ app.use("/subscription", subscriptionRoute);
 app.use("/notifications", notificationsRoute);
 app.use("/ai", aiRoute);
 
-
-// 🔍 SEO: Dynamic Sitemap
-app.get("/sitemap.xml", async (req, res) => {
-  try {
-    const BASE_URL = process.env.BASE_URL || 'https://lluminaa.vercel.app';
-    const Blog = require("./models/blog");
-    const User = require("./models/user");
-
-    // Static pages
-    const staticPages = ['/', '/about', '/privacy', '/terms', '/user/signin', '/user/signup'];
-
-    // Dynamic blog pages
-    const blogs = await Blog.find({ status: 'published' }).select('_id updatedAt').lean();
-    
-    // Public user profiles
-    const users = await User.find().select('_id updatedAt').lean();
-
-    let xml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`;
-
-    // Add static pages
-    for (const page of staticPages) {
-      xml += `
-  <url>
-    <loc>${BASE_URL}${page}</loc>
-    <changefreq>${page === '/' ? 'daily' : 'monthly'}</changefreq>
-    <priority>${page === '/' ? '1.0' : '0.5'}</priority>
-  </url>`;
-    }
-
-    // Add blog pages
-    for (const blog of blogs) {
-      xml += `
-  <url>
-    <loc>${BASE_URL}/blog/${blog._id}</loc>
-    <lastmod>${new Date(blog.updatedAt || blog._id.getTimestamp()).toISOString()}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>`;
-    }
-
-    // Add user profile pages
-    for (const user of users) {
-      xml += `
-  <url>
-    <loc>${BASE_URL}/user/${user._id}</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.4</priority>
-  </url>`;
-    }
-
-    xml += `
-</urlset>`;
-
-    res.set('Content-Type', 'application/xml');
-    res.send(xml);
-  } catch (error) {
-    console.error("❌ Sitemap Error:", error);
-    res.status(500).send("Error generating sitemap");
-  }
-});
 
 // 404 Page
 app.get("*", (req, res) => {

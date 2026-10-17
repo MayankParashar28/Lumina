@@ -4,81 +4,62 @@ html,
 body {
     margin: 0;
     padding: 0;
-    height: 100%;
-    /* Critical: Force full viewport height */
-    overflow: hidden;
-    /* Critical: Prevent "body" scroll */
+    /* Normal page scroll; the sidebars are sticky (plays well with Lenis smooth-scroll) */
+}
+
+/* The viewport (<html>) must be the scroll container, not <body>.
+   global.css sets body overflow-y:auto, which would otherwise capture the
+   sticky sidebars and stop them from pinning. */
+body {
+    overflow: visible;
 }
 
 .docs-wrapper {
     max-width: 1440px;
     margin: 0 auto;
-    padding-top: 100px;
-    /* Space for Navbar */
-    height: 100%;
-    /* Fill the viewport */
+    padding: 100px 0 60px;
+    /* Top space clears the fixed navbar */
     display: flex;
-    /* Robust Layout Model */
     flex-direction: row;
+    align-items: flex-start;
+    /* Critical: lets children use position: sticky */
     position: relative;
     font-family: 'Inter', sans-serif;
     box-sizing: border-box;
-    overflow: hidden;
-    /* Ensure wrapper clips content */
 }
 
-/* --- Left Sidebar (Navigation) --- */
+/* --- Left Sidebar (Navigation) — stays put while the center scrolls --- */
 .docs-sidebar-left {
     width: 240px;
     flex-shrink: 0;
-    /* Prevent resizing */
-    height: 100%;
-    /* Full height of wrapper */
+    position: sticky;
+    top: 100px;
+    align-self: flex-start;
+    max-height: calc(100vh - 120px);
     overflow-y: auto;
-    /* Independent Scroll */
-    padding-top: 10px;
-    padding-bottom: 40px;
-    padding-left: 20px;
-    padding-right: 20px;
+    padding: 10px 20px 40px;
     border-right: 1px solid #f0f0f0;
 }
 
-/* --- Center Content (Main) --- */
+/* --- Center Content (Main) — the only column that scrolls with the page --- */
 .docs-main {
     flex: 1;
     /* Take all remaining space */
     min-width: 0;
     /* Prevent flex overflow bug */
-    height: 100%;
-    /* Full height of wrapper */
-    overflow-y: auto;
-    /* Independent Scroll */
-    padding-top: 10px;
-    padding-bottom: 40px;
-    padding-left: 60px;
-    padding-right: 60px;
-
-    /* Hide scrollbar for cleaner look (optional) */
-    scrollbar-width: none;
+    padding: 10px 60px 40px;
 }
 
-.docs-main::-webkit-scrollbar {
-    display: none;
-}
-
-/* --- Right Sidebar (Table of Contents) --- */
+/* --- Right Sidebar (Table of Contents) — also sticky --- */
 .docs-sidebar-right {
     width: 240px;
     flex-shrink: 0;
-    /* Prevent resizing */
-    height: 100%;
-    /* Full height of wrapper */
+    position: sticky;
+    top: 100px;
+    align-self: flex-start;
+    max-height: calc(100vh - 120px);
     overflow-y: auto;
-    /* Independent Scroll */
-    padding-top: 10px;
-    padding-bottom: 40px;
-    padding-right: 20px;
-    /* Padding inside scroll area */
+    padding: 10px 20px 40px 0;
 }
 
 

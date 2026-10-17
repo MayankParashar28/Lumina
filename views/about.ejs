@@ -3,7 +3,7 @@
 
 <head>
     <%- include('./partials/header') %>
-        <link rel="stylesheet" href="/css/docs.css">
+        <link rel="stylesheet" href="/css/docs.css?v=3">
 </head>
 
 <body>
@@ -14,8 +14,9 @@
             <aside class="docs-sidebar-left">
                 <div class="docs-nav-group">
                     <div class="docs-nav-title">Company</div>
-                    <a href="/about" class="docs-nav-link active">About Lumina</a>
-                    <a href="/mission" class="docs-nav-link">Our Mission</a>
+                    <% const isMission = (locals.path === '/mission'); %>
+                    <a href="/about" class="docs-nav-link <%= isMission ? '' : 'active' %>">About Lumina</a>
+                    <a href="/mission" class="docs-nav-link <%= isMission ? 'active' : '' %>">Our Mission</a>
                 </div>
                 <div class="docs-nav-group">
                     <div class="docs-nav-title">Legal</div>
@@ -31,13 +32,15 @@
             <!-- Main Content -->
             <main class="docs-main">
                 <div class="docs-header">
-                    <h1 class="docs-title">Where Ideas Come to Life.</h1>
-                    <div class="docs-meta">The Story of Lumina</div>
+                    <h1 class="docs-title"><%= isMission ? 'Our Mission' : 'Where Ideas Come to Life.' %></h1>
+                    <div class="docs-meta"><%= isMission ? 'What drives us at Lumina' : 'The Story of Lumina' %></div>
                 </div>
 
                 <div class="docs-content">
                     <p class="lead" style="font-size: 1.25rem; font-weight: 500; color: #444; margin-bottom: 40px;">
-                        Lumina is a platform for the bold, the curious, and the storytellers of tomorrow.
+                        <%= isMission
+                            ? 'Our mission is simple: give ideas a clean, honest place to live — and the tools to help them reach the people who need them.'
+                            : 'Lumina is a platform for the bold, the curious, and the storytellers of tomorrow.' %>
                     </p>
 
                     <h2 id="mission">Our Mission</h2>
@@ -88,6 +91,7 @@
 
 
 
+    <script src="/javascript/docs.js" defer></script>
 </body>
 
 </html>

@@ -9,6 +9,9 @@ const { checkForAdmin } = require("../middleware/admin");
 
 const router = Router();
 
+// 🔒 Escape user input before using it in a RegExp (ReDoS / injection safety)
+const escapeRegex = (str) => String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 // Middleware to check if user is admin
 const adminAuth = (req, res, next) => {
     if (req.user && req.user.role === "ADMIN") {
@@ -50,8 +53,8 @@ router.get("/", async (req, res) => {
         if (searchQuery) {
             userQuery = {
                 $or: [
-                    { fullName: { $regex: searchQuery, $options: "i" } },
-                    { email: { $regex: searchQuery, $options: "i" } }
+                    { fullName: { $regex: escapeRegex(searchQuery), $options: "i" } },
+                    { email: { $regex: escapeRegex(searchQuery), $options: "i" } }
                 ]
             };
         }
@@ -61,7 +64,7 @@ router.get("/", async (req, res) => {
         let blogQuery = {};
         if (blogSearchQuery) {
             blogQuery = {
-                title: { $regex: blogSearchQuery, $options: "i" }
+                title: { $regex: escapeRegex(blogSearchQuery), $options: "i" }
             };
         }
 
@@ -121,10 +124,6 @@ router.get("/", async (req, res) => {
             userCount,
             blogCount,
             commentCount,
-            users,
-            blogs,
-            users,
-            blogs,
             users,
             blogs,
             searchQuery, // ✅ Pass user search query

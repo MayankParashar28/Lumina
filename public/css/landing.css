@@ -502,16 +502,13 @@ body {
 
 .scroller-inner {
     display: flex;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 30px;
-    width: 100%;
+    width: max-content;
+    /* Size to content so the row can overflow and scroll */
     padding: 2rem 5%;
     flex-wrap: nowrap;
     /* Force single row */
-    overflow-x: auto;
-    /* Safety scroll for mobile */
-    scroll-snap-type: x mandatory;
-    /* Enable scroll snap */
     -webkit-overflow-scrolling: touch;
     /* Smooth scroll on iOS */
 }
@@ -527,6 +524,8 @@ body {
 /* --- Redesigned Fresh Ink Cards (Professional Theme Aligned) --- */
 /* --- Redesigned Fresh Ink Cards (Professional Theme Aligned) --- */
 .scroll-card {
+    flex: 0 0 auto;
+    /* Don't shrink — keep width so the row overflows and scrolls */
     min-width: 400px;
     /* Increased from 280px */
     width: 400px;

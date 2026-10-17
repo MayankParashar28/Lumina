@@ -4,7 +4,6 @@
 <head>
     <%- include('./partials/header') %>
         <link rel="stylesheet" href="/css/profile.css">
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
@@ -112,8 +111,7 @@
                                 </div>
                                 <div class="story-content">
                                     <span class="public-story-meta">
-                                        <%= new Date(blog.createdAt).toLocaleDateString() %> · <%=
-                                                Math.ceil((blog.content ? blog.content.length : 0) / 1000) %> min read
+                                        <%= new Date(blog.createdAt).toLocaleDateString() %> · <%= blog.readTime || 1 %> min read
                                     </span>
                                     <h2 class="public-story-title">
                                         <%= blog.title %>
@@ -129,48 +127,6 @@
 
         </div>
         <%- include('./partials/footer') %>
-
-            <!-- Chart Data & Script -->
-            <script id="user-data" type="application/json">
-    {
-        "labels": ["Stories", "Likes", "Followers", "Following"],
-        "data": [
-            <%= blogCount || 0 %>,
-            <%= totalLikes || 0 %>,
-            <%= user.followers ? user.followers.length : 0 %>,
-            <%= user.following ? user.following.length : 0 %>
-        ]
-    }
-    </script>
-            <script>
-                document.addEventListener("DOMContentLoaded", function () {
-                    const userData = JSON.parse(document.getElementById("user-data").textContent);
-                    const ctx = document.getElementById("dashboard-chart").getContext("2d");
-
-                    new Chart(ctx, {
-                        type: 'bar',
-                        data: {
-                            labels: userData.labels,
-                            datasets: [{
-                                label: 'Activity',
-                                data: userData.data,
-                                backgroundColor: ['#333', '#555', '#999', '#bbb'],
-                                borderWidth: 0,
-                                borderRadius: 4
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: { legend: { display: false } },
-                            scales: {
-                                y: { beginAtZero: true, grid: { display: false }, ticks: { font: { family: 'Inter' } } },
-                                x: { grid: { display: false }, ticks: { font: { family: 'Inter' } } }
-                            }
-                        }
-                    });
-                });
-            </script>
 
             <style>
                 /* Specific override for the follow button to look like a text link */

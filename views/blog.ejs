@@ -55,11 +55,11 @@
                             <form method="POST" action="/user/follow/<%= blog.createdBy._id %>"
                                 style="display: inline;">
                                 <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                <% const isFollowingAuthor = user.following && user.following.map(String).includes(String(blog.createdBy._id)); %>
                                 <button
-                                    class="btn-follow <%= (user.following && user.following.includes(blog.createdBy.id)) ? 'followed' : '' %>"
+                                    class="btn-follow <%= isFollowingAuthor ? 'followed' : '' %>"
                                     style="padding: 0.2rem 0.8rem; font-size: 0.75rem; min-width: auto; margin-left: 0.5rem;">
-                                    <%= (user.following && user.following.includes(blog.createdBy.id)) ? 'Following'
-                                        : 'Follow' %>
+                                    <%= isFollowingAuthor ? 'Following' : 'Follow' %>
                                 </button>
                             </form>
                             <% } %>

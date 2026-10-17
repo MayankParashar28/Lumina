@@ -86,12 +86,9 @@
                                                 <div class="placeholder-img"></div>
                                                 <% } %>
                                                     <div class="card-overlay">
-                                                        <% const words=blog.body ? blog.body.replace(/<[^>]*>/g,
-                                                            '').split(/\s+/).length : 0;
-                                                            const readTime = Math.ceil(words / 200); %>
-                                                            <span class="read-time">
-                                                                <%= readTime %> min read
-                                                            </span>
+                                                        <span class="read-time">
+                                                            <%= blog.readTime || 1 %> min read
+                                                        </span>
                                                     </div>
                                     </div>
                                     <div class="card-content">
