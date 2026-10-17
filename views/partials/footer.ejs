@@ -28,7 +28,10 @@
     <i class="bi bi-arrow-up"></i>
 </button>
 
-<script>
+<!-- Global helpers (image fallback, etc.) — replaces former inline on* handlers -->
+<script nonce="<%= cspNonce %>" src="/javascript/app.js" defer></script>
+
+<script nonce="<%= cspNonce %>">
     document.addEventListener("DOMContentLoaded", () => {
         const scrollToTopBtn = document.getElementById("scrollToTop");
         if (scrollToTopBtn) {
@@ -49,7 +52,7 @@
 
 <!-- 🌊 Lenis Smooth Scroll (High Performance Config) -->
 <script src="https://unpkg.com/@studio-freight/lenis@1.0.42/dist/lenis.min.js"></script>
-<script>
+<script nonce="<%= cspNonce %>">
     // Optimized for ZERO jerkiness
     // Only disable on actual mobile viewports, not just touch devices (laptops can have touch)
     const isMobile = window.innerWidth < 768;

@@ -1,7 +1,7 @@
 <nav class="floating-nav">
   <div class="nav-content">
     <!-- Mobile Toggle -->
-    <button class="mobile-menu-btn" onclick="toggleMobileMenu()">
+    <button class="mobile-menu-btn" data-action="toggleMobileMenu">
       <i class="bi bi-list"></i>
     </button>
 
@@ -55,7 +55,7 @@
               <img loading="lazy" src="<%= typeof optimizeImage === 'function' ? optimizeImage(locals.user.profilePic, { width: 40, height: 40, crop: 'fill' }) : locals.user.profilePic %>" 
                    alt="<%= locals.user.fullName %>" 
                    style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;"
-                   onerror="this.onerror=null; this.src='/images/default-avatar.png';">
+                   data-fallback="/images/default-avatar.png">
             <% } else { %>
               <i class="bi bi-person-circle" style="font-size: 1.5rem;"></i>
             <% } %>
@@ -83,7 +83,7 @@
   </div> <!-- Closing nav-content -->
 </nav>
 
-<script>
+<script nonce="<%= cspNonce %>">
   function toggleMobileMenu() {
     const nav = document.querySelector('.floating-nav');
     const btnIcon = document.querySelector('.mobile-menu-btn i');
@@ -128,26 +128,7 @@
 
     <!-- Scripts -->
     <script src="/socket.io/socket.io.js"></script>
-    <script>
-      // AI Access Button
-      document.getElementById("ai-access-btn")?.addEventListener("click", async (e) => {
-        e.preventDefault();
-        try {
-          const res = await fetch("/subscription/create-checkout-session", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json"
-            }
-          });
-          const data = await res.json();
-          if (data.url) window.location.href = data.url;
-          else alert("Error: Unable to process payment.");
-        } catch (err) {
-          console.error("Payment Error:", err);
-          alert("Something went wrong. Try again later.");
-        }
-      });
-
+    <script nonce="<%= cspNonce %>">
       // Notification Count
       async function updateNotificationCount() {
         try {

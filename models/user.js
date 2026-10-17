@@ -53,14 +53,6 @@ const userSchema = new Schema(
       default: "active",
     },
     // ... (lines 31-81 unchanged)
-    stripeCustomerId: {
-      type: String,
-      select: false,
-    },
-    subscriptionId: {
-      type: String,
-      select: false,
-    },
     lastProfileEdit: {
       type: Date,
     },

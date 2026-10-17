@@ -23,10 +23,10 @@
                     <h3 class="section-label">Title</h3>
                     <div class="input-group" style="margin-bottom: 2rem; position: relative;">
                         <textarea name="title" id="title" class="input-title" placeholder="Enter your story title..."
-                            rows="1" required oninput="autoResize(this)"><%= blog.title %></textarea>
+                            rows="1" required data-input="autoResize"><%= blog.title %></textarea>
 
                         <!-- Magic Title Button (Text + Icon) -->
-                        <button type="button" id="title-magic-btn" class="btn-ai-premium" onclick="generateTitles()"
+                        <button type="button" id="title-magic-btn" class="btn-ai-premium" data-action="generateTitles"
                             title="Generate AI Titles">
                             <i class="fas fa-magic"></i> AI Generate Title
                         </button>
@@ -52,19 +52,19 @@
                                     <i class="fas fa-cloud-upload-alt"></i> Upload Cover Image
                                 </label>
                                 <input type="file" id="coverImage" name="coverImage" accept="image/*"
-                                    class="hidden-input" onchange="previewCover(this)">
+                                    class="hidden-input" data-change="previewCover">
 
                                 <!-- Separator -->
                                 <span class="divider">or</span>
 
                                 <!-- AI Generation -->
                                 <button type="button" class="btn-cover-action btn-ai-glass"
-                                    onclick="generateCoverWithAI()">
+                                    data-action="generateCoverWithAI">
                                     <i class="fas fa-magic"></i> AI Generate Cover
                                 </button>
 
                                 <!-- GIPHY Search (New!) -->
-                                <button type="button" class="btn-cover-action btn-ai-glass" onclick="searchGiphy()"
+                                <button type="button" class="btn-cover-action btn-ai-glass" data-action="searchGiphy"
                                     style="color: #9333ea; border-color: #d8b4fe; background: #f3e8ff;">
                                     <i class="fas fa-film"></i> Search GIF
                                 </button>
@@ -77,7 +77,7 @@
 
                         <button type="button" id="removeCover"
                             class="btn-remove-cover <%= blog.coverImageURL ? '' : 'hidden' %>"
-                            onclick="removeCoverImage()">
+                            data-action="removeCoverImage">
                             <i class="fas fa-trash-alt"></i>
                         </button>
                     </div>
@@ -103,7 +103,7 @@
 
                             <div class="toolbar-divider"></div>
 
-                            <button type="button" class="btn-toolbar-ai" onclick="generateWithAI()">
+                            <button type="button" class="btn-toolbar-ai" data-action="generateWithAI">
                                 <i class="fas fa-sparkles"></i> AI Continue Writing
                             </button>
                         </div>
@@ -151,13 +151,13 @@
                             <i class="fas fa-hashtag"></i>
                             <input type="text" name="tags" id="tags" placeholder="Tags (comma separated)..."
                                 autocomplete="off" value="<%= blog.tags.join(', ') %>">
-                            <button type="button" class="btn-mini-ai" onclick="generateTags()">
+                            <button type="button" class="btn-mini-ai" data-action="generateTags">
                                 <i class="fas fa-bolt"></i> AI FIND TAGS
                             </button>
 
                         </div>
                         <!-- Preview Button Moved Outside -->
-                        <button type="button" class="btn-mini-preview" onclick="previewStory()" title="Preview Story">
+                        <button type="button" class="btn-mini-preview" data-action="previewStory" title="Preview Story">
                             <i class="far fa-eye"></i>
                         </button>
                     </div>
@@ -180,7 +180,7 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h3>🚀 Ready to Update?</h3>
-                    <button type="button" class="close-modal" onclick="closeChecklist()">&times;</button>
+                    <button type="button" class="close-modal" data-action="closeChecklist">&times;</button>
                 </div>
                 <div class="modal-body">
                     <p class="modal-intro">Let's check if your story is ready for the world:</p>
@@ -193,8 +193,8 @@
                     </ul>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="closeChecklist()">Keep Editing</button>
-                    <button type="button" id="btn-confirm-publish" class="btn-primary" onclick="submitFinal()" disabled>
+                    <button type="button" class="btn-secondary" data-action="closeChecklist">Keep Editing</button>
+                    <button type="button" id="btn-confirm-publish" class="btn-primary" data-action="submitFinal" disabled>
                         Update Now
                     </button>
                 </div>
@@ -205,7 +205,7 @@
             <%- include('./partials/script') %>
 
                 <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
-                <script>
+                <script nonce="<%= cspNonce %>">
                     // Initialize Quill editor
                     var quill = new Quill('#editor', {
                         theme: 'snow',
@@ -442,7 +442,7 @@
                             return;
                         }
 
-                        const btn = document.querySelector('button[onclick="searchGiphy()"]');
+                        const btn = document.querySelector('button[data-action="searchGiphy"]');
                         const originalText = btn.innerHTML;
                         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Searching...';
                         btn.disabled = true;

@@ -6,7 +6,6 @@ const User = require("../models/user");
 const Comment = require("../models/comment");
 const Blog = require("../models/blog");
 const marked = require("marked");
-const { checkSubscription } = require("../middleware/subscription");
 const { error } = require("console");
 const Notification = require("../models/Notification");
 const moderateContent = require("../utils/moderator"); // Hybrid Moderation

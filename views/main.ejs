@@ -10,7 +10,7 @@
                 scroll-behavior: smooth;
             }
         </style>
-        <script>
+        <script nonce="<%= cspNonce %>">
             // Theme logic - Critical to run in head to prevent flash
             const theme = localStorage.getItem('theme') || 'light';
             document.documentElement.setAttribute('data-theme', theme);
@@ -153,7 +153,7 @@
                                 <div class="scroll-card">
                                     <div class="card-image-wrapper">
                                         <img loading="lazy" src="<%= optimizeImage(blog.coverImageURL || '/images/default-cover.png', { width: 600, crop: 'fill' }) %>"
-                                            alt="<%= blog.title %>" onerror="this.onerror=null; this.src='/images/default-cover.png';">
+                                            alt="<%= blog.title %>" data-fallback="/images/default-cover.png">
                                         <div class="card-overlay">
                                             <a href="/blog/<%= blog._id %>" class="read-btn">READ</a>
                                         </div>
@@ -228,7 +228,7 @@
         <%- include('./partials/footer') %>
             <%- include('./partials/script') %>
 
-                <script>
+                <script nonce="<%= cspNonce %>">
                     // Custom Cursor Logic
                     const cursorDot = document.querySelector('.cursor-dot');
                     const cursorOutline = document.querySelector('.cursor-outline');
@@ -354,7 +354,7 @@
                 </script>
 
                 <!-- Fresh Ink: auto-scroll (left ↔ right) + drag / wheel -->
-                <script>
+                <script nonce="<%= cspNonce %>">
                     (() => {
                         const scroller = document.getElementById('freshInkScroller');
                         if (!scroller) return;

@@ -33,7 +33,7 @@
                    const isBlogOwner = user && blog.createdBy && String(user._id) === String(blog.createdBy._id);
                    const isAdmin = user && user.role === "ADMIN";
                    if (isCommentOwner || isBlogOwner || isAdmin) { %>
-                    <form action="/blog/comment/delete/<%= comment._id %>" method="POST" class="delete-form" onsubmit="return confirm('Delete comment?');" style="display:inline; margin-left: 0.5rem;">
+                    <form action="/blog/comment/delete/<%= comment._id %>" method="POST" class="delete-form" data-confirm="Delete comment?" style="display:inline; margin-left: 0.5rem;">
                         <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                         <button type="submit" class="btn-delete" title="Delete"><i class="fas fa-trash-alt"></i></button>
                     </form>
@@ -50,7 +50,7 @@
                    const hasReactions = Object.keys(reactionCounts).length > 0;
                 %>
                 <div class="reaction-wrapper" style="position: relative; margin-left: auto;">
-                    <button class="btn-reaction-trigger" onclick="toggleReactionPicker('<%= comment._id %>', this)" title="Add Reaction">
+                    <button class="btn-reaction-trigger" data-c-action="react-picker" data-c-id="<%= comment._id %>" title="Add Reaction">
                         <% if (myReaction) { %>
                             <span style="font-style: normal; font-size: 1.1rem;"><%= myReaction %></span>
                         <% } else { %>
@@ -61,7 +61,7 @@
                     <!-- Reaction Picker -->
                     <div id="reaction-picker-<%= comment._id %>" class="reaction-picker hidden">
                         <% emojis.forEach(emoji => { %>
-                            <button class="reaction-option <%= myReaction === emoji ? 'active' : '' %>" onclick="toggleReaction('<%= comment._id %>', '<%= emoji %>', this)">
+                            <button class="reaction-option <%= myReaction === emoji ? 'active' : '' %>" data-c-action="react" data-c-id="<%= comment._id %>" data-c-emoji="<%= emoji %>">
                                 <%= emoji %>
                             </button>
                         <% }); %>
@@ -79,7 +79,7 @@
                     <% if (hasReactions) { %>
                         <div class="existing-reactions">
                             <% Object.entries(reactionCounts).forEach(([emoji, count]) => { %>
-                                <span class="reaction-count-chip" onclick="toggleReaction('<%= comment._id %>', '<%= emoji %>', this)" title="Click to toggle">
+                                <span class="reaction-count-chip" data-c-action="react" data-c-id="<%= comment._id %>" data-c-emoji="<%= emoji %>" title="Click to toggle">
                                     <%= emoji %> <span class="count-num"><%= count %></span>
                                 </span>
                             <% }); %>
@@ -90,14 +90,14 @@
                 <div class="action-buttons-right" style="display: flex; gap: 10px; align-items: center;">
                     <!-- Pin Button (Blog Author Only) -->
                     <% if (user && blog.createdBy && String(user._id) === String(blog.createdBy._id)) { %>
-                        <button class="btn-action-icon <%= comment.isPinned ? 'active' : '' %>" onclick="togglePin('<%= comment._id %>', this)" title="<%= comment.isPinned ? 'Unpin' : 'Pin' %>">
+                        <button class="btn-action-icon <%= comment.isPinned ? 'active' : '' %>" data-c-action="pin" data-c-id="<%= comment._id %>" title="<%= comment.isPinned ? 'Unpin' : 'Pin' %>">
                             <i class="fas fa-thumbtack"></i>
                         </button>
                     <% } %>
 
                     <!-- Reply Button -->
                     <% if (user && (!comment.createdBy || String(user._id) !== String(comment.createdBy._id))) { %>
-                        <button class="btn-reply-toggle" onclick="toggleReplyForm('<%= comment._id %>')">
+                        <button class="btn-reply-toggle" data-c-action="reply-toggle" data-c-id="<%= comment._id %>">
                             <i class="fas fa-reply"></i> Reply
                         </button>
                     <% } %>
@@ -106,7 +106,7 @@
 
             <!-- Reply Form (Hidden by default) -->
             <% if (user && (!comment.createdBy || String(user._id) !== String(comment.createdBy._id))) { %>
-                <form id="reply-form-<%= comment._id %>" class="reply-form hidden" onsubmit="return handleReplySubmit(event, '<%= comment._id %>')">
+                <form id="reply-form-<%= comment._id %>" class="reply-form hidden" data-c-action="reply-submit" data-c-id="<%= comment._id %>">
                     <div class="reply-input-wrapper">
                         <img loading="lazy" src="<%= user.profilePic %>" class="reply-avatar">
                         <textarea name="content" placeholder="Write a reply..." required rows="1"></textarea>

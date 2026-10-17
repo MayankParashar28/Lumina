@@ -145,7 +145,7 @@
                                 </a>
                                 <!-- Remove Action (Outside anchor to prevent navigation) -->
                                 <button class="remove-btn position-absolute top-0 end-0 m-2"
-                                    onclick="removeBookmark('<%= blog._id %>', this)" title="Remove">
+                                    data-remove-bookmark="<%= blog._id %>" title="Remove">
                                     <i class="fas fa-times"></i>
                                 </button>
                             </div>
@@ -156,7 +156,7 @@
 
         <%- include('./partials/footer') %>
 
-            <script>
+            <script nonce="<%= cspNonce %>">
                 async function removeBookmark(blogId, btn) {
                     if (!confirm('Remove this story from your reading list?')) return;
 
@@ -184,6 +184,12 @@
                         alert("Error removing bookmark.");
                     }
                 }
+
+                // Delegated: replaces inline onclick="removeBookmark(id, this)"
+                document.addEventListener("click", (e) => {
+                    const btn = e.target.closest("[data-remove-bookmark]");
+                    if (btn) removeBookmark(btn.dataset.removeBookmark, btn);
+                });
             </script>
 </body>
 

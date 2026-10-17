@@ -13,7 +13,7 @@ const svgCaptcha = require("svg-captcha");
 const mongoose = require("mongoose");
 const moment = require("moment");
 const flash = require("connect-flash");
-const csurf = require("csurf");
+const csurf = require("@dr.pogodin/csurf").default; // Maintained fork of the archived `csurf`
 const { cosineSimilarity } = require("./services/ai");
 const { optimizeImage } = require("./services/imageHelper");
 const aiRoute = require("./routes/ai");
@@ -22,8 +22,6 @@ const helmet = require("helmet");
 const passport = require("passport"); // ✅ Required since we use passport.initialize()
 require("./services/passport"); // ✅ Import the strategy configuration
 
-
-const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 const checkForAuthenticationCookie = require("./middleware/authentication");
 
@@ -34,7 +32,6 @@ const Notification = require("./models/Notification");
 
 const userRoute = require("./routes/user");
 const blogRoute = require("./routes/blog");
-const subscriptionRoute = require("./routes/subscription");
 const notificationsRoute = require("./routes/notifications");
 const staticRoute = require("./routes/static");
 const adminRoute = require("./routes/admin"); // 🛡️ Import Admin Route
@@ -46,10 +43,13 @@ if (!URI) {
 }
 
 
-mongoose
-  .connect(URI)
-  .then(() => logger.info("✅ MongoDB connected successfully."))
-  .catch((error) => logger.error("❌ Error connecting to MongoDB:", error.message));
+// In tests, the test suite manages its own in-memory MongoDB connection.
+if (process.env.NODE_ENV !== "test") {
+  mongoose
+    .connect(URI)
+    .then(() => logger.info("✅ MongoDB connected successfully."))
+    .catch((error) => logger.error("❌ Error connecting to MongoDB:", error.message));
+}
 
 // Optional MongoClient ping check (non-blocking)
 const { MongoClient, ServerApiVersion } = require("mongodb");
@@ -73,7 +73,7 @@ async function pingMongoDB() {
   }
 }
 
-pingMongoDB();
+if (process.env.NODE_ENV !== "test") pingMongoDB();
 
 const port = process.env.PORT || 8000;
 
@@ -87,14 +87,22 @@ app.set("trust proxy", 1);
 // Middleware
 app.use(compression()); // 🚀 Enable Gzip/Brotli Compression
 
+// 🔐 Per-request CSP nonce for inline <script> blocks. This lets us drop
+// 'unsafe-inline' and 'unsafe-eval' from script-src (so injected <script>
+// tags can't execute). Must run before helmet so the directive can read it.
+const crypto = require("crypto");
+app.use((req, res, next) => {
+  res.locals.cspNonce = crypto.randomBytes(16).toString("base64");
+  next();
+});
+
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
       scriptSrc: [
         "'self'",
-        "'unsafe-inline'",
-        "'unsafe-eval'",
+        (req, res) => `'nonce-${res.locals.cspNonce}'`,
         "https://cdn.jsdelivr.net",
         "https://cdnjs.cloudflare.com",
         "https://code.jquery.com",
@@ -106,7 +114,7 @@ app.use(helmet({
         "https://cdn.quilljs.com",
         "https://unpkg.com"
       ],
-      scriptSrcAttr: ["'unsafe-inline'"],
+      scriptSrcAttr: ["'none'"], // inline event handlers fully removed (delegated via /javascript/app.js)
       styleSrc: [
         "'self'",
         "'unsafe-inline'",
@@ -165,7 +173,6 @@ app.use((req, res, next) => {
     '/about': { title: 'About - Lumina', metaDescription: 'Learn about Lumina — the minimalist blogging platform where ideas come to life. Discover our mission to empower creators and foster meaningful conversations!...', },
     '/privacy': { title: 'Privacy Policy - Lumina', metaDescription: 'Read how Lumina protects your data and respects your privacy. Understand our commitment to securing your personal information and writing content securely!...', },
     '/terms': { title: 'Terms of Service - Lumina', metaDescription: 'Review the terms and conditions for using the Lumina platform. Learn about our community guidelines and policies for publishing and interacting safely!...', },
-    '/subscribe': { title: 'Subscribe - Lumina', metaDescription: 'Unlock AI-powered writing tools with a Lumina subscription. Enhance your creative process with smart suggestions, automated summaries, and more features!...', },
     '/notifications': { title: 'Notifications - Lumina', metaDescription: 'Stay updated with your latest interactions on Lumina. Track comments, likes, and follows from the community on your published stories and insightful replies!...', noIndex: true },
     '/admin': { title: 'Admin Dashboard - Lumina', metaDescription: 'Access the Lumina admin control panel to manage users, review platform analytics, and oversee content moderation for a safe community experience online!...', noIndex: true },
     '/admin/moderation': { title: 'Moderation Logs - Lumina Admin', metaDescription: 'Review flagged content and moderation actions on Lumina. Help maintain a positive, safe, and welcoming environment for all readers and passionate writers!...', noIndex: true },
@@ -221,7 +228,7 @@ app.use(
 const csrfProtection = csurf({ cookie: false }); // Using session-based CSRF
 
 app.use((req, res, next) => {
-  if (req.path === "/subscription/webhook" || req.path === "/ai/generate-comment-suggestions") {
+  if (req.path === "/ai/generate-comment-suggestions") {
     return next();
   }
   csrfProtection(req, res, next);
@@ -517,7 +524,6 @@ app.use("/", staticRoute);
 app.use("/blog", blogRoute);
 app.use("/user", userRoute);
 app.use("/admin", adminRoute); // 🛡️ Mount Admin Route
-app.use("/subscription", subscriptionRoute);
 app.use("/notifications", notificationsRoute);
 app.use("/ai", aiRoute);
 
@@ -550,30 +556,31 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start Server
-// Start Server
-const serverInstance = server.listen(port, () => logger.info(`🚀 App listening on port ${port}`));
+// Start Server (skipped under test — supertest binds its own ephemeral port)
+if (process.env.NODE_ENV !== "test") {
+  const serverInstance = server.listen(port, () => logger.info(`🚀 App listening on port ${port}`));
 
-// 🛑 Graceful Shutdown Logic
-const gracefulShutdown = () => {
-  logger.info("🛑 Received termination signal. Shutting down gracefully...");
+  // 🛑 Graceful Shutdown Logic
+  const gracefulShutdown = () => {
+    logger.info("🛑 Received termination signal. Shutting down gracefully...");
 
-  serverInstance.close(() => {
-    logger.info("✅ HTTP server closed.");
+    serverInstance.close(() => {
+      logger.info("✅ HTTP server closed.");
 
-    mongoose.connection.close()
-      .then(() => {
-        logger.info("✅ MongoDB connection closed.");
-        process.exit(0);
-      });
-  });
+      mongoose.connection.close()
+        .then(() => {
+          logger.info("✅ MongoDB connection closed.");
+          process.exit(0);
+        });
+    });
 
-  // Force close after 10s if hanging
-  setTimeout(() => {
-    logger.error("❌ Could not close connections in time, forcefully shutting down");
-    process.exit(1);
-  }, 10000);
-};
+    // Force close after 10s if hanging
+    setTimeout(() => {
+      logger.error("❌ Could not close connections in time, forcefully shutting down");
+      process.exit(1);
+    }, 10000);
+  };
 
-process.on('SIGTERM', gracefulShutdown);
-process.on('SIGINT', gracefulShutdown);
+  process.on('SIGTERM', gracefulShutdown);
+  process.on('SIGINT', gracefulShutdown);
+}

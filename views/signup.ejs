@@ -71,7 +71,7 @@
 
         <%- include('./partials/footer') %>
 
-            <script>
+            <script nonce="<%= cspNonce %>">
                 // Ripple Effect
                 document.getElementById("submit-button").addEventListener("click", function (e) {
                     const button = this;

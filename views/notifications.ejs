@@ -22,7 +22,7 @@
                                 if (notification.blogId) link=`/blog/${notification.blogId}`; %>
                                 <li id="notif-<%= notification._id %>"
                                     class="<%= notification.read ? 'read' : 'unread' %> notification-item"
-                                    onclick="handleNotificationClick(event, '<%= notification._id %>', '<%= link %>')"
+                                    data-notif-id="<%= notification._id %>" data-notif-link="<%= link %>"
                                     style="cursor: pointer;">
 
                                     <div class="notif-message">
@@ -40,7 +40,7 @@
                                     <!-- Restore Mark as Read Button -->
                                     <% if (!notification.read) { %>
                                         <button class="mark-read-btn"
-                                            onclick="handleNotificationClick(event, '<%= notification._id %>', '#', true)">
+                                            data-notif-read="<%= notification._id %>">
                                             Mark as Read
                                         </button>
                                         <% } %>
@@ -55,7 +55,7 @@
             <!-- Theme Toggle Button -->
 
 
-            <script> // Notification handling
+            <script nonce="<%= cspNonce %>"> // Notification handling
                 // Function to mark notification as read
                 // Function to mark notification as read AND navigate
                 async function handleNotificationClick(event, notificationId, targetUrl, skipNavigation = false) {
@@ -125,6 +125,17 @@
                         const timestamp = el.getAttribute("data-time");
                         el.textContent = timeAgo(timestamp);
                     });
+                });
+
+                // Delegated: replaces inline onclick handlers on the item + mark-read button
+                document.addEventListener("click", (e) => {
+                    const readBtn = e.target.closest("[data-notif-read]");
+                    if (readBtn) {
+                        handleNotificationClick(e, readBtn.dataset.notifRead, "#", true);
+                        return;
+                    }
+                    const item = e.target.closest("[data-notif-id]");
+                    if (item) handleNotificationClick(e, item.dataset.notifId, item.dataset.notifLink);
                 });
             </script>
 </body>

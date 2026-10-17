@@ -1,6 +1,6 @@
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-X0LJ7PMQGK"></script>
-<script>
+<script nonce="<%= cspNonce %>">
     window.dataLayer = window.dataLayer || [];
     function gtag() { dataLayer.push(arguments); }
     gtag('js', new Date());
@@ -8,7 +8,7 @@
 </script>
 
 <!-- Ahrefs Analytics -->
-<script>
+<script nonce="<%= cspNonce %>">
     var ahrefs_analytics_script = document.createElement('script');
     ahrefs_analytics_script.async = true;
     ahrefs_analytics_script.src = 'https://analytics.ahrefs.com/analytics.js';

@@ -28,7 +28,7 @@
                                     </label>
                                 </div>
                                 <input type="file" id="profilePic" name="profilePic" accept="image/*"
-                                    onchange="previewAvatar(this)" hidden>
+                                    data-change="previewAvatar" hidden>
                                 <span class="avatar-hint">Tap to change</span>
                             </div>
 
@@ -90,7 +90,7 @@
                     </div>
 
                     <div class="form-actions">
-                        <button type="button" class="btn-cancel" onclick="history.back()">Cancel</button>
+                        <button type="button" class="btn-cancel" data-action="goBack">Cancel</button>
                         <button type="submit" class="submit-btn" id="saveBtn">Save Changes</button>
                     </div>
                 </form>
@@ -99,7 +99,7 @@
 
         <%- include('./partials/footer') %>
 
-            <script>
+            <script nonce="<%= cspNonce %>">
                 // Avatar Preview
                 function previewAvatar(input) {
                     if (input.files && input.files[0]) {

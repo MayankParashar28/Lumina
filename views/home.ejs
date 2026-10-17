@@ -81,7 +81,7 @@
                                 <div class="blog-card-inner">
                                     <div class="card-image-wrapper">
                                         <% if (blog.coverImageURL) { %>
-                                            <img loading="lazy" src="<%= typeof optimizeImage === 'function' ? optimizeImage(blog.coverImageURL, { width: 600, crop: 'fill' }) : blog.coverImageURL %>" alt="<%= blog.title %>" loading="lazy" onerror="this.onerror=null; this.src='/images/default-cover.png';">
+                                            <img loading="lazy" src="<%= typeof optimizeImage === 'function' ? optimizeImage(blog.coverImageURL, { width: 600, crop: 'fill' }) : blog.coverImageURL %>" alt="<%= blog.title %>" loading="lazy" data-fallback="/images/default-cover.png">
                                             <% } else { %>
                                                 <div class="placeholder-img"></div>
                                                 <% } %>
@@ -109,7 +109,7 @@
                                                 <div class="author-info">
                                                     <% if (blog.createdBy.profilePic) { %>
                                                         <img loading="lazy" src="<%= typeof optimizeImage === 'function' ? optimizeImage(blog.createdBy.profilePic, { width: 48, crop: 'fill' }) : blog.createdBy.profilePic %>" alt="Author"
-                                                            class="author-avatar-small" onerror="this.onerror=null; this.src='/images/default-avatar.png';">
+                                                            class="author-avatar-small" data-fallback="/images/default-avatar.png">
                                                         <% } else { %>
                                                             <div class="author-avatar-small placeholder"></div>
                                                             <% } %>
@@ -154,7 +154,7 @@
 
         <!-- Sanitizer -->
         <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
-        <script>
+        <script nonce="<%= cspNonce %>">
 
             let currentPage = 1;
             let isLoading = false;
@@ -251,7 +251,7 @@
                                 <a href="/blog/${blog._id}" class="blog-card-link">
                                     <div class="blog-card-inner">
                                         <div class="card-image-wrapper">
-                                            ${blog.coverImageURL ? `<img src="${blog.coverImageURL}" alt="${blog.title}" loading="lazy" onerror="this.onerror=null; this.src='/images/default-cover.png';">` : '<div class="placeholder-img"></div>'}
+                                            ${blog.coverImageURL ? `<img src="${blog.coverImageURL}" alt="${blog.title}" loading="lazy" data-fallback="/images/default-cover.png">` : '<div class="placeholder-img"></div>'}
                                             <div class="card-overlay">
                                                 <span class="read-time">${blog.readTime || 1} min read</span>
                                             </div>
@@ -263,7 +263,7 @@
                                             <h2 class="card-heading">${blog.title}</h2>
                                             <div class="card-footer-minimal">
                                                 <div class="author-info">
-                                                    ${blog.createdBy && blog.createdBy.profilePic ? `<img loading="lazy" src="${blog.createdBy.profilePic}" alt="Author" class="author-avatar-small" onerror="this.onerror=null; this.src='/images/default-avatar.png';">` : '<div class="author-avatar-small placeholder"></div>'}
+                                                    ${blog.createdBy && blog.createdBy.profilePic ? `<img loading="lazy" src="${blog.createdBy.profilePic}" alt="Author" class="author-avatar-small" data-fallback="/images/default-avatar.png">` : '<div class="author-avatar-small placeholder"></div>'}
                                                     <span class="author-name">${blog.createdBy ? blog.createdBy.fullName : 'Unknown User'}</span>
                                                 </div>
                                                 <div class="interaction-stats">

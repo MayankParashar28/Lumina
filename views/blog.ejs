@@ -87,7 +87,7 @@
             <% if (blog.coverImageURL) { %>
                 <div class="hero-image-container">
                     <img loading="lazy" src="<%= optimizeImage(blog.coverImageURL, { width: 1200 }) %>" alt="<%= blog.title %>"
-                        class="blog-hero-image" onerror="this.onerror=null; this.src='/images/default-cover.png';">
+                        class="blog-hero-image" data-fallback="/images/default-cover.png">
                 </div>
                 <% } %>
                     <div class="content-wrapper">
@@ -118,7 +118,7 @@
                             </div>
                             <div class="action-item">
                                 <button class="action-icon-btn" title="Comment"
-                                    onclick="document.getElementById('comments').scrollIntoView({ behavior: 'smooth' });">
+                                    data-action="scrollToComments">
                                     <i class="far fa-comment"></i>
                                     <!-- <span class="action-label">
                                     <%= comments.length %>
@@ -153,7 +153,7 @@
 
                     <!-- Sanitizer -->
                     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
-                    <script>
+                    <script nonce="<%= cspNonce %>">
                         document.addEventListener("DOMContentLoaded", function () {
                             const rawContent = document.getElementById("raw-content").textContent; // Get escaped HTML source
                             const blogBody = document.getElementById("blog-content");
@@ -182,7 +182,7 @@
                     </div>
                 </div>
 
-                <script>
+                <script nonce="<%= cspNonce %>">
                     document.addEventListener("DOMContentLoaded", () => {
                         const blogId = "<%= blog._id %>";
                         const suggestionsContainer = document.getElementById("ai-suggestions-container");
@@ -250,7 +250,7 @@
                         <div class="input-box-wrapper">
                             <textarea name="content" class="comment-textarea" placeholder="Add to the discussion..."
                                 required rows="1"
-                                oninput="this.style.height = ''; this.style.height = (this.scrollHeight) + 'px'"></textarea>
+                                data-input="autoGrow"></textarea>
                             <div class="form-actions">
                                 <button type="submit" class="btn-comment">Post Comment</button>
                             </div>
@@ -286,7 +286,7 @@
             </div>
         </section>
 
-        <script>
+        <script nonce="<%= cspNonce %>">
             // Fetch Recommendations
             document.addEventListener("DOMContentLoaded", async () => {
                 const blogId = "<%= blog._id %>";
@@ -319,7 +319,7 @@
         </script>
 
 
-        <script>
+        <script nonce="<%= cspNonce %>">
             // Progress Bar Script
             window.onscroll = function () { myFunction() };
             function myFunction() {
@@ -390,7 +390,7 @@
                 });
             });
         </script>
-        <script>
+        <script nonce="<%= cspNonce %>">
             // Comment Scroll (Already handled inline for mobile, keeping for desktop ID if exists)
             const commentBtn = document.getElementById('comment-btn');
             if (commentBtn) {
@@ -425,14 +425,30 @@
                 if (picker) {
                     picker.classList.toggle('hidden');
                 }
-
-                // Stop propagation so document click doesn't close immediately
-                if (event) event.stopPropagation();
             }
 
-            // Close pickers on outside click
-            document.addEventListener('click', () => {
+            // Close pickers on outside click (but not when clicking a trigger/picker)
+            document.addEventListener('click', (e) => {
+                if (e.target.closest('.reaction-wrapper')) return;
                 document.querySelectorAll('.reaction-picker').forEach(p => p.classList.add('hidden'));
+            });
+
+            // 🧵 Delegated comment actions — replaces the inline onclick/onsubmit in the
+            // comment-thread partial. Works for both server-rendered and socket-injected comments.
+            document.addEventListener('click', (e) => {
+                const el = e.target.closest('[data-c-action]');
+                if (!el || el.tagName === 'FORM') return;
+                const id = el.dataset.cId;
+                switch (el.dataset.cAction) {
+                    case 'pin': togglePin(id, el); break;
+                    case 'react': toggleReaction(id, el.dataset.cEmoji, el); break;
+                    case 'react-picker': toggleReactionPicker(id, el); break;
+                    case 'reply-toggle': toggleReplyForm(id); break;
+                }
+            });
+            document.addEventListener('submit', (e) => {
+                const form = e.target.closest('form[data-c-action="reply-submit"]');
+                if (form) { e.preventDefault(); handleReplySubmit(e, form.dataset.cId); }
             });
 
             // ⚡ Emoji Reaction Logic (Updated)
@@ -626,7 +642,7 @@
         <%- include('./partials/footer') %>
             <!-- ⚡ Socket.io Real-time Comments -->
             <script src="/socket.io/socket.io.js"></script>
-            <script>
+            <script nonce="<%= cspNonce %>">
                 (() => {
                     const socket = io();
                     const blogId = "<%= blog._id %>";

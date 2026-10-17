@@ -49,7 +49,7 @@
                             <label>Verify you are human</label>
                             <div class="captcha-row">
                                 <img loading="lazy" src="/captcha" alt="CAPTCHA" id="captcha-image" height="50">
-                                <button type="button" class="refresh-btn" onclick="refreshCaptcha()">
+                                <button type="button" class="refresh-btn" data-action="refreshCaptcha">
                                     <i class="fas fa-sync-alt"></i>
                                 </button>
                             </div>
@@ -80,7 +80,7 @@
 
         <%- include('./partials/footer') %>
 
-            <script>
+            <script nonce="<%= cspNonce %>">
                 function refreshCaptcha() {
                     const captchaImg = document.getElementById("captcha-image");
                     captchaImg.style.opacity = "0";

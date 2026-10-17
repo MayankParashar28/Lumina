@@ -106,7 +106,7 @@
                             <a href="/blog/<%= blog._id %>" class="story-card">
                                 <div class="story-image-wrapper">
                                     <img loading="lazy" src="<%= typeof optimizeImage === 'function' ? optimizeImage(blog.coverImageURL, { width: 600, crop: 'fill' }) : blog.coverImageURL %>"
-                                        alt="<%= blog.title %>" loading="lazy" onerror="this.onerror=null; this.src='/images/default-cover.png';">
+                                        alt="<%= blog.title %>" loading="lazy" data-fallback="/images/default-cover.png">
                                 </div>
                                 <div class="story-content">
                                     <span class="story-date">
@@ -147,7 +147,7 @@
                             <a href="/blog/<%= blog._id %>" class="story-card">
                                 <div class="story-image-wrapper">
                                     <img loading="lazy" src="<%= typeof optimizeImage === 'function' ? optimizeImage(blog.coverImageURL, { width: 600, crop: 'fill' }) : blog.coverImageURL %>"
-                                        alt="<%= blog.title %>" loading="lazy" onerror="this.onerror=null; this.src='/images/default-cover.png';">
+                                        alt="<%= blog.title %>" loading="lazy" data-fallback="/images/default-cover.png">
                                 </div>
                                 <div class="story-content">
                                     <span class="story-author">by <%= blog.createdBy ? blog.createdBy.fullName
@@ -176,7 +176,7 @@
         <%- include('./partials/footer') %>
 
             <!-- Chart Config -->
-            <script>
+            <script nonce="<%= cspNonce %>">
                 document.addEventListener("DOMContentLoaded", function () {
                     const ctx = document.getElementById("activityChart").getContext("2d");
                     const data = {

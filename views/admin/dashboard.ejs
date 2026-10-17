@@ -311,7 +311,7 @@
                     <a href="/admin/moderation" class="btn btn-sm btn-outline-danger">
                         <i class="bi bi-shield-exclamation me-1"></i> Moderation Logs
                     </a>
-                    <button class="btn btn-sm btn-outline-primary" onclick="location.reload()"><i
+                    <button class="btn btn-sm btn-outline-primary" data-action="reload"><i
                             class="bi bi-arrow-clockwise"></i> Refresh</button>
                 </div>
             </div>
@@ -413,7 +413,7 @@
                                             <td data-label="Actions">
                                                 <% if (u.role !=='ADMIN' ) { %>
                                                     <form action="/admin/user/delete/<%= u._id %>" method="POST"
-                                                        onsubmit="return confirm('Delete this user permanently?');">
+                                                        data-confirm="Delete this user permanently?">
                                                         <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                                                         <button class="btn btn-link text-danger p-0 border-0 small"><i
                                                                 class="fas fa-trash-alt"></i></button>
@@ -526,7 +526,7 @@
                                                         </button>
                                                     </form>
                                                     <form action="/admin/blog/delete/<%= b._id %>" method="POST"
-                                                        onsubmit="return confirm('Delete blog?');">
+                                                        data-confirm="Delete blog?">
                                                         <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                                                         <button class="btn btn-sm p-0 border-0 text-danger"
                                                             title="Delete"><i class="fas fa-trash-alt"></i></button>
@@ -549,7 +549,7 @@
 
             <!-- Chart.js -->
             <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-            <script>
+            <script nonce="<%= cspNonce %>">
                 const analyticsIds = ['userGrowthChart', 'blogGrowthChart'];
                 // Assuming backend passes `analytics` object: { labels: [], userGrowthData: [], blogGrowthData: [] }
                 // We need to inject it safely.
