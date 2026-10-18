@@ -137,7 +137,7 @@
 
 
     <!-- Scripts -->
-    <script src="/socket.io/socket.io.js"></script>
+    <script nonce="<%= cspNonce %>" src="https://cdn.jsdelivr.net/npm/socket.io-client@4.8.1/dist/socket.io.min.js"></script>
     <script nonce="<%= cspNonce %>">
       // Notification Count
       async function updateNotificationCount() {
@@ -209,37 +209,50 @@
 
       // 🔄 Real-Time Notifications
       <% if (locals.user) { %>
-        const socket = io();
-        socket.emit("register", "<%= locals.user._id %>");
+        if (typeof io === "function") {
+          try {
+            const socket = io({
+              reconnectionAttempts: 2,
+              timeout: 3000,
+              autoConnect: true,
+            });
+            socket.on("connect_error", () => {
+              socket.disconnect(); // Gracefully stop polling on serverless like Vercel
+            });
+            socket.emit("register", "<%= locals.user._id %>");
 
-        socket.on("new_notification", (data) => {
-          // 1. Show Toast
-          const container = document.getElementById("flash-toast-container") || createToastContainer();
-          const toast = document.createElement("div");
-          toast.className = "alert alert-info alert-dismissible fade show toast-animate";
-          toast.role = "alert";
-          toast.innerHTML = `
-             <i class="bi bi-bell-fill me-2"></i> ${data.message}
-             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-           `;
-          container.appendChild(toast);
+            socket.on("new_notification", (data) => {
+              // 1. Show Toast
+              const container = document.getElementById("flash-toast-container") || createToastContainer();
+              const toast = document.createElement("div");
+              toast.className = "alert alert-info alert-dismissible fade show toast-animate";
+              toast.role = "alert";
+              toast.innerHTML = `
+                 <i class="bi bi-bell-fill me-2"></i> ${data.message}
+                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+               `;
+              container.appendChild(toast);
 
-          // Auto dismiss
-          setTimeout(() => {
-            toast.classList.add("fog-vanish");
-            setTimeout(() => toast.remove(), 1500);
-          }, 4000);
+              // Auto dismiss
+              setTimeout(() => {
+                toast.classList.add("fog-vanish");
+                setTimeout(() => toast.remove(), 1500);
+              }, 4000);
 
-          // 2. Update Badge
-          const badge = document.getElementById("notification-count");
-          if (badge) {
-            const current = parseInt(badge.innerText) || 0;
-            badge.innerText = current + 1;
-            badge.style.display = "block";
-            badge.classList.add("animate-bounce"); // Optional: bounce animation
-            setTimeout(() => badge.classList.remove("animate-bounce"), 500);
+              // 2. Update Badge
+              const badge = document.getElementById("notification-count");
+              if (badge) {
+                const current = parseInt(badge.innerText) || 0;
+                badge.innerText = current + 1;
+                badge.style.display = "block";
+                badge.classList.add("animate-bounce"); // Optional: bounce animation
+                setTimeout(() => badge.classList.remove("animate-bounce"), 500);
+              }
+            });
+          } catch (e) {
+            console.warn("Real-time notifications unavailable:", e);
           }
-        });
+        }
 
         function createToastContainer() {
           const div = document.createElement("div");

@@ -836,10 +836,22 @@
 
         <%- include('./partials/footer') %>
             <!-- ⚡ Socket.io Real-time Comments -->
-            <script src="/socket.io/socket.io.js"></script>
+            <script nonce="<%= cspNonce %>" src="https://cdn.jsdelivr.net/npm/socket.io-client@4.8.1/dist/socket.io.min.js"></script>
             <script nonce="<%= cspNonce %>">
                 (() => {
-                    const socket = io();
+                    if (typeof io !== "function") return;
+                    let socket = null;
+                    try {
+                        socket = io({
+                            reconnectionAttempts: 2,
+                            timeout: 3000,
+                        });
+                        socket.on("connect_error", () => {
+                            socket.disconnect(); // Gracefully stop polling on serverless like Vercel
+                        });
+                    } catch (e) {
+                        return;
+                    }
                     const blogId = "<%= blog._id %>";
 
                     // 1. Join Blog Room
@@ -874,7 +886,9 @@
                     document.querySelectorAll(".lp-emoji").forEach((btn) => {
                         btn.addEventListener("click", () => {
                             const emoji = btn.dataset.emoji;
-                            socket.emit("float_reaction", { blogId, emoji });
+                            if (socket && socket.connected) {
+                                socket.emit("float_reaction", { blogId, emoji });
+                            }
                             spawnFloat(emoji); // optimistic local echo
                         });
                     });

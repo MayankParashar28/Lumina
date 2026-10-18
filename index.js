@@ -507,6 +507,14 @@ const io = socketIo(server); // Create Socket.io server
 
 app.set("io", io);
 
+// Static fallback for socket.io client bundle (ensures /socket.io/socket.io.js never 404s on serverless)
+try {
+  const socketIoClientDist = path.join(__dirname, "node_modules", "socket.io", "client-dist");
+  app.use("/socket.io", express.static(socketIoClientDist));
+} catch (e) {
+  // Ignore if path not available
+}
+
 // WebSocket connections
 io.on("connection", (socket) => {
   // console.log("🟢 User connected:", socket.id);
