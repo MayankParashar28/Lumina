@@ -278,3 +278,10 @@
 .theme-toggle {
     display: none !important;
 }
+/* Load older notifications */
+.notif-loadmore {
+    display: flex;
+    justify-content: center;
+    margin-top: 1.5rem;
+}
+.notif-loadmore .mark-all-btn { text-decoration: none; }

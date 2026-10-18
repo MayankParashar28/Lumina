@@ -15,6 +15,7 @@ const moment = require("moment");
 const flash = require("connect-flash");
 const { csrfSync } = require("csrf-sync"); // Maintained, CommonJS, session-based CSRF (Vercel/serverless-safe)
 const { cosineSimilarity } = require("./services/ai");
+const { vectorSearchBlogs } = require("./services/vectorSearch"); // Phase-2: Atlas kNN (falls back to cosine)
 const { optimizeImage } = require("./services/imageHelper");
 const aiRoute = require("./routes/ai");
 const socketio = require("socket.io");
@@ -46,7 +47,16 @@ if (!URI) {
 // In tests, the test suite manages its own in-memory MongoDB connection.
 if (process.env.NODE_ENV !== "test") {
   mongoose
-    .connect(URI)
+    .connect(URI, {
+      // 🧱 Phase-2 scaling: a bounded connection pool, reused across requests
+      // (and across serverless invocations on a warm instance), so we don't open
+      // a fresh connection per request or storm Atlas on cold starts.
+      maxPoolSize: Number(process.env.MONGO_POOL_SIZE) || 10,
+      minPoolSize: 0,
+      maxIdleTimeMS: 60000,
+      serverSelectionTimeoutMS: 10000,
+      socketTimeoutMS: 45000,
+    })
     .then(() => logger.info("✅ MongoDB connected successfully."))
     .catch((error) => logger.error("❌ Error connecting to MongoDB:", error.message));
 }
@@ -194,19 +204,30 @@ if (!process.env.SESSION_SECRET) {
   throw new Error("❌ SESSION_SECRET is not defined in .env. Please add it to secure sessions.");
 }
 
-const sessionStore = MongoStore.create({
-  mongoUrl: URI,
-  ttl: 24 * 60 * 60,
-  crypto: {
-    secret: process.env.SESSION_SECRET
-  },
-  autoRemove: 'native',
-  touchAfter: 24 * 3600
-});
+// 🧱 Phase-1 scaling: shared Redis layer (sessions, cache, rate-limit, sockets).
+const redisSvc = require("./services/redis");
 
-sessionStore.on('error', function (error) {
-  console.error('Session Store Error:', error);
-});
+let sessionStore;
+if (redisSvc.enabled) {
+  // Redis sessions: fast, shared across instances, and takes session load off Mongo.
+  // connect-redis v7 (CommonJS) exposes the store as the `.default` export.
+  const RedisStore = require("connect-redis").default || require("connect-redis").RedisStore;
+  sessionStore = new RedisStore({ client: redisSvc.client, prefix: "sess:", ttl: 24 * 60 * 60 });
+  logger.info("✅ Sessions stored in Redis.");
+} else {
+  sessionStore = MongoStore.create({
+    mongoUrl: URI,
+    ttl: 24 * 60 * 60,
+    crypto: {
+      secret: process.env.SESSION_SECRET
+    },
+    autoRemove: 'native',
+    touchAfter: 24 * 3600
+  });
+  sessionStore.on('error', function (error) {
+    console.error('Session Store Error:', error);
+  });
+}
 
 // Session Configuration
 app.use(
@@ -270,17 +291,21 @@ app.get('/user/edit-profile', (req, res) => {
 
 // ⚡ Cache slowly-changing taxonomy (categories / tags / trending tags) used on
 // every home render. Refreshes at most once every 5 minutes.
-let _taxoCache = { data: null, ts: 0 };
-const TAXONOMY_TTL = 5 * 60 * 1000;
+// Taxonomy (categories/tags/trending) is read on nearly every page but changes
+// rarely. Cache it in the shared layer (Redis when enabled, else in-process) so
+// every instance skips these three Mongo aggregations for 5 minutes.
+const TAXONOMY_TTL_SECONDS = 5 * 60;
 async function getTaxonomy() {
-  if (_taxoCache.data && Date.now() - _taxoCache.ts < TAXONOMY_TTL) return _taxoCache.data;
+  const cached = await redisSvc.cache.get("taxonomy");
+  if (cached) return cached;
   const [categories, tags, trendingTagsList] = await Promise.all([
     Blog.distinct("category"),
     Blog.distinct("tags"),
     Blog.getTrendingTags(),
   ]);
-  _taxoCache = { data: { categories, tags, trendingTagsList }, ts: Date.now() };
-  return _taxoCache.data;
+  const data = { categories, tags, trendingTagsList };
+  await redisSvc.cache.set("taxonomy", data, TAXONOMY_TTL_SECONDS);
+  return data;
 }
 
 // Smart Root Route
@@ -288,16 +313,23 @@ app.get("/", async (req, res) => {
   try {
     // If user is NOT logged in, render the Landing Page (formerly /main)
     if (!req.user) {
+      // 🧱 Phase-2 scaling: anonymous reads are the bulk of traffic and never need
+      // read-your-writes, so route them to replica secondaries and cap the list
+      // (the client loads more via /blog/api/feed) instead of fetching every post.
       const blogs = await Blog.find({ status: "published" })
         .sort({ createdAt: -1 })
+        .limit(30)
         .select("-body")
         .populate("createdBy", "fullName profilePic") // Added profilePic for consistency if needed
+        .read("secondaryPreferred")
         .lean();
 
       const featuredBlogs = await Blog.find({ featured: true, status: "published" })
         .sort({ createdAt: -1 })
+        .limit(12)
         .select("-body")
         .populate("createdBy", "fullName profilePic")
+        .read("secondaryPreferred")
         .lean();
 
       const trendingBlogs = await Blog.find({ status: "published" })
@@ -305,6 +337,7 @@ app.get("/", async (req, res) => {
         .limit(3)
         .select("-body")
         .populate("createdBy", "fullName profilePic")
+        .read("secondaryPreferred")
         .lean();
 
       return res.render("main", {
@@ -375,37 +408,42 @@ app.get("/", async (req, res) => {
           // Average it
           userVector.forEach((_, i) => userVector[i] /= validEmbeddings.length);
 
-          // ⚡ OPTIMIZATION: Two-Stage Ranking
-          // Stage 1: Candidate Generation (Fetch only ID + Embedding)
-          const ninetyDaysAgo = new Date();
-          ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-          const candidates = await Blog.find({
-            status: "published",
-            createdAt: { $gte: ninetyDaysAgo },
-            embedding: { $exists: true, $ne: [] }
-          }).select("_id +embedding").lean(); // Fetch strictly minimal data
-
-          // Stage 2: In-Memory Scoring
-          const scoredCandidates = candidates.map(b => {
-            const score = cosineSimilarity(userVector, b.embedding);
-            return { _id: b._id, score };
+          // Preferred: native Atlas Vector Search (scales with content size),
+          // excluding posts already in the reader's history so the feed stays fresh.
+          const viaVector = await vectorSearchBlogs(userVector, {
+            limit: 10,
+            excludeIds: historyIds.map(String),
           });
 
-          // Sort by score (descending)
-          scoredCandidates.sort((a, b) => b.score - a.score);
+          if (viaVector) {
+            blogs = viaVector;
+          } else {
+            // Fallback: in-memory cosine over recent candidates (two-stage ranking).
+            const ninetyDaysAgo = new Date();
+            ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+            const candidates = await Blog.find({
+              status: "published",
+              createdAt: { $gte: ninetyDaysAgo },
+              embedding: { $exists: true, $ne: [] }
+            }).select("_id +embedding").lean();
 
-          // Stage 3: Hydration (Fetch full details only for top 10)
-          const topIds = scoredCandidates.slice(0, 10).map(c => c._id);
-          const topBlogs = await Blog.find({ _id: { $in: topIds } })
-            .select("-body")
-            .populate("createdBy", "fullName profilePic")
-            .lean();
+            const scoredCandidates = candidates.map(b => ({
+              _id: b._id,
+              score: cosineSimilarity(userVector, b.embedding),
+            }));
+            scoredCandidates.sort((a, b) => b.score - a.score);
 
-          // Re-attach scores and preserve order
-          blogs = topBlogs.map(blog => {
-            const candidate = scoredCandidates.find(c => c._id.toString() === blog._id.toString());
-            return { ...blog, score: candidate ? candidate.score : 0 };
-          }).sort((a, b) => b.score - a.score);
+            const topIds = scoredCandidates.slice(0, 10).map(c => c._id);
+            const topBlogs = await Blog.find({ _id: { $in: topIds } })
+              .select("-body")
+              .populate("createdBy", "fullName profilePic")
+              .lean();
+
+            blogs = topBlogs.map(blog => {
+              const candidate = scoredCandidates.find(c => c._id.toString() === blog._id.toString());
+              return { ...blog, score: candidate ? candidate.score : 0 };
+            }).sort((a, b) => b.score - a.score);
+          }
         }
       } catch (pError) {
         console.error("⚠️ Personalization Error:", pError);
@@ -504,6 +542,21 @@ const socketIo = require("socket.io");
 
 const server = http.createServer(app); // Create HTTP server
 const io = socketIo(server); // Create Socket.io server
+
+// 🧱 Phase-1 scaling: with Redis, fan out socket events across every app instance.
+// Without it, sockets only reach clients connected to the same process — fine for
+// one node, broken once you run more than one. (Requires a persistent host; Vercel
+// serverless cannot hold websockets at all.)
+if (redisSvc.enabled) {
+  try {
+    const { createAdapter } = require("@socket.io/redis-adapter");
+    const { pubClient, subClient } = redisSvc.makePubSub();
+    io.adapter(createAdapter(pubClient, subClient));
+    logger.info("✅ Socket.io using Redis adapter (multi-instance fan-out ready).");
+  } catch (e) {
+    logger.error("⚠️ Socket.io Redis adapter setup failed, using single-node:", e.message);
+  }
+}
 
 app.set("io", io);
 

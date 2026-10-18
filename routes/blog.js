@@ -17,6 +17,7 @@ dotenv.config();
 const axios = require("axios"); // Import Axios for GIPHY Proxy
 
 const { generateEmbedding, cosineSimilarity } = require("../services/ai"); // Import AI Service
+const { vectorSearchBlogs } = require("../services/vectorSearch"); // Phase-2: Atlas kNN (falls back to cosine)
 const logger = require("../services/logger"); // Structured Logging
 const rateLimit = require("express-rate-limit");
 
@@ -60,12 +61,17 @@ async function notifyMentions(content, blog, author, req) {
 }
 
 // Rate Limiters
+// Rate-limit counters live in Redis when enabled, so limits hold across all app
+// instances (memory stores reset per-process and let bursts through at scale).
+const { makeRateLimitStore } = require("../services/redis");
+
 const blogLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 5, // Limit each IP to 5 blogs per hour
   message: "Too many blogs created from this IP, please try again after an hour",
   standardHeaders: true,
   legacyHeaders: false,
+  store: makeRateLimitStore("rl:blog:"),
 });
 
 const commentLimiter = rateLimit({
@@ -74,6 +80,7 @@ const commentLimiter = rateLimit({
   message: "Too many comments from this IP, please try again after 15 minutes",
   standardHeaders: true,
   legacyHeaders: false,
+  store: makeRateLimitStore("rl:comment:"),
 });
 
 const { storage, cloudinary, upload } = require("../config/cloudConfig");
@@ -223,23 +230,30 @@ router.get("/search", async (req, res) => {
     // 1) Semantic ranking via embeddings
     const queryEmbedding = await generateEmbedding(q);
     if (queryEmbedding && queryEmbedding.length > 0) {
-      const candidates = await Blog.find({
-        status: "published",
-        embedding: { $exists: true, $ne: [] }
-      })
-        .select("title coverImageURL category createdBy readTime views createdAt +embedding")
-        .populate("createdBy", "fullName profilePic")
-        .lean();
-
-      results = candidates
-        .map(b => {
-          const score = cosineSimilarity(queryEmbedding, b.embedding);
-          const { embedding, ...clean } = b;
-          return { ...clean, score };
+      // Preferred: native Atlas Vector Search (scales with content size).
+      const viaVector = await vectorSearchBlogs(queryEmbedding, { limit: 12 });
+      if (viaVector) {
+        results = viaVector.filter(r => r.score > 0.3);
+      } else {
+        // Fallback: in-memory cosine over all embeddings (fine at small scale).
+        const candidates = await Blog.find({
+          status: "published",
+          embedding: { $exists: true, $ne: [] }
         })
-        .filter(r => r.score > 0.3)
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 12);
+          .select("title coverImageURL category createdBy readTime views createdAt +embedding")
+          .populate("createdBy", "fullName profilePic")
+          .lean();
+
+        results = candidates
+          .map(b => {
+            const score = cosineSimilarity(queryEmbedding, b.embedding);
+            const { embedding, ...clean } = b;
+            return { ...clean, score };
+          })
+          .filter(r => r.score > 0.3)
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 12);
+      }
     }
 
     // 2) Fallback to MongoDB text search if semantic found nothing
@@ -435,6 +449,16 @@ router.get("/recommendations/:id", async (req, res) => {
       return res.json({ blogs: fallback });
     }
 
+    // Preferred: native Atlas Vector Search (scales with content size).
+    const viaVector = await vectorSearchBlogs(currentBlog.embedding, {
+      limit: 3,
+      excludeIds: [req.params.id],
+    });
+    if (viaVector) {
+      return res.json({ blogs: viaVector });
+    }
+
+    // Fallback: in-memory cosine over all embeddings.
     const allBlogs = await Blog.find({
       _id: { $ne: req.params.id },
       status: "published",
@@ -1440,19 +1464,19 @@ router.get("/api/feed", async (req, res) => {
 const { generateSummary, generateCounterpoint, rewriteAtLevel } = require("../services/ai");
 
 // ⚡ Simple in-memory cache (per server instance) for AI-generated post content.
-const _aiCache = new Map();
-const AI_CACHE_TTL = 60 * 60 * 1000; // 1 hour
-const aiCacheGet = (key) => {
-  const hit = _aiCache.get(key);
-  return hit && Date.now() - hit.ts < AI_CACHE_TTL ? hit.val : null;
-};
-const aiCacheSet = (key, val) => _aiCache.set(key, { val, ts: Date.now() });
+// AI results (counterpoint / rewrite / summary) are expensive and rate-limited by
+// Gemini, so cache them in the shared layer (Redis when enabled, else in-process)
+// for an hour. Shared caching means one generation serves every instance + viewer.
+const { cache: sharedCache } = require("../services/redis");
+const AI_CACHE_TTL_SECONDS = 60 * 60; // 1 hour
+const aiCacheGet = (key) => sharedCache.get(`ai:${key}`);
+const aiCacheSet = (key, val) => sharedCache.set(`ai:${key}`, val, AI_CACHE_TTL_SECONDS);
 
 // 🥊 Steelman / Counterpoint (API)
 router.get("/api/:id/counterpoint", async (req, res) => {
   try {
     const key = `cp:${req.params.id}`;
-    const cached = aiCacheGet(key);
+    const cached = await aiCacheGet(key);
     if (cached) return res.json({ counterpoint: cached, cached: true });
 
     const blog = await Blog.findById(req.params.id).select("title body");
@@ -1460,7 +1484,7 @@ router.get("/api/:id/counterpoint", async (req, res) => {
 
     const plainBody = blog.body.replace(/<[^>]*>/g, "");
     const counterpoint = await generateCounterpoint(blog.title, plainBody);
-    aiCacheSet(key, counterpoint);
+    await aiCacheSet(key, counterpoint);
     res.json({ counterpoint });
   } catch (error) {
     logger.error("❌ Counterpoint API Error:", error);
@@ -1473,7 +1497,7 @@ router.get("/api/:id/rewrite", async (req, res) => {
   try {
     const level = req.query.level === "expert" ? "expert" : "eli5";
     const key = `rw:${level}:${req.params.id}`;
-    const cached = aiCacheGet(key);
+    const cached = await aiCacheGet(key);
     if (cached) return res.json({ level, content: cached, cached: true });
 
     const blog = await Blog.findById(req.params.id).select("title body");
@@ -1481,7 +1505,7 @@ router.get("/api/:id/rewrite", async (req, res) => {
 
     const plainBody = blog.body.replace(/<[^>]*>/g, "");
     const content = await rewriteAtLevel(level, blog.title, plainBody);
-    aiCacheSet(key, content);
+    await aiCacheSet(key, content);
     res.json({ level, content });
   } catch (error) {
     logger.error("❌ Rewrite API Error:", error);

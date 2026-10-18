@@ -4,7 +4,7 @@
 <head>
     <%- include('./partials/header') %>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
-        <link rel="stylesheet" href="/css/notifications.css?v=2">
+        <link rel="stylesheet" href="/css/notifications.css?v=3">
 </head>
 
 <body>
@@ -55,6 +55,13 @@
                                 </li>
                                 <% }) %>
                     </ul>
+                    <% if (typeof hasMore !== 'undefined' && hasMore && nextCursor) { %>
+                        <div class="notif-loadmore">
+                            <a class="mark-all-btn" href="/notifications?before=<%= encodeURIComponent(nextCursor) %>">
+                                Load older notifications
+                            </a>
+                        </div>
+                    <% } %>
                     <% } %>
         </div>
 

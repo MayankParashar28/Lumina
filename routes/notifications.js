@@ -14,14 +14,31 @@ router.get("/", async (req, res) => {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    // ✅ Fetch notifications and populate sender details
-    const notifications = await Notification.find({ userId })
+    // 🧱 Phase-2 scaling: cursor-paginate instead of loading every notification.
+    // `before` is the createdAt of the last item on the previous page.
+    const PAGE_SIZE = 20;
+    const query = { userId };
+    if (req.query.before) {
+      const before = new Date(req.query.before);
+      if (!isNaN(before)) query.createdAt = { $lt: before };
+    }
+
+    const batch = await Notification.find(query)
       .populate("senderId", "fullName profilePic")
       .sort({ createdAt: -1 })
-      .lean();  // ✅ Improves performance
+      .limit(PAGE_SIZE + 1) // fetch one extra to detect "has more"
+      .lean();
+
+    const hasMore = batch.length > PAGE_SIZE;
+    const notifications = batch.slice(0, PAGE_SIZE);
+    const nextCursor = hasMore && notifications.length
+      ? new Date(notifications[notifications.length - 1].createdAt).toISOString()
+      : null;
 
     res.render("notifications", {
       notifications,
+      hasMore,
+      nextCursor,
       searchQuery: "",
       user: req.user
     });

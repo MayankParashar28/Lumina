@@ -8,6 +8,8 @@ const crypto = require("crypto");
 const { sendVerificationEmail } = require("../services/emailService");
 const passport = require("passport");
 const logger = require("../services/logger"); // Structured Logging
+// Shared rate-limit counters across instances (Redis when enabled, else memory).
+const { makeRateLimitStore } = require("../services/redis");
 
 // Rate limit for authentication
 const authLimiter = rateLimit({
@@ -16,6 +18,7 @@ const authLimiter = rateLimit({
   message: "Too many login attempts from this IP, please try again after 15 minutes",
   standardHeaders: true,
   legacyHeaders: false,
+  store: makeRateLimitStore("rl:auth:"),
 });
 
 // Rate limit for sending emails (Forgot Password)
@@ -25,6 +28,7 @@ const emailLimiter = rateLimit({
   message: "Too many emails sent from this IP, please try again after an hour",
   standardHeaders: true,
   legacyHeaders: false,
+  store: makeRateLimitStore("rl:email:"),
 });
 
 // Rate limit for verification tokens (Verify Email, Reset Password)
@@ -34,6 +38,7 @@ const verifyLimiter = rateLimit({
   message: "Too many verification attempts, please try again later",
   standardHeaders: true,
   legacyHeaders: false,
+  store: makeRateLimitStore("rl:verify:"),
 });
 
 
@@ -290,6 +295,7 @@ router.get("/vibe", async (req, res) => {
 
   try {
     const { cosineSimilarity } = require("../services/ai");
+    const { vectorSearchBlogs } = require("../services/vectorSearch"); // Phase-2: Atlas kNN (falls back to cosine)
     const meId = String(req.user._id);
 
     // 1. Gather the signals that describe this reader's taste:
@@ -335,31 +341,46 @@ router.get("/vibe", async (req, res) => {
       });
     }
 
-    // 3. Score every other published post against the taste vector.
+    // 3. Score candidate posts against the taste vector.
     const followingSet = new Set((me.following || []).map(String));
-    const candidates = await Blog.find({
-      status: "published",
-      createdBy: { $ne: req.user._id },
-      _id: { $nin: [...tasteIds] }, // don't recommend what they've already engaged with
-    })
-      .select("+embedding title coverImageURL createdAt readTime createdBy")
-      .populate("createdBy", "fullName profilePic")
-      .lean();
+    let scored = [];
 
-    const scored = [];
+    // Preferred: native Atlas Vector Search (scales with content size). Over-fetch
+    // so there's enough to rank authors, then drop the reader's own posts.
+    const viaVector = await vectorSearchBlogs(tasteVector, { limit: 60, excludeIds: [...tasteIds] });
+    if (viaVector) {
+      scored = viaVector.filter(
+        (b) => b.createdBy && String(b.createdBy._id) !== meId && b.score > 0
+      );
+    } else {
+      // Fallback: in-memory cosine over all candidate embeddings.
+      const candidates = await Blog.find({
+        status: "published",
+        createdBy: { $ne: req.user._id },
+        _id: { $nin: [...tasteIds] }, // don't recommend what they've already engaged with
+      })
+        .select("+embedding title coverImageURL createdAt readTime createdBy")
+        .populate("createdBy", "fullName profilePic")
+        .lean();
+
+      for (const b of candidates) {
+        if (!Array.isArray(b.embedding) || !b.embedding.length) continue;
+        if (!b.createdBy) continue;
+        const score = cosineSimilarity(tasteVector, b.embedding);
+        if (!score || score <= 0) continue;
+        const { embedding, ...clean } = b;
+        scored.push({ ...clean, score });
+      }
+    }
+
+    // Aggregate per author: best match (0.6) + average match (0.4).
     const authorAgg = new Map(); // authorId → { author, sum, count, best }
-    for (const b of candidates) {
-      if (!Array.isArray(b.embedding) || !b.embedding.length) continue;
-      if (!b.createdBy) continue;
-      const score = cosineSimilarity(tasteVector, b.embedding);
-      if (!score || score <= 0) continue;
-      scored.push({ ...b, score });
-
+    for (const b of scored) {
       const aId = String(b.createdBy._id);
       const entry = authorAgg.get(aId) || { author: b.createdBy, sum: 0, count: 0, best: 0 };
-      entry.sum += score;
+      entry.sum += b.score;
       entry.count += 1;
-      entry.best = Math.max(entry.best, score);
+      entry.best = Math.max(entry.best, b.score);
       authorAgg.set(aId, entry);
     }
 
