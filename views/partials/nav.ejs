@@ -23,6 +23,15 @@
           Mission
         </a>
       </li>
+      <% if (locals.user) { %>
+        <!-- Search inside the mobile slide-out menu (hidden on desktop) -->
+        <li class="nav-search-mobile">
+          <form method="GET" action="/blog/search" role="search">
+            <i class="bi bi-search"></i>
+            <input type="text" name="q" placeholder="Search by meaning..." autocomplete="off" aria-label="Search stories">
+          </form>
+        </li>
+      <% } %>
     </ul>
 
     <!-- Right Actions -->
@@ -34,8 +43,8 @@
           <button id="searchToggle" class="icon-btn">
             <i class="bi bi-search"></i>
           </button>
-          <form class="floating-search" method="GET" action="/" id="searchForm">
-            <input id="searchInput" type="text" name="searchQuery" placeholder="Search..." autocomplete="off">
+          <form class="floating-search" method="GET" action="/blog/search" id="searchForm">
+            <input id="searchInput" type="text" name="q" placeholder="Search by meaning..." autocomplete="off">
           </form>
         </div>
 
@@ -68,6 +77,9 @@
               <a href="/admin" class="dropdown-item fw-bold text-primary">Admin Panel</a>
               <% } %>
                 <a href="/blog/drafts" class="dropdown-item">My Drafts</a>
+                <a href="/user/reading-history" class="dropdown-item">Recently Read</a>
+                <a href="/user/vibe" class="dropdown-item">Your Vibe</a>
+                <a href="/user/analytics" class="dropdown-item">Analytics</a>
                 <a href="/user/profile" class="dropdown-item">Profile</a>
                 <a href="/user/logout" class="dropdown-item danger">Log Out</a>
           </div>
@@ -120,10 +132,8 @@
   </div>
   <% } %>
 
-    <!-- Bootstrap Icons + Bundle -->
+    <!-- Bootstrap Icons (the Bootstrap JS bundle is already loaded once in the header) -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"
-      crossorigin="anonymous"></script>
 
 
     <!-- Scripts -->

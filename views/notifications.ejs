@@ -4,7 +4,7 @@
 <head>
     <%- include('./partials/header') %>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
-        <link rel="stylesheet" href="/css/notifications.css">
+        <link rel="stylesheet" href="/css/notifications.css?v=2">
 </head>
 
 <body>
@@ -15,6 +15,14 @@
             <% if (notifications.length===0) { %>
                 <p class="no-notifications">No new notifications.</p>
                 <% } else { %>
+                    <div class="notif-header">
+                        <h2 class="notif-title">Notifications</h2>
+                        <% if (notifications.some(n => !n.read)) { %>
+                            <button id="mark-all-read" type="button" class="mark-all-btn">
+                                <i class="fas fa-check-double"></i> Mark all as read
+                            </button>
+                        <% } %>
+                    </div>
                     <ul id="notifications">
                         <% notifications.forEach(notification=> { %>
                             <% let link='#' ; if (notification.targetUrl) link=notification.targetUrl; else if
@@ -56,7 +64,18 @@
 
 
             <script nonce="<%= cspNonce %>"> // Notification handling
-                // Function to mark notification as read
+                // Keep the nav bell badge in sync with the server's unread count.
+                function updateBell(count) {
+                    const badge = document.getElementById("notification-count");
+                    if (!badge) return;
+                    if (count > 0) {
+                        badge.innerText = count > 99 ? "99+" : count;
+                        badge.style.display = "flex";
+                    } else {
+                        badge.style.display = "none";
+                    }
+                }
+
                 // Function to mark notification as read AND navigate
                 async function handleNotificationClick(event, notificationId, targetUrl, skipNavigation = false) {
                     // Stop event bubbling so row click doesn't trigger if button clicked
@@ -73,12 +92,21 @@
                         if (btn) btn.style.display = 'none';
                     }
 
-                    // 2. Fire request in background
+                    // If nothing is unread anymore, drop the "Mark all as read" button.
+                    if (!document.querySelector("#notifications li.unread")) {
+                        const allBtn = document.getElementById("mark-all-read");
+                        if (allBtn) allBtn.style.display = "none";
+                    }
+
+                    // 2. Persist to the server (CSRF token required) and sync the bell.
                     fetch(`/notifications/mark-read/${notificationId}`, {
                         method: "POST",
-                        headers: { "Content-Type": "application/json" },
+                        headers: { "Content-Type": "application/json", "x-csrf-token": "<%= csrfToken %>" },
                         keepalive: true
-                    }).catch(err => console.error("Mark read failed", err));
+                    })
+                        .then(r => (r.ok ? r.json() : null))
+                        .then(data => { if (data && typeof data.count === "number") updateBell(data.count); })
+                        .catch(err => console.error("Mark read failed", err));
 
                     // 3. Navigate to the content (unless skipped)
                     if (!skipNavigation && targetUrl && targetUrl !== '#' && targetUrl !== 'undefined') {
@@ -127,8 +155,28 @@
                     });
                 });
 
+                // Mark ALL as read
+                async function markAllRead() {
+                    document.querySelectorAll("#notifications li.unread").forEach(li => {
+                        li.classList.add("read");
+                        li.classList.remove("unread");
+                        const b = li.querySelector(".mark-read-btn");
+                        if (b) b.style.display = "none";
+                    });
+                    const allBtn = document.getElementById("mark-all-read");
+                    if (allBtn) allBtn.style.display = "none";
+                    updateBell(0);
+                    try {
+                        await fetch("/notifications/mark-all-read", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json", "x-csrf-token": "<%= csrfToken %>" }
+                        });
+                    } catch (err) { console.error("Mark all read failed", err); }
+                }
+
                 // Delegated: replaces inline onclick handlers on the item + mark-read button
                 document.addEventListener("click", (e) => {
+                    if (e.target.closest("#mark-all-read")) { markAllRead(); return; }
                     const readBtn = e.target.closest("[data-notif-read]");
                     if (readBtn) {
                         handleNotificationClick(e, readBtn.dataset.notifRead, "#", true);

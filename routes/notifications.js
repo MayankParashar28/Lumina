@@ -97,6 +97,23 @@ router.post("/mark-read/:id", async (req, res) => {
 });
 
 
+// 📌 Mark ALL of the user's notifications as read
+router.post("/mark-all-read", async (req, res) => {
+  try {
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+    await Notification.updateMany(
+      { userId: req.user._id, read: false },
+      { read: true }
+    );
+    return res.json({ success: true, count: 0 });
+  } catch (error) {
+    logger.error("❌ Error marking all notifications as read:", error);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
 // 📌 Get unread notifications count
 router.get("/unread-count", async (req, res) => {
   try {

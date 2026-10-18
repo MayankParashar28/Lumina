@@ -69,7 +69,7 @@ function cosineSimilarity(vecA, vecB) {
 async function generateSummary(text) {
     if (!genAI) return { summary: "AI service unavailable.", highlights: [] };
 
-    const modelsToTry = ["gemini-2.0-flash", "gemini-flash-latest", "gemini-pro-latest"];
+    const modelsToTry = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-pro-latest"];
     let lastError = null;
 
     for (const modelId of modelsToTry) {
@@ -100,4 +100,77 @@ async function generateSummary(text) {
     };
 }
 
-module.exports = { generateEmbedding, cosineSimilarity, generateSummary };
+/**
+ * Generates the strongest good-faith counter-argument ("steelman") to a post.
+ * @param {string} title
+ * @param {string} text - plain-text blog body
+ * @returns {Promise<string>} the counterpoint text (HTML-free)
+ */
+async function generateCounterpoint(title, text) {
+    if (!genAI) return "AI service unavailable.";
+
+    const modelsToTry = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-pro-latest"];
+    for (const modelId of modelsToTry) {
+        try {
+            const model = genAI.getGenerativeModel({ model: modelId });
+            const prompt = [
+                "You are a sharp, fair-minded critic. Read the blog post below and write the STRONGEST,",
+                "good-faith opposing view — what a thoughtful, well-informed skeptic would argue.",
+                "Steelman the other side; do not strawman. Be respectful and specific.",
+                "Return 2-4 short paragraphs of plain text. No markdown, no headers, no preamble.",
+                "",
+                `Title: ${title}`,
+                `Post: ${String(text).substring(0, 5000)}`,
+            ].join("\n");
+
+            const result = await model.generateContent(prompt);
+            const response = await result.response;
+            const out = (response.text() || "").trim();
+            if (out) return out;
+        } catch (error) {
+            logger.error(`❌ Counterpoint model ${modelId} failed:`, error.message);
+        }
+    }
+    return "Could not generate a counterpoint right now. Please try again later.";
+}
+
+/**
+ * Rewrites a post at a given reading level.
+ * @param {string} level - "eli5" | "expert"
+ * @param {string} title
+ * @param {string} text - plain-text blog body
+ * @returns {Promise<string>} rewritten text (plain text)
+ */
+async function rewriteAtLevel(level, title, text) {
+    if (!genAI) return "AI service unavailable.";
+
+    const instructions = {
+        eli5: "Rewrite the post so a curious 12-year-old can understand it. Use simple words, short sentences, and everyday analogies. Keep all the key ideas.",
+        expert: "Rewrite the post for a domain expert. Be precise and technical, use correct terminology, and go deeper where the original was shallow. Keep it concise.",
+    };
+    const instruction = instructions[level] || instructions.eli5;
+
+    const modelsToTry = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-pro-latest"];
+    for (const modelId of modelsToTry) {
+        try {
+            const model = genAI.getGenerativeModel({ model: modelId });
+            const prompt = [
+                instruction,
+                "Return plain text only (short paragraphs). No markdown, no headers, no preamble.",
+                "",
+                `Title: ${title}`,
+                `Post: ${String(text).substring(0, 6000)}`,
+            ].join("\n");
+
+            const result = await model.generateContent(prompt);
+            const response = await result.response;
+            const out = (response.text() || "").trim();
+            if (out) return out;
+        } catch (error) {
+            logger.error(`❌ Rewrite (${level}) model ${modelId} failed:`, error.message);
+        }
+    }
+    return "Could not rewrite this post right now. Please try again later.";
+}
+
+module.exports = { generateEmbedding, cosineSimilarity, generateSummary, generateCounterpoint, rewriteAtLevel };

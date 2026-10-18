@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <%- include('./partials/header') %>
+    <style>
+        .search-container { max-width: 1000px; margin: 8rem auto 4rem; padding: 0 1.5rem; }
+        .search-form { display: flex; gap: 0.6rem; margin-bottom: 0.75rem; }
+        .search-form input {
+            flex: 1; padding: 0.9rem 1.2rem; font-size: 1rem; border: 1.5px solid var(--border-color);
+            border-radius: 999px; outline: none; background: var(--bg-color); color: var(--text-color);
+        }
+        .search-form input:focus { border-color: #6366f1; }
+        .search-form button {
+            padding: 0 1.6rem; border: none; border-radius: 999px; font-weight: 600; cursor: pointer;
+            background: linear-gradient(135deg, #6366f1, #06b6d4); color: #fff;
+        }
+        .search-meta { font-size: 0.85rem; color: #888; margin-bottom: 2rem; }
+        .search-meta .badge-mode { display: inline-flex; align-items: center; gap: 0.3rem; background: #eef2ff; color: #6366f1; font-weight: 600; padding: 0.15rem 0.6rem; border-radius: 999px; font-size: 0.72rem; }
+        .search-grid { display: grid; gap: 1.1rem; }
+        .search-card {
+            display: flex; gap: 1.25rem; align-items: center; text-decoration: none; color: inherit;
+            background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 12px; padding: 1rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .search-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+        .search-img { width: 120px; height: 76px; object-fit: cover; border-radius: 8px; flex-shrink: 0; background: var(--accent-gray); }
+        .search-info { flex: 1; min-width: 0; }
+        .search-cat { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #6366f1; }
+        .search-name { font-size: 1.15rem; font-weight: 700; margin: 0.2rem 0 0.4rem; }
+        .search-row-meta { font-size: 0.82rem; color: #888; display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+        .search-score { margin-left: auto; font-size: 0.72rem; color: #adb5bd; white-space: nowrap; }
+        .empty-state { text-align: center; padding: 4rem 1rem; color: #6c757d; }
+        @media (max-width: 600px) {
+            .search-card { flex-direction: column; align-items: flex-start; }
+            .search-img { width: 100%; height: 160px; }
+            .search-score { margin-left: 0; }
+        }
+    </style>
+</head>
+
+<body>
+    <%- include('./partials/nav', { searchQuery: '' }) %>
+
+    <div class="search-container">
+        <form class="search-form" method="GET" action="/blog/search">
+            <input type="text" name="q" value="<%= query %>" placeholder="Search by meaning — e.g. 'how AI is changing work'" autofocus>
+            <button type="submit">Search</button>
+        </form>
+
+        <% if (query) { %>
+            <p class="search-meta">
+                <%= results.length %> result<%= results.length === 1 ? '' : 's' %> for “<strong><%= query %></strong>”
+                <% if (mode === 'semantic') { %><span class="badge-mode">✨ by meaning</span><% } else if (mode === 'text') { %><span class="badge-mode">keyword match</span><% } %>
+            </p>
+        <% } %>
+
+        <% if (query && results.length === 0) { %>
+            <div class="empty-state">
+                <i class="fas fa-magnifying-glass fa-3x mb-3" style="opacity: 0.3;"></i>
+                <h3>No matches found</h3>
+                <p>Try different words or a broader idea.</p>
+            </div>
+        <% } else if (!query) { %>
+            <div class="empty-state">
+                <i class="fas fa-wand-magic-sparkles fa-3x mb-3" style="opacity: 0.3;"></i>
+                <h3>Search Lumina by meaning</h3>
+                <p>Describe the idea you're looking for — not just keywords.</p>
+            </div>
+        <% } else { %>
+            <div class="search-grid">
+                <% results.forEach(blog => { %>
+                    <a href="/blog/<%= blog._id %>" class="search-card">
+                        <img loading="lazy"
+                             src="<%= typeof optimizeImage === 'function' ? optimizeImage(blog.coverImageURL || '/images/default-cover.png', { width: 300, crop: 'fill' }) : (blog.coverImageURL || '/images/default-cover.png') %>"
+                             alt="" class="search-img" data-fallback="/images/default-cover.png">
+                        <div class="search-info">
+                            <% if (blog.category) { %><span class="search-cat"><%= blog.category %></span><% } %>
+                            <h2 class="search-name"><%= blog.title %></h2>
+                            <div class="search-row-meta">
+                                <% if (blog.createdBy) { %><span>by <%= blog.createdBy.fullName %></span><span>·</span><% } %>
+                                <span><%= blog.readTime || 1 %> min read</span>
+                                <span>·</span>
+                                <span><%= blog.views || 0 %> views</span>
+                            </div>
+                        </div>
+                        <% if (typeof blog.score === 'number' && mode === 'semantic') { %>
+                            <span class="search-score"><%= Math.round(blog.score * 100) %>% match</span>
+                        <% } %>
+                    </a>
+                <% }) %>
+            </div>
+        <% } %>
+    </div>
+
+    <%- include('./partials/footer') %>
+</body>
+
+</html>

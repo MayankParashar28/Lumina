@@ -73,7 +73,9 @@ async function pingMongoDB() {
   }
 }
 
-if (process.env.NODE_ENV !== "test") pingMongoDB();
+// Diagnostic only — skip in production (avoids a second DB connection on every
+// serverless cold start) and in tests.
+if (process.env.NODE_ENV !== "test" && process.env.NODE_ENV !== "production") pingMongoDB();
 
 const port = process.env.PORT || 8000;
 
@@ -105,10 +107,7 @@ app.use(helmet({
         (req, res) => `'nonce-${res.locals.cspNonce}'`,
         "https://cdn.jsdelivr.net",
         "https://cdnjs.cloudflare.com",
-        "https://code.jquery.com",
         "https://kit.fontawesome.com",
-        "https://www.google.com",
-        "https://www.gstatic.com",
         "https://www.googletagmanager.com",
         "https://analytics.ahrefs.com",
         "https://cdn.quilljs.com",
@@ -224,11 +223,17 @@ app.use(
   })
 );
 
-// CSRF Protection — session-based; token comes from the _csrf form field or the
-// x-csrf-token header (matching every form/fetch in the app).
+// CSRF Protection — session-based; token comes from the _csrf form field, the
+// x-csrf-token header, or the _csrf query param. The query param is needed for
+// multipart/form-data posts (new/edit blog): their body isn't parsed until multer
+// runs inside the route, which is AFTER this global CSRF check, so the token is
+// passed on the action URL instead.
 const { generateToken, csrfSynchronisedProtection } = csrfSync({
   getTokenFromRequest: (req) =>
-    (req.body && req.body._csrf) || req.headers["x-csrf-token"] || req.headers["csrf-token"],
+    (req.body && req.body._csrf) ||
+    (req.query && req.query._csrf) ||
+    req.headers["x-csrf-token"] ||
+    req.headers["csrf-token"],
 });
 const csrfProtection = csrfSynchronisedProtection;
 
@@ -262,6 +267,21 @@ app.get('/user/edit-profile', (req, res) => {
 
 
 
+
+// ⚡ Cache slowly-changing taxonomy (categories / tags / trending tags) used on
+// every home render. Refreshes at most once every 5 minutes.
+let _taxoCache = { data: null, ts: 0 };
+const TAXONOMY_TTL = 5 * 60 * 1000;
+async function getTaxonomy() {
+  if (_taxoCache.data && Date.now() - _taxoCache.ts < TAXONOMY_TTL) return _taxoCache.data;
+  const [categories, tags, trendingTagsList] = await Promise.all([
+    Blog.distinct("category"),
+    Blog.distinct("tags"),
+    Blog.getTrendingTags(),
+  ]);
+  _taxoCache = { data: { categories, tags, trendingTagsList }, ts: Date.now() };
+  return _taxoCache.data;
+}
 
 // Smart Root Route
 app.get("/", async (req, res) => {
@@ -419,9 +439,7 @@ app.get("/", async (req, res) => {
       res.locals.pagination = null;
     }
 
-    const categories = await Blog.distinct("category");
-    const tags = await Blog.distinct("tags");
-    const trendingTagsList = await Blog.getTrendingTags(); // 📈 Fetch Top Tags
+    const { categories, tags, trendingTagsList } = await getTaxonomy(); // ⚡ cached (5 min)
 
     // Fetch featured and trending blogs
     const featuredBlogs = await Blog.find({ featured: true, status: "published" })
@@ -437,12 +455,30 @@ app.get("/", async (req, res) => {
       .populate("createdBy", "fullName profilePic")
       .lean();
 
+    // 🕘 "Continue reading": the user's last few distinct read blogs (newest first).
+    let recentlyRead = [];
+    if (req.user.readingHistory && req.user.readingHistory.length > 0) {
+      const distinctIds = [...new Set(
+        [...req.user.readingHistory]
+          .sort((a, b) => new Date(b.viewedAt) - new Date(a.viewedAt))
+          .map(h => h.blogId.toString())
+      )].slice(0, 4);
+      const found = await Blog.find({ _id: { $in: distinctIds }, status: "published" })
+        .select("-body")
+        .populate("createdBy", "fullName profilePic")
+        .lean();
+      recentlyRead = distinctIds
+        .map(id => found.find(b => b._id.toString() === id))
+        .filter(Boolean);
+    }
+
     // Render the home page
     res.render("home", {
       user: req.user,
       blogs: blogs || [],
       featuredBlogs,
       trendingBlogs,
+      recentlyRead,
       trendingTagsList, // Pass to view
       categories,
       tags,
@@ -482,11 +518,29 @@ io.on("connection", (socket) => {
     }
   });
 
+  // 👀 Live co-reading: track readers per blog + broadcast the count
+  const broadcastReaderCount = (blogId) => {
+    const room = io.sockets.adapter.rooms.get(`blog:${blogId}`);
+    io.to(`blog:${blogId}`).emit("reader_count", room ? room.size : 0);
+  };
+
   socket.on("join_blog", (blogId) => {
-    if (blogId) {
-      socket.join(`blog:${blogId}`);
-      // console.log(`✅ User joined blog room: blog:${blogId}`);
+    if (!blogId) return;
+    socket.join(`blog:${blogId}`);
+    socket.data.blogId = blogId;
+    broadcastReaderCount(blogId);
+  });
+
+  // 🎈 Floating live reactions (broadcast to everyone else reading the post)
+  const FLOAT_EMOJIS = ["❤️", "🔥", "👏", "😮", "💡", "👍"];
+  socket.on("float_reaction", ({ blogId, emoji } = {}) => {
+    if (blogId && FLOAT_EMOJIS.includes(emoji)) {
+      socket.to(`blog:${blogId}`).emit("float_reaction", { emoji });
     }
+  });
+
+  socket.on("disconnect", () => {
+    if (socket.data && socket.data.blogId) broadcastReaderCount(socket.data.blogId);
   });
 });
 module.exports = app;
@@ -531,6 +585,29 @@ app.use("/user", userRoute);
 app.use("/admin", adminRoute); // 🛡️ Mount Admin Route
 app.use("/notifications", notificationsRoute);
 app.use("/ai", aiRoute);
+
+// 🗓️ Scheduled publishing
+const { publishDueScheduled } = require("./services/scheduler");
+
+// Cron endpoint (for serverless platforms like Vercel Cron). Protected by
+// CRON_SECRET when set — accepts it as "Authorization: Bearer <secret>",
+// an "x-cron-secret" header, or a "?secret=" query param.
+app.get("/cron/publish-scheduled", async (req, res) => {
+  const secret = process.env.CRON_SECRET;
+  if (secret) {
+    const bearer = (req.headers.authorization || "").replace(/^Bearer\s+/i, "");
+    if (bearer !== secret && req.headers["x-cron-secret"] !== secret && req.query.secret !== secret) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+  }
+  const published = await publishDueScheduled(app.get("io"));
+  res.json({ published });
+});
+
+// Interval for long-lived servers (no-op on serverless cold-starts; skipped in tests).
+if (process.env.NODE_ENV !== "test") {
+  setInterval(() => publishDueScheduled(app.get("io")), 60 * 1000).unref?.();
+}
 
 
 // 404 Page

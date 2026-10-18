@@ -63,17 +63,28 @@
                                             <% } else { %>
                                                 <div class="placeholder-img"></div>
                                                 <% } %>
-                                                    <div class="draft-badge">
-                                                        <i class="fas fa-pen-nib"></i> Draft
-                                                    </div>
+                                                    <% if (blog.status === 'scheduled') { %>
+                                                        <div class="draft-badge" style="color:#06b6d4;">
+                                                            <i class="fas fa-clock"></i> Scheduled
+                                                        </div>
+                                                    <% } else { %>
+                                                        <div class="draft-badge">
+                                                            <i class="fas fa-pen-nib"></i> Draft
+                                                        </div>
+                                                    <% } %>
                                     </div>
                                     <div class="card-content">
                                         <h2 class="card-heading">
                                             <%= blog.title %>
                                         </h2>
                                         <div class="card-footer-minimal">
-                                            <span class="time-ago">Last edited <%= new
-                                                    Date(blog.updatedAt).toLocaleDateString() %></span>
+                                            <span class="time-ago">
+                                                <% if (blog.status === 'scheduled' && blog.publishAt) { %>
+                                                    Publishes <%= new Date(blog.publishAt).toLocaleString() %>
+                                                <% } else { %>
+                                                    Last edited <%= new Date(blog.updatedAt).toLocaleDateString() %>
+                                                <% } %>
+                                            </span>
                                             <div class="interaction-stats">
                                                 <span style="color: var(--accent-primary);">Click to Edit <i
                                                         class="fas fa-arrow-right"></i></span>

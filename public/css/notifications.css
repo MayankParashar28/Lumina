@@ -99,14 +99,54 @@
     /* Subtle highlight */
 }
 
+/* Unread: bright with an indigo accent rail so it clearly stands out. */
+#notifications li.unread {
+    background-color: #fff;
+    border-left: 4px solid #6366f1;
+}
+
+/* Read: muted/greyed, no accent — clearly "handled". */
 #notifications li.read {
-    background-color: var(--accent-gray);
-    opacity: 0.7;
+    background-color: var(--accent-gray, #f3f4f6);
+    opacity: 0.65;
     border-color: transparent;
+    border-left: 4px solid transparent;
 }
 
 [data-theme="dark"] #notifications li.read {
     background-color: #333;
+}
+
+/* Header with "Mark all as read" */
+.notif-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.25rem;
+    gap: 1rem;
+}
+.notif-title {
+    font-weight: 800;
+    font-size: 1.4rem;
+    margin: 0;
+}
+.mark-all-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    color: #4f46e5;
+    font-size: 0.82rem;
+    font-weight: 700;
+    padding: 0.5rem 0.9rem;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.mark-all-btn:hover {
+    background: #eef2ff;
+    border-color: #c7d2fe;
 }
 
 .notif-message {

@@ -7,13 +7,92 @@
 <link rel="stylesheet" href="/css/blog.css?v=10033">
 <!-- Quill Theme for matching styles -->
 <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+<style>
+    .tldr-container { max-width: 1000px; margin: 0 auto 2.5rem; padding: 0 1rem; }
+    .tldr-btn {
+        display: inline-flex; align-items: center; gap: 0.5rem;
+        background: linear-gradient(135deg, #6366f1, #06b6d4); color: #fff;
+        border: none; padding: 0.6rem 1.3rem; border-radius: 999px;
+        font-weight: 600; font-size: 0.9rem; cursor: pointer;
+        box-shadow: 0 4px 14px rgba(99,102,241,0.25); transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .tldr-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(99,102,241,0.35); }
+    .tldr-btn:disabled { opacity: 0.7; cursor: default; transform: none; }
+    .tldr-panel {
+        margin-top: 1.2rem; background: var(--card-bg, #fff); border: 1px solid var(--border-color, #e5e7eb);
+        border-left: 4px solid #6366f1; border-radius: 12px; padding: 1.4rem 1.6rem;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.04); animation: tldrIn 0.35s ease;
+    }
+    .tldr-panel.hidden { display: none; }
+    .tldr-panel h4 { margin: 0 0 0.6rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; color: #6366f1; }
+    .tldr-panel .tldr-summary { font-size: 1.05rem; line-height: 1.7; color: var(--text-color, #222); margin-bottom: 1rem; }
+    .tldr-panel ul { margin: 0; padding-left: 1.2rem; }
+    .tldr-panel li { margin-bottom: 0.5rem; line-height: 1.5; }
+    .mention { color: #6366f1; font-weight: 600; background: rgba(99,102,241,0.08); padding: 0 3px; border-radius: 4px; }
+    .ai-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; }
+    .tldr-btn.cp { background: linear-gradient(135deg, #f59e0b, #ef4444); box-shadow: 0 4px 14px rgba(239,68,68,0.22); }
+    .tldr-btn.cp:hover { box-shadow: 0 6px 20px rgba(239,68,68,0.32); }
+    .tldr-panel.cp { border-left-color: #ef4444; }
+    .tldr-panel.cp h4 { color: #ef4444; }
+    .tldr-panel p + p { margin-top: 0.8rem; }
+    .level-toggle { display: inline-flex; align-items: center; gap: 0.4rem; margin-left: auto; background: #f3f4f6; border-radius: 999px; padding: 0.25rem; }
+    .level-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: #888; padding: 0 0.5rem; font-weight: 600; }
+    .level-btn { border: none; background: transparent; padding: 0.35rem 0.8rem; border-radius: 999px; font-size: 0.82rem; font-weight: 600; color: #555; cursor: pointer; transition: all 0.15s; }
+    .level-btn.active { background: #fff; color: #6366f1; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+    .level-btn:disabled { opacity: 0.5; cursor: default; }
+    @media (max-width: 600px) { .level-toggle { margin-left: 0; width: 100%; justify-content: center; } }
+    /* 👀 Live co-reading presence + floating reactions */
+    .live-presence { position: fixed; bottom: 22px; left: 22px; z-index: 1200; display: none; flex-direction: column; gap: 0.5rem;
+        background: rgba(255,255,255,0.95); backdrop-filter: blur(8px); border: 1px solid rgba(0,0,0,0.08);
+        border-radius: 16px; padding: 0.7rem 0.9rem; box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
+    .live-presence.show { display: flex; }
+    .lp-count { font-size: 0.82rem; font-weight: 700; color: #111; display: flex; align-items: center; gap: 0.4rem; }
+    .lp-count i { color: #6366f1; }
+    .lp-dot { width: 7px; height: 7px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 0 0 rgba(34,197,94,0.6); animation: lpPulse 1.8s infinite; }
+    @keyframes lpPulse { 0%{box-shadow:0 0 0 0 rgba(34,197,94,0.5);} 70%{box-shadow:0 0 0 7px rgba(34,197,94,0);} 100%{box-shadow:0 0 0 0 rgba(34,197,94,0);} }
+    .lp-reactions { display: flex; gap: 0.2rem; }
+    .lp-emoji { border: none; background: transparent; font-size: 1.15rem; cursor: pointer; padding: 0.2rem 0.3rem; border-radius: 8px; transition: transform 0.12s, background 0.12s; }
+    .lp-emoji:hover { transform: scale(1.3); background: rgba(0,0,0,0.05); }
+    .lp-emoji:active { transform: scale(0.9); }
+    .float-layer { position: fixed; inset: 0; pointer-events: none; z-index: 1300; overflow: hidden; }
+    .float-emoji { position: absolute; bottom: 70px; will-change: transform, opacity; animation: floatUp 2.6s ease-out forwards; }
+    @keyframes floatUp { 0%{opacity:0; transform: translateY(0) scale(0.6);} 15%{opacity:1;} 100%{opacity:0; transform: translateY(-62vh) scale(1.2);} }
+    @media (max-width: 600px) { .live-presence { bottom: 14px; left: 14px; } }
+    @keyframes tldrIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+</style>
 
 <body>
     <%- include('./partials/nav', { searchQuery: searchQuery || '' }) %>
 
         <div id="progress-container">
-            <div id="progress-bar"></div>
+            <div id="progress-bar" data-reading-progress></div>
         </div>
+
+        <% if (locals.isPreview) { %>
+            <div class="preview-banner">
+                <span><i class="fas fa-eye"></i> Preview — only you can see this. It isn't published yet.</span>
+                <a href="<%= locals.previewReturnTo || '/blog/add-new' %>" class="preview-banner__back">
+                    <i class="fas fa-arrow-left"></i> Back to editing
+                </a>
+            </div>
+            <style>
+                .preview-banner {
+                    position: sticky; top: 0; z-index: 1500;
+                    display: flex; align-items: center; justify-content: center; gap: 1.25rem; flex-wrap: wrap;
+                    background: linear-gradient(90deg, #6366f1, #ec4899); color: #fff;
+                    padding: 0.7rem 1.25rem; font-size: 0.9rem; font-weight: 600;
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.12);
+                }
+                .preview-banner__back {
+                    display: inline-flex; align-items: center; gap: 0.4rem;
+                    background: rgba(255,255,255,0.18); color: #fff; text-decoration: none;
+                    padding: 0.35rem 0.9rem; border-radius: 999px; font-weight: 700;
+                    transition: background 0.15s;
+                }
+                .preview-banner__back:hover { background: rgba(255,255,255,0.3); color: #fff; }
+                @media (max-width: 600px) { .preview-banner { font-size: 0.8rem; gap: 0.6rem; } }
+            </style>
+        <% } %>
 
 
 
@@ -90,6 +169,29 @@
                         class="blog-hero-image" data-fallback="/images/default-cover.png">
                 </div>
                 <% } %>
+
+                    <!-- ✨ AI reading tools -->
+                    <% if (!locals.isPreview && String(blog._id) !== 'preview-id') { %>
+                        <div class="tldr-container">
+                            <div class="ai-tools">
+                                <button type="button" id="summarize-btn" class="tldr-btn">
+                                    <i class="fas fa-wand-magic-sparkles"></i> <span>Summarize</span>
+                                </button>
+                                <button type="button" id="counterpoint-btn" class="tldr-btn cp">
+                                    <i class="fas fa-scale-balanced"></i> <span>Counterpoint</span>
+                                </button>
+                                <div class="level-toggle" role="group" aria-label="Reading level">
+                                    <span class="level-label">Reading level</span>
+                                    <button type="button" class="level-btn active" data-level="standard">Standard</button>
+                                    <button type="button" class="level-btn" data-level="eli5">ELI5</button>
+                                    <button type="button" class="level-btn" data-level="expert">Expert</button>
+                                </div>
+                            </div>
+                            <div id="tldr-panel" class="tldr-panel hidden" aria-live="polite"></div>
+                            <div id="counterpoint-panel" class="tldr-panel cp hidden" aria-live="polite"></div>
+                        </div>
+                    <% } %>
+
                     <div class="content-wrapper">
 
 
@@ -135,7 +237,8 @@
                                 </div>
                                 <% } %>
                                     <div class="action-item">
-                                        <button class="action-icon-btn share-btn-trigger" title="Share Story">
+                                        <button class="action-icon-btn" title="Share Story"
+                                            data-share data-share-title="<%= blog.title %>">
                                             <i class="fas fa-share-alt"></i>
                                         </button>
                                     </div>
@@ -161,6 +264,9 @@
                             // Sanitize the HTML directly (Quill produces HTML)
                             const cleanHTML = DOMPurify.sanitize(rawContent);
                             blogBody.innerHTML = cleanHTML;
+
+                            // Content was injected after load — add code-copy buttons now.
+                            if (window.addCodeCopyButtons) window.addCodeCopyButtons(blogBody);
                         });
                     </script>
 
@@ -320,14 +426,7 @@
 
 
         <script nonce="<%= cspNonce %>">
-            // Progress Bar Script
-            window.onscroll = function () { myFunction() };
-            function myFunction() {
-                var winScroll = document.body.scrollTop || document.documentElement.scrollTop;
-                var height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
-                var scrolled = (winScroll / height) * 100;
-                document.getElementById("progress-bar").style.width = scrolled + "%";
-            }
+            // Progress bar is now driven by [data-reading-progress] in app.js.
 
             // Bookmark Logic (Class-based for Mobile + Desktop)
             document.querySelectorAll('.bookmark-btn-trigger').forEach(btn => {
@@ -403,16 +502,7 @@
             }
 
             // Share Logic (Class-based)
-            document.querySelectorAll('.share-btn-trigger').forEach(btn => {
-                btn.addEventListener('click', async () => {
-                    try {
-                        await navigator.clipboard.writeText(window.location.href);
-                        alert('Link copied to clipboard!');
-                    } catch (err) {
-                        console.error('Failed to copy: ', err);
-                    }
-                });
-            });
+            // Share is now handled by [data-share] in app.js (native share + copy fallback).
 
             // 😃 Emoji Picker Logic
             function toggleReactionPicker(commentId, btn) {
@@ -639,6 +729,111 @@
                 return false;
             }
         </script>
+
+        <!-- ✨ AI reading tools: Summarize · Counterpoint · Reading levels -->
+        <script nonce="<%= cspNonce %>">
+            (() => {
+                const blogId = "<%= blog._id %>";
+                const esc = (s) => String(s).replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+                const toParas = (text) => String(text).split(/\n\n+/).map(p => p.trim()).filter(Boolean);
+
+                // --- ✨ Summarize ---
+                (function () {
+                    const btn = document.getElementById("summarize-btn");
+                    const panel = document.getElementById("tldr-panel");
+                    if (!btn || !panel) return;
+                    let loaded = false;
+                    btn.addEventListener("click", async () => {
+                        if (loaded) { panel.classList.toggle("hidden"); return; }
+                        const label = btn.querySelector("span"); const orig = label ? label.textContent : "";
+                        btn.disabled = true; if (label) label.textContent = "Summarizing…";
+                        try {
+                            const res = await fetch(`/blog/api/${blogId}/summary`);
+                            if (!res.ok) throw new Error("HTTP " + res.status);
+                            const data = await res.json();
+                            const hl = Array.isArray(data.highlights) ? data.highlights : [];
+                            panel.innerHTML = `<h4>✨ AI Summary</h4><p class="tldr-summary"></p>${hl.length ? "<h4>Key points</h4><ul></ul>" : ""}`;
+                            panel.querySelector(".tldr-summary").textContent = data.summary || "No summary available.";
+                            if (hl.length) { const ul = panel.querySelector("ul"); hl.forEach(h => { const li = document.createElement("li"); li.textContent = h; ul.appendChild(li); }); }
+                            panel.classList.remove("hidden"); loaded = true; if (label) label.textContent = "Hide summary";
+                        } catch (err) {
+                            console.error("Summary failed", err);
+                            panel.innerHTML = '<p class="tldr-summary">Could not generate a summary right now. Please try again later.</p>';
+                            panel.classList.remove("hidden"); if (label) label.textContent = orig;
+                        } finally { btn.disabled = false; }
+                    });
+                })();
+
+                // --- 🥊 Counterpoint (steelman) ---
+                (function () {
+                    const btn = document.getElementById("counterpoint-btn");
+                    const panel = document.getElementById("counterpoint-panel");
+                    if (!btn || !panel) return;
+                    let loaded = false;
+                    btn.addEventListener("click", async () => {
+                        if (loaded) { panel.classList.toggle("hidden"); return; }
+                        const label = btn.querySelector("span"); const orig = label ? label.textContent : "";
+                        btn.disabled = true; if (label) label.textContent = "Thinking…";
+                        try {
+                            const res = await fetch(`/blog/api/${blogId}/counterpoint`);
+                            if (!res.ok) throw new Error("HTTP " + res.status);
+                            const data = await res.json();
+                            panel.innerHTML = "<h4>🥊 The Counterpoint</h4>" + toParas(data.counterpoint || "No counterpoint available.").map(p => `<p>${esc(p)}</p>`).join("");
+                            panel.classList.remove("hidden"); loaded = true; if (label) label.textContent = "Hide counterpoint";
+                        } catch (err) {
+                            console.error("Counterpoint failed", err);
+                            panel.innerHTML = "<p>Could not generate a counterpoint right now. Please try again later.</p>";
+                            panel.classList.remove("hidden"); if (label) label.textContent = orig;
+                        } finally { btn.disabled = false; }
+                    });
+                })();
+
+                // --- 🎚️ Adaptive reading levels ---
+                (function () {
+                    const content = document.getElementById("blog-content");
+                    const btns = [...document.querySelectorAll(".level-btn")];
+                    if (!content || !btns.length) return;
+                    const cache = {};
+                    const setActive = (lvl) => { btns.forEach(x => x.classList.toggle("active", x.dataset.level === lvl)); };
+                    btns.forEach(b => b.addEventListener("click", async () => {
+                        const level = b.dataset.level;
+                        if (b.classList.contains("active")) return;
+                        if (cache.standard == null) cache.standard = content.innerHTML; // capture original once
+                        if (level === "standard") { content.innerHTML = cache.standard; setActive("standard"); return; }
+                        if (cache[level]) { content.innerHTML = cache[level]; setActive(level); return; }
+
+                        const prev = content.innerHTML;
+                        btns.forEach(x => x.disabled = true); content.style.opacity = "0.4";
+                        try {
+                            const res = await fetch(`/blog/api/${blogId}/rewrite?level=${level}`);
+                            if (!res.ok) throw new Error("HTTP " + res.status);
+                            const data = await res.json();
+                            cache[level] = toParas(data.content || "").map(p => `<p>${esc(p)}</p>`).join("") || prev;
+                            content.innerHTML = cache[level]; setActive(level);
+                        } catch (err) {
+                            console.error("Rewrite failed", err);
+                            alert("Could not rewrite this post right now.");
+                            content.innerHTML = prev; setActive("standard");
+                        } finally { btns.forEach(x => x.disabled = false); content.style.opacity = "1"; }
+                    }));
+                })();
+            })();
+        </script>
+
+        <!-- 👀 Live co-reading presence + floating reactions -->
+        <div id="live-presence" class="live-presence" aria-live="polite">
+            <span class="lp-count"><span class="lp-dot"></span><span id="reader-count">1</span>&nbsp;reading now</span>
+            <div class="lp-reactions">
+                <button type="button" class="lp-emoji" data-emoji="❤️" aria-label="React with heart">❤️</button>
+                <button type="button" class="lp-emoji" data-emoji="🔥" aria-label="React with fire">🔥</button>
+                <button type="button" class="lp-emoji" data-emoji="👏" aria-label="React with clap">👏</button>
+                <button type="button" class="lp-emoji" data-emoji="😮" aria-label="React with wow">😮</button>
+                <button type="button" class="lp-emoji" data-emoji="💡" aria-label="React with idea">💡</button>
+                <button type="button" class="lp-emoji" data-emoji="👍" aria-label="React with thumbs up">👍</button>
+            </div>
+        </div>
+        <div id="float-layer" class="float-layer" aria-hidden="true"></div>
+
         <%- include('./partials/footer') %>
             <!-- ⚡ Socket.io Real-time Comments -->
             <script src="/socket.io/socket.io.js"></script>
@@ -649,6 +844,40 @@
 
                     // 1. Join Blog Room
                     socket.emit("join_blog", blogId);
+
+                    // 👀 Live co-reading presence + floating reactions
+                    const presence = document.getElementById("live-presence");
+                    const countEl = document.getElementById("reader-count");
+                    const floatLayer = document.getElementById("float-layer");
+
+                    socket.on("reader_count", (n) => {
+                        const count = Math.max(1, Number(n) || 1);
+                        if (countEl) countEl.textContent = count;
+                        if (presence) presence.classList.add("show");
+                    });
+
+                    const spawnFloat = (emoji) => {
+                        if (!floatLayer) return;
+                        const span = document.createElement("span");
+                        span.className = "float-emoji";
+                        span.textContent = emoji;
+                        span.style.left = (8 + Math.random() * 30) + "%";
+                        span.style.fontSize = (1.4 + Math.random() * 0.9) + "rem";
+                        floatLayer.appendChild(span);
+                        setTimeout(() => span.remove(), 2600);
+                    };
+
+                    socket.on("float_reaction", (data) => {
+                        if (data && data.emoji) spawnFloat(data.emoji);
+                    });
+
+                    document.querySelectorAll(".lp-emoji").forEach((btn) => {
+                        btn.addEventListener("click", () => {
+                            const emoji = btn.dataset.emoji;
+                            socket.emit("float_reaction", { blogId, emoji });
+                            spawnFloat(emoji); // optimistic local echo
+                        });
+                    });
 
                     // 2. Listen for New Comments
                     socket.on("new_comment", (data) => {

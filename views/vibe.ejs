@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <%- include('./partials/header') %>
+    <style>
+        .vibe-container { max-width: 1040px; margin: 7rem auto 4rem; padding: 0 1.5rem; }
+
+        /* Hero banner */
+        .vibe-hero {
+            position: relative; overflow: hidden; text-align: center;
+            border-radius: 24px; padding: 3rem 1.5rem 2.6rem;
+            background: linear-gradient(135deg, #eef2ff 0%, #fdf2f8 100%);
+            border: 1px solid rgba(99,102,241,0.12);
+            margin-bottom: 2.5rem;
+        }
+        .vibe-hero::before, .vibe-hero::after {
+            content: ""; position: absolute; border-radius: 50%; filter: blur(50px); opacity: 0.5; z-index: 0;
+        }
+        .vibe-hero::before { width: 220px; height: 220px; background: #c7d2fe; top: -80px; left: -60px; }
+        .vibe-hero::after { width: 220px; height: 220px; background: #fbcfe8; bottom: -90px; right: -50px; }
+        .vibe-hero > * { position: relative; z-index: 1; }
+        .vibe-title {
+            font-weight: 800; font-size: 2.6rem; margin-bottom: 0.6rem; line-height: 1.1;
+            background: linear-gradient(135deg, #6366f1, #ec4899);
+            -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .vibe-sub { color: #6b7280; max-width: 540px; margin: 0 auto; line-height: 1.5; }
+        .vibe-pill {
+            display: inline-flex; align-items: center; gap: 0.45rem; margin-top: 1.25rem;
+            background: #fff; border: 1px solid rgba(99,102,241,0.2); color: #4f46e5;
+            font-size: 0.82rem; font-weight: 700; padding: 0.45rem 1rem; border-radius: 999px;
+            box-shadow: 0 4px 14px rgba(99,102,241,0.12);
+        }
+        .vibe-pill i { color: #ec4899; }
+
+        .vibe-section-title { font-weight: 800; font-size: 1.4rem; margin: 2.5rem 0 1.25rem; display: flex; align-items: center; gap: 0.6rem; }
+        .vibe-section-title .count { font-size: 0.8rem; font-weight: 700; color: #9ca3af; background: #f3f4f6; padding: 0.15rem 0.6rem; border-radius: 999px; }
+
+        /* Shared vibe meter */
+        .vibe-meter { height: 7px; background: #eef0f4; border-radius: 999px; overflow: hidden; flex: 1; }
+        .vibe-meter__fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #6366f1, #ec4899); animation: vibeGrow 0.9s cubic-bezier(0.2,0.8,0.2,1); }
+        @keyframes vibeGrow { from { width: 0 !important; } }
+        .vibe-meter-row { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.55rem; }
+        .match-pct { font-size: 0.78rem; font-weight: 800; color: #4f46e5; flex-shrink: 0; min-width: 34px; text-align: right; }
+
+        /* Authors */
+        .author-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.1rem; }
+        .author-card {
+            position: relative; display: flex; align-items: center; gap: 1rem; background: #fff;
+            border: 1px solid rgba(0,0,0,0.06); border-radius: 16px; padding: 1.15rem 1.25rem;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.04); text-decoration: none; color: inherit;
+            transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+        }
+        .author-card:hover { transform: translateY(-3px); box-shadow: 0 12px 28px rgba(99,102,241,0.14); border-color: rgba(99,102,241,0.25); }
+        .author-rank {
+            position: absolute; top: -8px; left: -8px; width: 26px; height: 26px; border-radius: 50%;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff; font-size: 0.72rem; font-weight: 800;
+            display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 8px rgba(99,102,241,0.35);
+        }
+        .author-avatar-wrap { flex-shrink: 0; padding: 2px; border-radius: 50%; background: linear-gradient(135deg, #6366f1, #ec4899); }
+        .author-avatar { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; display: block; background: #f0f0f0; border: 2px solid #fff; }
+        .author-info { flex: 1; min-width: 0; }
+        .author-name { font-weight: 700; color: #111827; display: flex; align-items: center; gap: 0.4rem; }
+        .author-card:hover .author-name { color: #4f46e5; }
+        .author-posts { font-size: 0.78rem; color: #9ca3af; margin-top: 0.1rem; }
+        .follow-tag { font-size: 0.64rem; font-weight: 800; color: #16a34a; background: #dcfce7; padding: 0.1rem 0.45rem; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.03em; }
+
+        /* Posts */
+        .vibe-post-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 1.4rem; }
+        .vibe-post {
+            position: relative; text-decoration: none; color: inherit; background: #fff; border: 1px solid rgba(0,0,0,0.06);
+            border-radius: 16px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+            transition: transform 0.2s, box-shadow 0.2s; display: flex; flex-direction: column;
+        }
+        .vibe-post:hover { transform: translateY(-5px); box-shadow: 0 16px 34px rgba(0,0,0,0.12); }
+        .vibe-post-cover { position: relative; }
+        .vibe-post-img { width: 100%; height: 165px; object-fit: cover; background: #f0f0f0; display: block; }
+        .vibe-post-match {
+            position: absolute; top: 0.7rem; left: 0.7rem; display: inline-flex; align-items: center; gap: 0.3rem;
+            font-size: 0.72rem; font-weight: 800; color: #fff; padding: 0.3rem 0.65rem; border-radius: 999px;
+            background: linear-gradient(135deg, rgba(99,102,241,0.95), rgba(236,72,153,0.95)); backdrop-filter: blur(4px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+        .vibe-post-bar { position: absolute; bottom: 0; left: 0; height: 4px; background: linear-gradient(90deg, #6366f1, #ec4899); }
+        .vibe-post-body { padding: 1rem 1.1rem 1.2rem; flex: 1; display: flex; flex-direction: column; }
+        .vibe-post-title { font-size: 1.05rem; font-weight: 700; margin: 0 0 0.6rem; line-height: 1.3; color: #111827; }
+        .vibe-post:hover .vibe-post-title { color: #4f46e5; }
+        .vibe-post-meta { font-size: 0.8rem; color: #6b7280; margin-top: auto; display: flex; align-items: center; gap: 0.45rem; }
+        .vibe-post-meta img { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; }
+
+        .vibe-empty { text-align: center; padding: 4rem 1rem; color: #6b7280; }
+        .vibe-empty i { opacity: 0.3; }
+        @media (max-width: 600px) { .vibe-title { font-size: 2rem; } .vibe-hero { padding: 2.2rem 1.25rem; } }
+    </style>
+</head>
+
+<body>
+    <%- include('./partials/nav', { searchQuery: '' }) %>
+
+    <div class="vibe-container">
+        <div class="vibe-hero">
+            <h1 class="vibe-title">✨ Your Vibe</h1>
+            <p class="vibe-sub">We read the stories you love, liked, and bookmarked — then found the writers and posts that match your taste.</p>
+            <% if (hasTaste) { %>
+                <span class="vibe-pill"><i class="fas fa-wand-magic-sparkles"></i> Tuned from <%= signalCount %> post<%= signalCount === 1 ? '' : 's' %> you've engaged with</span>
+            <% } %>
+        </div>
+
+        <% if (!hasTaste) { %>
+            <div class="vibe-empty">
+                <i class="fas fa-wand-magic-sparkles fa-3x mb-3"></i>
+                <h3>Not enough to go on yet</h3>
+                <p>Read, like, and bookmark a few posts and we'll tune your vibe to match.</p>
+                <a href="/" class="btn btn-primary mt-3">Explore Stories</a>
+            </div>
+        <% } else { %>
+
+            <% if (authors && authors.length) { %>
+                <h2 class="vibe-section-title"><i class="fas fa-user-group" style="color:#6366f1;"></i> Authors who match your vibe <span class="count"><%= authors.length %></span></h2>
+                <div class="author-grid">
+                    <% authors.forEach((a, i) => { %>
+                        <a href="/user/profile/<%= a.author._id %>" class="author-card">
+                            <% if (i < 3) { %><span class="author-rank"><%= i + 1 %></span><% } %>
+                            <span class="author-avatar-wrap">
+                                <img loading="lazy" class="author-avatar" alt=""
+                                     src="<%= a.author.profilePic || '/images/default-avatar.png' %>"
+                                     data-fallback="/images/default-avatar.png">
+                            </span>
+                            <div class="author-info">
+                                <div class="author-name"><%= a.author.fullName %><% if (a.isFollowing) { %><span class="follow-tag">Following</span><% } %></div>
+                                <div class="author-posts"><%= a.posts %> matching post<%= a.posts === 1 ? '' : 's' %></div>
+                                <div class="vibe-meter-row">
+                                    <div class="vibe-meter"><div class="vibe-meter__fill" style="width: <%= a.match %>%"></div></div>
+                                    <span class="match-pct"><%= a.match %>%</span>
+                                </div>
+                            </div>
+                        </a>
+                    <% }) %>
+                </div>
+            <% } %>
+
+            <% if (posts && posts.length) { %>
+                <h2 class="vibe-section-title"><i class="fas fa-bolt" style="color:#ec4899;"></i> Posts tuned to your taste <span class="count"><%= posts.length %></span></h2>
+                <div class="vibe-post-grid">
+                    <% posts.forEach(p => { %>
+                        <a href="/blog/<%= p._id %>" class="vibe-post">
+                            <div class="vibe-post-cover">
+                                <img loading="lazy" class="vibe-post-img" alt=""
+                                     src="<%= typeof optimizeImage === 'function' ? optimizeImage(p.coverImageURL || '/images/default-cover.png', { width: 400, crop: 'fill' }) : (p.coverImageURL || '/images/default-cover.png') %>"
+                                     data-fallback="/images/default-cover.png">
+                                <span class="vibe-post-match"><i class="fas fa-bolt"></i> <%= p.match %>% match</span>
+                                <div class="vibe-post-bar" style="width: <%= p.match %>%"></div>
+                            </div>
+                            <div class="vibe-post-body">
+                                <h3 class="vibe-post-title"><%= p.title %></h3>
+                                <div class="vibe-post-meta">
+                                    <% if (p.createdBy) { %>
+                                        <img src="<%= p.createdBy.profilePic || '/images/default-avatar.png' %>" alt="" data-fallback="/images/default-avatar.png">
+                                        <span><%= p.createdBy.fullName %></span>
+                                        <span>·</span>
+                                    <% } %>
+                                    <span><%= p.readTime || 1 %> min read</span>
+                                </div>
+                            </div>
+                        </a>
+                    <% }) %>
+                </div>
+            <% } %>
+
+            <% if ((!authors || !authors.length) && (!posts || !posts.length)) { %>
+                <div class="vibe-empty">
+                    <i class="fas fa-compass fa-3x mb-3"></i>
+                    <h3>You've seen it all</h3>
+                    <p>We couldn't find fresh posts matching your vibe right now. Check back as new stories arrive.</p>
+                    <a href="/" class="btn btn-primary mt-3">Browse the feed</a>
+                </div>
+            <% } %>
+        <% } %>
+    </div>
+
+    <%- include('./partials/footer') %>
+</body>
+
+</html>

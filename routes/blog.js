@@ -22,6 +22,43 @@ const rateLimit = require("express-rate-limit");
 
 const router = Router();
 
+// 💬 @mentions: notify people mentioned in a comment. Matches @name against the
+// thread's participants (blog author + commenters) by first name or full name,
+// so it works without a dedicated username field.
+async function notifyMentions(content, blog, author, req) {
+  try {
+    const handles = [...new Set((String(content).match(/@([a-zA-Z0-9_]+)/g) || [])
+      .map(m => m.slice(1).toLowerCase()))];
+    if (handles.length === 0) return;
+
+    const commenterIds = await Comment.distinct("createdBy", { blogId: blog._id });
+    const ids = [...new Set([blog.createdBy.toString(), ...commenterIds.map(String)])];
+    const participants = await User.find({ _id: { $in: ids } }).select("fullName").lean();
+
+    const io = req.app.get("io");
+    for (const p of participants) {
+      if (p._id.toString() === author._id.toString()) continue; // don't notify yourself
+      const full = (p.fullName || "").toLowerCase().replace(/\s+/g, "");
+      const first = (p.fullName || "").toLowerCase().split(/\s+/)[0];
+      if (!handles.some(h => h === full || h === first)) continue;
+
+      await Notification.create({
+        userId: p._id,
+        senderId: author._id,
+        type: "mention",
+        message: `${author.fullName} mentioned you in a comment.`,
+        blogId: blog._id,
+        targetUrl: `/blog/${blog._id}`,
+        read: false,
+        createdAt: new Date(),
+      });
+      if (io) io.to(`user:${p._id}`).emit("new_notification", { message: `${author.fullName} mentioned you in a comment.` });
+    }
+  } catch (err) {
+    logger.error("⚠️ Mention notification error:", err.message);
+  }
+}
+
 // Rate Limiters
 const blogLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
@@ -43,49 +80,80 @@ const { storage, cloudinary, upload } = require("../config/cloudConfig");
 // upload is pre-configured with 5MB limit and MIME type validation
 
 // 👁️ Preview Blog
-router.post("/preview", async (req, res) => {
+// Draft data is submitted via POST, stashed in the session, then rendered via a
+// GET redirect. This way the preview works whether it opens in a new tab or
+// navigates in place, and a stray GET /blog/preview no longer collides with the
+// /blog/:id route (which would throw "Invalid Blog ID").
+function renderPreview(req, res, data) {
+  const mockBlog = {
+    _id: "preview-id",
+    title: data.title || "[Untitled Story]",
+    body: data.body || "<p>Start writing your story...</p>",
+    coverImageURL: data.aiCoverURL || data.coverImage || "",
+    createdBy: req.user,
+    createdAt: new Date(),
+    views: 0,
+    tags: [],
+    category: "Preview",
+    readTime: 1,
+    likes: 0,
+    likedBy: [],
+    comments: []
+  };
+
+  return res.render("blog", {
+    title: mockBlog.title,
+    metaDescription: "Preview Mode",
+    ogImage: mockBlog.coverImageURL,
+    user: req.user || null,
+    blog: mockBlog,
+    comments: [],
+    isAuthenticated: !!req.user,
+    searchQuery: "",
+    moment: require("moment"),
+    createdByName: req.user ? req.user.fullName : "Author",
+    createdByProfilePic: req.user ? req.user.profilePic : "https://api.dicebear.com/7.x/initials/svg?seed=Author",
+    formattedDate: "Just now",
+    isBookmarked: false,
+    relatedBlogs: [],
+    isPreview: true,
+    previewReturnTo: (data.from === "edit" && data.editId) ? `/blog/edit/${data.editId}` : "/blog/add-new"
+  });
+}
+
+router.post("/preview", (req, res) => {
   try {
-    const { title, body, aiCoverURL, coverImage } = req.body;
-
-    // Construct mock blog object
-    const mockBlog = {
-      _id: "preview-id",
-      title: title || "[Untitled Story]",
-      body: body || "<p>Start writing your story...</p>",
-      coverImageURL: aiCoverURL || coverImage || "", // Use AI URL or Placeholder (File upload preview is tricky without saving, simplified here)
-      createdBy: req.user,
-      createdAt: new Date(),
-      views: 0,
-      tags: [],
-      category: "Preview",
-      likes: 0,
-      likedBy: [],
-      comments: []
-    };
-
-    // Render the blog template with mock data
-    return res.render("blog", {
-      title: mockBlog.title,
-      metaDescription: "Preview Mode",
-      ogImage: mockBlog.coverImageURL,
-      user: req.user || null,
-      blog: mockBlog,
-      comments: [], // No comments in preview
-      isAuthenticated: !!req.user,
-      searchQuery: "",
-      moment: require("moment"),
-      createdByName: req.user ? req.user.fullName : "Author",
-      createdByProfilePic: req.user ? req.user.profilePic : "https://api.dicebear.com/7.x/initials/svg?seed=Author",
-      formattedDate: "Just now",
-      isBookmarked: false,
-      relatedBlogs: [],
-      isPreview: true // Flag to potentially hide confusing interactions
+    const { title, body, aiCoverURL, coverImage, from, editId } = req.body;
+    req.session.previewData = { title, body, aiCoverURL, coverImage, from, editId };
+    // Persist the session BEFORE redirecting — the store is async, and the
+    // browser follows the 303 immediately, so without this the GET can arrive
+    // before the write lands and see no preview data.
+    req.session.save((err) => {
+      if (err) {
+        logger.error("Preview session save error:", err);
+        req.flash("error", "Generating preview failed. Please try again.");
+        return res.redirect("back");
+      }
+      return res.redirect(303, "/blog/preview");
     });
-
   } catch (err) {
     logger.error("Preview Error:", err);
     req.flash("error", "Generating preview failed. Please try again.");
     return res.redirect("back");
+  }
+});
+
+router.get("/preview", (req, res) => {
+  try {
+    const data = req.session.previewData;
+    if (!data) {
+      req.flash("error", "No preview to show — write your story, then hit Preview.");
+      return res.redirect("/blog/add-new");
+    }
+    return renderPreview(req, res, data);
+  } catch (err) {
+    logger.error("Preview Error:", err);
+    return res.redirect("/blog/add-new");
   }
 });
 
@@ -126,7 +194,7 @@ router.get("/drafts", async (req, res) => {
   try {
     const drafts = await Blog.find({
       createdBy: req.user._id,
-      status: "draft"
+      status: { $in: ["draft", "scheduled"] }
     }).select("-body").sort({ createdAt: -1 }).lean();
 
     res.render("drafts", {
@@ -137,6 +205,61 @@ router.get("/drafts", async (req, res) => {
   } catch (err) {
     logger.error("Error fetching drafts:", err);
     res.redirect("/");
+  }
+});
+
+// 🔍 Semantic search — ranks posts by meaning (query embedding × post embeddings),
+// with a text-search fallback. Must be defined BEFORE the "/:id" route.
+router.get("/search", async (req, res) => {
+  const q = String(req.query.q || "").trim();
+  try {
+    if (!q) {
+      return res.render("search", { user: req.user, query: "", results: [], mode: null, moment });
+    }
+
+    let results = [];
+    let mode = "semantic";
+
+    // 1) Semantic ranking via embeddings
+    const queryEmbedding = await generateEmbedding(q);
+    if (queryEmbedding && queryEmbedding.length > 0) {
+      const candidates = await Blog.find({
+        status: "published",
+        embedding: { $exists: true, $ne: [] }
+      })
+        .select("title coverImageURL category createdBy readTime views createdAt +embedding")
+        .populate("createdBy", "fullName profilePic")
+        .lean();
+
+      results = candidates
+        .map(b => {
+          const score = cosineSimilarity(queryEmbedding, b.embedding);
+          const { embedding, ...clean } = b;
+          return { ...clean, score };
+        })
+        .filter(r => r.score > 0.3)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 12);
+    }
+
+    // 2) Fallback to MongoDB text search if semantic found nothing
+    if (results.length === 0) {
+      mode = "text";
+      results = await Blog.find(
+        { $text: { $search: q }, status: "published" },
+        { score: { $meta: "textScore" } }
+      )
+        .select("title coverImageURL category createdBy readTime views createdAt")
+        .populate("createdBy", "fullName profilePic")
+        .sort({ score: { $meta: "textScore" } })
+        .limit(12)
+        .lean();
+    }
+
+    return res.render("search", { user: req.user, query: q, results, mode, moment });
+  } catch (err) {
+    logger.error("❌ Search error:", err);
+    return res.render("search", { user: req.user, query: q, results: [], mode: null, moment });
   }
 });
 
@@ -440,7 +563,7 @@ router.post("/comment/:blogId", commentLimiter, async (req, res) => {
     }
 
     // 🛡️ Moderation Check
-    const moderation = await moderateContent(req.body.content);
+    const moderation = await moderateContent(req.body.content, { userId: req.user._id, ip: req.ip });
     if (!moderation.safe) {
       if (req.xhr || req.headers.accept.includes('json')) {
         return res.status(400).json({ error: `Comment Rejected: ${moderation.reason}` });
@@ -478,6 +601,9 @@ router.post("/comment/:blogId", commentLimiter, async (req, res) => {
       createdBy: userId,
       createdAt: new Date(),
     });
+
+    // 💬 Notify anyone @mentioned in the comment
+    notifyMentions(req.body.content, blog, req.user, req);
 
     // ✅ Send Notification (if not the owner commenting)
     // ✅ Send Notification (Async/Non-blocking)
@@ -591,7 +717,7 @@ router.post("/comment/:commentId/reply", async (req, res) => {
     if (!parentComment) return res.status(404).send("Parent comment not found");
 
     // 🛡️ Moderation Check
-    const moderation = await moderateContent(req.body.content);
+    const moderation = await moderateContent(req.body.content, { userId: req.user._id, ip: req.ip });
     if (!moderation.safe) {
       return res.status(400).json({ error: `Reply Rejected: ${moderation.reason}` });
     }
@@ -605,6 +731,9 @@ router.post("/comment/:commentId/reply", async (req, res) => {
       depth: (parentComment.depth || 1) + 1,
       createdAt: new Date()
     });
+
+    // 💬 Notify anyone @mentioned in the reply
+    notifyMentions(req.body.content, parentComment.blogId, req.user, req);
 
     // Notify Parent Author
     if (parentComment.createdBy.toString() !== req.user._id.toString()) {
@@ -1049,49 +1178,70 @@ router.post("/", blogLimiter, upload.single("coverImage"), async (req, res) => {
       .sort({ createdAt: -1 }) // Get the latest blog
       .select("createdAt");
 
-    if (lastBlog && req.user.role !== "ADMIN") {
+    // Cooldown applies only to publishing/scheduling — saving drafts is unlimited.
+    if (lastBlog && req.user.role !== "ADMIN" && req.body.action !== "draft") {
       const timeSinceLastBlog = new Date() - new Date(lastBlog.createdAt);
       if (timeSinceLastBlog < BLOG_COOLDOWN) {
         const remainingTime = Math.ceil((BLOG_COOLDOWN - timeSinceLastBlog) / 60000); // Convert to minutes
-        req.flash("error", `Please wait ${remainingTime} minutes before posting another blog.`);
-        return res.redirect("/");
+        // Keep them on the editor (work preserved) and suggest saving a draft.
+        req.flash("error", `You can publish again in ${remainingTime} min. Save this as a draft for now.`);
+        return res.redirect("/blog/add-new");
       }
     }
 
-    if (!title || !category) {
-      logger.warn("❌ Missing Title or Category");
-      return res.status(400).send("Title and Category are required.");
-    }
-
-    const tagArray = tags ? tags.split(",").map(tag => tag.trim()) : [];
-    if (tagArray.length === 0) {
-      logger.warn("❌ No Tags Provided");
-      return res.status(400).send("At least one tag is required.");
-    }
-
-    if (!req.file && !aiCoverURL) {
-      logger.warn("❌ No Cover Image Uploaded");
-      return res.status(400).send("No cover image uploaded.");
-    }
-
+    const isDraft = req.body.action === "draft";
+    const tagArray = tags ? tags.split(",").map(tag => tag.trim()).filter(Boolean) : [];
     let finalBody = body?.trim() || "";
 
-    if (!finalBody || finalBody.trim().length === 0) {
-      logger.warn("❌ Final Body Still Empty!");
-      return res.status(400).send("Blog content is required.");
-    }
+    // Drafts are intentionally lenient: a title + some content is enough, so you
+    // can save unfinished work. Cover/category/tags/length are only enforced when
+    // actually publishing or scheduling.
+    if (isDraft) {
+      if (!title || !title.trim()) {
+        req.flash("error", "Give your draft a title before saving.");
+        return res.redirect("/blog/add-new");
+      }
+      if (!finalBody) finalBody = "<p></p>"; // body is required by the schema
+    } else {
+      // On any failure, send the writer back to the editor with a clear message
+      // instead of a dead-end error page (their draft is preserved via autosave).
+      if (!title || !category) {
+        req.flash("error", "Add a title and pick a category before publishing.");
+        return res.redirect("/blog/add-new");
+      }
+      if (tagArray.length === 0) {
+        req.flash("error", "Add at least one tag so readers can find your story.");
+        return res.redirect("/blog/add-new");
+      }
+      if (!req.file && !aiCoverURL) {
+        req.flash("error", "Add a cover image before publishing.");
+        return res.redirect("/blog/add-new");
+      }
+      if (!finalBody || finalBody.trim().length === 0) {
+        req.flash("error", "Your story needs some content before publishing.");
+        return res.redirect("/blog/add-new");
+      }
 
-    // Validation: 50 Word Minimum
-    const textBody = finalBody.replace(/<[^>]*>/g, '').trim();
-    const wordCount = textBody.split(/\s+/).filter(word => word.length > 0).length;
+      // Validation: 50 Word Minimum
+      const textBody = finalBody.replace(/<[^>]*>/g, '').trim();
+      const wordCount = textBody.split(/\s+/).filter(word => word.length > 0).length;
 
-    if (wordCount < 50) {
-      req.flash("error", `Story too short! Please write at least 50 words (currently ${wordCount}).`);
-      return res.redirect("/blog/add-new"); // Redirect back to editor
+      if (wordCount < 50) {
+        req.flash("error", `Story too short! Please write at least 50 words (currently ${wordCount}).`);
+        return res.redirect("/blog/add-new"); // Redirect back to editor
+      }
     }
 
     // ✅ Save Blog in Database (Initially without embedding)
-    const blogStatus = req.body.action === "draft" ? "draft" : "published";
+    // 🗓️ Scheduling: a future publishAt (on a publish action) schedules the post.
+    let scheduledAt = null;
+    if (req.body.action !== "draft" && req.body.publishAt) {
+      const when = new Date(req.body.publishAt);
+      if (!isNaN(when) && when.getTime() > Date.now()) scheduledAt = when;
+    }
+    const blogStatus = req.body.action === "draft"
+      ? "draft"
+      : (scheduledAt ? "scheduled" : "published");
 
     let finalCoverImageURL = "";
     if (req.file) {
@@ -1133,7 +1283,8 @@ router.post("/", blogLimiter, upload.single("coverImage"), async (req, res) => {
       coverImageURL: finalCoverImageURL,
       createdAt: new Date(),
       embedding: [], // Will be populated in background
-      status: blogStatus
+      status: blogStatus,
+      publishAt: scheduledAt,
     });
 
     // ⚡ Background AI: Generate Embedding (Fire-and-forget)
@@ -1186,6 +1337,9 @@ router.post("/", blogLimiter, upload.single("coverImage"), async (req, res) => {
           });
         }
       }
+    } else if (blogStatus === "scheduled") {
+      req.flash("success", `🗓️ Scheduled — this post will publish on ${scheduledAt.toLocaleString()}.`);
+      return res.redirect("/blog/drafts");
     } else {
       req.flash("success", "Draft saved successfully!");
       return res.redirect("/blog/drafts");
@@ -1283,7 +1437,57 @@ router.get("/api/feed", async (req, res) => {
   }
 });
 
-const { generateSummary } = require("../services/ai");
+const { generateSummary, generateCounterpoint, rewriteAtLevel } = require("../services/ai");
+
+// ⚡ Simple in-memory cache (per server instance) for AI-generated post content.
+const _aiCache = new Map();
+const AI_CACHE_TTL = 60 * 60 * 1000; // 1 hour
+const aiCacheGet = (key) => {
+  const hit = _aiCache.get(key);
+  return hit && Date.now() - hit.ts < AI_CACHE_TTL ? hit.val : null;
+};
+const aiCacheSet = (key, val) => _aiCache.set(key, { val, ts: Date.now() });
+
+// 🥊 Steelman / Counterpoint (API)
+router.get("/api/:id/counterpoint", async (req, res) => {
+  try {
+    const key = `cp:${req.params.id}`;
+    const cached = aiCacheGet(key);
+    if (cached) return res.json({ counterpoint: cached, cached: true });
+
+    const blog = await Blog.findById(req.params.id).select("title body");
+    if (!blog) return res.status(404).json({ error: "Blog not found" });
+
+    const plainBody = blog.body.replace(/<[^>]*>/g, "");
+    const counterpoint = await generateCounterpoint(blog.title, plainBody);
+    aiCacheSet(key, counterpoint);
+    res.json({ counterpoint });
+  } catch (error) {
+    logger.error("❌ Counterpoint API Error:", error);
+    res.status(500).json({ error: "Failed to generate counterpoint" });
+  }
+});
+
+// 🎚️ Adaptive reading level rewrite (API)  — ?level=eli5|expert
+router.get("/api/:id/rewrite", async (req, res) => {
+  try {
+    const level = req.query.level === "expert" ? "expert" : "eli5";
+    const key = `rw:${level}:${req.params.id}`;
+    const cached = aiCacheGet(key);
+    if (cached) return res.json({ level, content: cached, cached: true });
+
+    const blog = await Blog.findById(req.params.id).select("title body");
+    if (!blog) return res.status(404).json({ error: "Blog not found" });
+
+    const plainBody = blog.body.replace(/<[^>]*>/g, "");
+    const content = await rewriteAtLevel(level, blog.title, plainBody);
+    aiCacheSet(key, content);
+    res.json({ level, content });
+  } catch (error) {
+    logger.error("❌ Rewrite API Error:", error);
+    res.status(500).json({ error: "Failed to rewrite post" });
+  }
+});
 
 // 📊 Get Blog Summary & Highlights (API)
 router.get("/api/:id/summary", async (req, res) => {

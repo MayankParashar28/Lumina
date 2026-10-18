@@ -43,8 +43,12 @@ const blogSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["draft", "published", "private"],
+      enum: ["draft", "published", "private", "scheduled"],
       default: "published",
+    },
+    // 🗓️ When a "scheduled" post should auto-publish
+    publishAt: {
+      type: Date,
     },
 
     likedBy: {

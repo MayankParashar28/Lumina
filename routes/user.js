@@ -184,6 +184,216 @@ router.get("/bookmarks", async (req, res) => {
   }
 });
 
+// 🕘 Recently Read (reading history)
+router.get("/reading-history", async (req, res) => {
+  if (!req.user) return res.redirect("/user/signin");
+
+  try {
+    const user = await User.findById(req.user._id).populate({
+      path: "readingHistory.blogId",
+      select: "-body",
+      populate: { path: "createdBy", select: "fullName profilePic" }
+    });
+
+    // Newest first, drop entries whose blog was deleted, and de-duplicate by blog.
+    const seen = new Set();
+    const history = (user.readingHistory || [])
+      .filter(h => h.blogId)
+      .sort((a, b) => new Date(b.viewedAt) - new Date(a.viewedAt))
+      .filter(h => {
+        const id = h.blogId._id.toString();
+        if (seen.has(id)) return false;
+        seen.add(id);
+        return true;
+      });
+
+    res.render("reading-history", {
+      user: req.user,
+      history,
+      moment: require("moment"),
+      title: "Recently Read - Lumina"
+    });
+  } catch (error) {
+    logger.error("Error fetching reading history:", error);
+    res.redirect("/");
+  }
+});
+
+// 📊 Author analytics dashboard
+router.get("/analytics", async (req, res) => {
+  if (!req.user) return res.redirect("/user/signin");
+
+  try {
+    const userId = new mongoose.Types.ObjectId(req.user._id);
+
+    const blogs = await Blog.find({ createdBy: userId })
+      .select("title views likes createdAt status")
+      .lean();
+    const blogIds = blogs.map(b => b._id);
+
+    const totalViews = blogs.reduce((s, b) => s + (b.views || 0), 0);
+    const totalLikes = blogs.reduce((s, b) => s + (b.likes || 0), 0);
+    const totalComments = await Comment.countDocuments({ blogId: { $in: blogIds } });
+    const me = await User.findById(userId).select("followers following createdAt").lean();
+    const followers = me && me.followers ? me.followers.length : 0;
+
+    const topPosts = [...blogs]
+      .sort((a, b) => (b.views || 0) - (a.views || 0))
+      .slice(0, 5);
+
+    // Last 6 months, oldest → newest
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
+    sixMonthsAgo.setDate(1);
+    sixMonthsAgo.setHours(0, 0, 0, 0);
+
+    const blogMonthly = await Blog.aggregate([
+      { $match: { createdBy: userId, createdAt: { $gte: sixMonthsAgo } } },
+      { $group: { _id: { $month: "$createdAt" }, posts: { $sum: 1 }, likes: { $sum: "$likes" } } }
+    ]);
+    const commentMonthly = await Comment.aggregate([
+      { $match: { blogId: { $in: blogIds }, createdAt: { $gte: sixMonthsAgo } } },
+      { $group: { _id: { $month: "$createdAt" }, comments: { $sum: 1 } } }
+    ]);
+
+    const labels = [], posts = [], likes = [], comments = [];
+    for (let i = 0; i < 6; i++) {
+      const d = new Date();
+      d.setMonth(d.getMonth() - (5 - i));
+      const m = d.getMonth() + 1;
+      labels.push(monthNames[d.getMonth()]);
+      const bs = blogMonthly.find(x => x._id === m);
+      const cs = commentMonthly.find(x => x._id === m);
+      posts.push(bs ? bs.posts : 0);
+      likes.push(bs ? bs.likes : 0);
+      comments.push(cs ? cs.comments : 0);
+    }
+
+    res.render("analytics", {
+      user: req.user,
+      totals: { posts: blogs.length, totalViews, totalLikes, totalComments, followers },
+      topPosts,
+      monthly: { labels, posts, likes, comments },
+      moment: require("moment"),
+      title: "Analytics - Lumina"
+    });
+  } catch (error) {
+    logger.error("Error loading analytics:", error);
+    res.redirect("/user/profile");
+  }
+});
+
+// ✨ Vibe match — embeddings-based discovery of authors & posts tuned to your taste
+router.get("/vibe", async (req, res) => {
+  if (!req.user) return res.redirect("/user/signin");
+
+  try {
+    const { cosineSimilarity } = require("../services/ai");
+    const meId = String(req.user._id);
+
+    // 1. Gather the signals that describe this reader's taste:
+    //    posts they bookmarked, liked, or recently read.
+    const me = await User.findById(meId)
+      .select("bookmarks readingHistory following")
+      .lean();
+
+    const tasteIds = new Set();
+    (me.bookmarks || []).forEach(id => tasteIds.add(String(id)));
+    (me.readingHistory || []).forEach(h => h.blogId && tasteIds.add(String(h.blogId)));
+    const likedPosts = await Blog.find({ likedBy: meId }).select("_id").lean();
+    likedPosts.forEach(b => tasteIds.add(String(b._id)));
+
+    // 2. Average their embeddings into a single "taste vector".
+    const tasteBlogs = await Blog.find({ _id: { $in: [...tasteIds] } })
+      .select("+embedding")
+      .lean();
+    const vectors = tasteBlogs
+      .map(b => b.embedding)
+      .filter(v => Array.isArray(v) && v.length);
+
+    let tasteVector = null;
+    if (vectors.length) {
+      const dim = vectors[0].length;
+      tasteVector = new Array(dim).fill(0);
+      for (const v of vectors) {
+        if (v.length !== dim) continue;
+        for (let i = 0; i < dim; i++) tasteVector[i] += v[i];
+      }
+      for (let i = 0; i < dim; i++) tasteVector[i] /= vectors.length;
+    }
+
+    // Nothing to profile yet → gentle empty state (handled in the view).
+    if (!tasteVector) {
+      return res.render("vibe", {
+        user: req.user,
+        hasTaste: false,
+        signalCount: 0,
+        authors: [],
+        posts: [],
+        title: "Your Vibe - Lumina",
+      });
+    }
+
+    // 3. Score every other published post against the taste vector.
+    const followingSet = new Set((me.following || []).map(String));
+    const candidates = await Blog.find({
+      status: "published",
+      createdBy: { $ne: req.user._id },
+      _id: { $nin: [...tasteIds] }, // don't recommend what they've already engaged with
+    })
+      .select("+embedding title coverImageURL createdAt readTime createdBy")
+      .populate("createdBy", "fullName profilePic")
+      .lean();
+
+    const scored = [];
+    const authorAgg = new Map(); // authorId → { author, sum, count, best }
+    for (const b of candidates) {
+      if (!Array.isArray(b.embedding) || !b.embedding.length) continue;
+      if (!b.createdBy) continue;
+      const score = cosineSimilarity(tasteVector, b.embedding);
+      if (!score || score <= 0) continue;
+      scored.push({ ...b, score });
+
+      const aId = String(b.createdBy._id);
+      const entry = authorAgg.get(aId) || { author: b.createdBy, sum: 0, count: 0, best: 0 };
+      entry.sum += score;
+      entry.count += 1;
+      entry.best = Math.max(entry.best, score);
+      authorAgg.set(aId, entry);
+    }
+
+    // 4. Top posts tuned to the reader.
+    const posts = scored
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 8)
+      .map(p => ({ ...p, match: Math.round(p.score * 100) }));
+
+    // 5. Authors ranked by how closely their body of work matches the vibe.
+    const authors = [...authorAgg.values()]
+      .map(e => ({
+        author: e.author,
+        match: Math.round(((e.best * 0.6) + ((e.sum / e.count) * 0.4)) * 100),
+        posts: e.count,
+        isFollowing: followingSet.has(String(e.author._id)),
+      }))
+      .sort((a, b) => b.match - a.match)
+      .slice(0, 6);
+
+    res.render("vibe", {
+      user: req.user,
+      hasTaste: true,
+      signalCount: vectors.length,
+      authors,
+      posts,
+      title: "Your Vibe - Lumina",
+    });
+  } catch (error) {
+    logger.error("Error computing vibe match:", error);
+    res.redirect("/");
+  }
+});
+
 // Profile Edit - GET Form
 router.get("/edit", async (req, res) => {
   try {

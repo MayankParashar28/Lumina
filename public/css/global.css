@@ -213,9 +213,8 @@ input.form-control:focus {
         display: none;
     }
 
-    .nav-links {
-        display: none !important;
-    }
+    /* .nav-links becomes a full-screen slide-out menu below (toggled by the
+       hamburger); don't force display:none here or the menu can never open. */
 
     .nav-actions {
         gap: 0.3rem;
@@ -305,6 +304,11 @@ input.form-control:focus {
     margin: 0;
     padding: 0;
     flex-shrink: 0;
+}
+
+/* Mobile-menu search is hidden on desktop; shown in the slide-out overlay. */
+.nav-search-mobile {
+    display: none;
 }
 
 .nav-link-custom {
@@ -746,6 +750,14 @@ input.form-control:focus {
         gap: 0.5rem;
     }
 
+    /* Show the hamburger so the slide-out menu can be opened on mobile. */
+    .mobile-menu-btn {
+        display: flex;
+        align-items: center;
+        order: -1;
+        /* keep it before the brand */
+    }
+
     /* Links Container - Hidden by default on mobile */
     .nav-links {
         display: flex;
@@ -781,6 +793,40 @@ input.form-control:focus {
         /* Larger text for mobile menu */
     }
 
+    /* Search field inside the mobile slide-out menu */
+    .nav-search-mobile {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        width: 80%;
+        max-width: 340px;
+        padding: 0.7rem 1rem;
+        border: 1px solid rgba(128, 128, 128, 0.3);
+        border-radius: 999px;
+        background: rgba(128, 128, 128, 0.08);
+    }
+
+    .nav-search-mobile form {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        width: 100%;
+    }
+
+    .nav-search-mobile i {
+        font-size: 1.1rem;
+        opacity: 0.6;
+    }
+
+    .nav-search-mobile input {
+        flex: 1;
+        border: none;
+        background: transparent;
+        outline: none;
+        font-size: 1.05rem;
+        color: var(--text-color);
+    }
+
     .nav-brand {
         z-index: 1002;
         /* Keep brand above menu */
@@ -795,4 +841,115 @@ input.form-control:focus {
     .search-trigger input {
         width: 120px;
     }
+}
+/* ===================================================================
+   UI primitives for app.js behaviors
+   (toasts, reading progress, copy buttons, share)
+   =================================================================== */
+
+/* 🔔 Toasts */
+.app-toast-wrap {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 100000;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    max-width: min(360px, calc(100vw - 2rem));
+    pointer-events: none;
+}
+.app-toast {
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.8rem 1rem;
+    border-radius: 12px;
+    background: #fff;
+    color: #1f2937;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16);
+    border-left: 4px solid #6366f1;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: default;
+    opacity: 0;
+    transform: translateX(120%);
+    transition: transform 0.32s cubic-bezier(0.2, 0.9, 0.3, 1), opacity 0.32s;
+}
+.app-toast.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+.app-toast__icon {
+    font-size: 1.05rem;
+    flex-shrink: 0;
+}
+.app-toast__msg {
+    flex: 1;
+    min-width: 0;
+}
+.app-toast__action {
+    flex-shrink: 0;
+    border: none;
+    background: #6366f1;
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.78rem;
+    padding: 0.35rem 0.7rem;
+    border-radius: 8px;
+    cursor: pointer;
+}
+.app-toast__action:hover { background: #4f46e5; }
+.app-toast--success { border-left-color: #22c55e; }
+.app-toast--success .app-toast__icon { color: #22c55e; }
+.app-toast--error { border-left-color: #ef4444; }
+.app-toast--error .app-toast__icon { color: #ef4444; }
+.app-toast--warn { border-left-color: #f59e0b; }
+.app-toast--warn .app-toast__icon { color: #f59e0b; }
+.app-toast--info .app-toast__icon { color: #6366f1; }
+
+/* 📊 Reading progress bar */
+.reading-progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 3px;
+    width: 0;
+    z-index: 100001;
+    background: linear-gradient(90deg, #6366f1, #ec4899);
+    border-radius: 0 2px 2px 0;
+    transition: width 0.08s linear;
+    pointer-events: none;
+}
+
+/* 📋 Code-block copy button */
+.blog-content pre, article pre, .ql-editor pre { position: relative; }
+.code-copy-btn {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    border: none;
+    background: rgba(255, 255, 255, 0.12);
+    color: #e5e7eb;
+    border-radius: 6px;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.8rem;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s, background 0.15s;
+}
+.blog-content pre:hover .code-copy-btn,
+article pre:hover .code-copy-btn,
+.ql-editor pre:hover .code-copy-btn,
+.code-copy-btn:focus { opacity: 1; }
+.code-copy-btn:hover { background: rgba(255, 255, 255, 0.25); }
+.code-copy-btn.copied { background: #22c55e; color: #fff; opacity: 1; }
+
+/* Generic copy/share button feedback */
+.copy-btn.copied { color: #22c55e; }
+
+@media (prefers-reduced-motion: reduce) {
+    .app-toast { transition: opacity 0.2s; transform: none; }
+    .reading-progress { transition: none; }
 }

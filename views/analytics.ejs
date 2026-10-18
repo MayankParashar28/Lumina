@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <%- include('./partials/header') %>
+    <script nonce="<%= cspNonce %>" src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <style>
+        .an-container { max-width: 1000px; margin: 8rem auto 4rem; padding: 0 1.5rem; }
+        .an-title { font-weight: 800; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.75rem; }
+        .an-sub { color: #6c757d; margin-bottom: 2rem; }
+        .an-stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; margin-bottom: 2.5rem; }
+        .an-card { background: #fff; border: 1px solid rgba(0,0,0,0.06); border-radius: 14px; padding: 1.2rem; text-align: center; box-shadow: 0 2px 12px rgba(0,0,0,0.04); }
+        .an-num { font-size: 1.9rem; font-weight: 800; letter-spacing: -1px; line-height: 1.1; }
+        .an-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: #6c757d; font-weight: 600; margin-top: 0.3rem; }
+        .an-panel { background: #fff; border: 1px solid rgba(0,0,0,0.06); border-radius: 16px; padding: 1.6rem; box-shadow: 0 2px 12px rgba(0,0,0,0.04); margin-bottom: 2rem; }
+        .an-panel h3 { font-size: 1rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: #444; margin: 0 0 1.2rem; }
+        .an-chart-wrap { height: 300px; }
+        .top-row { display: flex; align-items: center; gap: 1rem; padding: 0.8rem 0; border-bottom: 1px solid #f1f1f1; text-decoration: none; color: inherit; }
+        .top-row:last-child { border-bottom: none; }
+        .top-rank { font-weight: 800; color: #c7c7c7; width: 1.6rem; font-size: 1.1rem; }
+        .top-name { flex: 1; min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .top-stat { font-size: 0.85rem; color: #6c757d; white-space: nowrap; }
+        .empty-state { text-align: center; padding: 3rem 1rem; color: #6c757d; }
+        @media (max-width: 700px) { .an-stats { grid-template-columns: repeat(2, 1fr); } }
+    </style>
+</head>
+
+<body>
+    <%- include('./partials/nav', { searchQuery: '' }) %>
+
+    <div class="an-container">
+        <h1 class="an-title"><i class="fas fa-chart-line text-primary"></i> Your Analytics</h1>
+        <p class="an-sub">How your stories are performing.</p>
+
+        <div class="an-stats">
+            <div class="an-card"><div class="an-num"><%= totals.posts %></div><div class="an-label">Posts</div></div>
+            <div class="an-card"><div class="an-num"><%= totals.totalViews %></div><div class="an-label">Views</div></div>
+            <div class="an-card"><div class="an-num"><%= totals.totalLikes %></div><div class="an-label">Likes</div></div>
+            <div class="an-card"><div class="an-num"><%= totals.totalComments %></div><div class="an-label">Comments</div></div>
+            <div class="an-card"><div class="an-num"><%= totals.followers %></div><div class="an-label">Followers</div></div>
+        </div>
+
+        <div class="an-panel">
+            <h3>Activity — last 6 months</h3>
+            <div class="an-chart-wrap"><canvas id="activityChart"></canvas></div>
+        </div>
+
+        <div class="an-panel">
+            <h3>Top Posts</h3>
+            <% if (topPosts && topPosts.length > 0) { %>
+                <% topPosts.forEach((p, i) => { %>
+                    <a href="/blog/<%= p._id %>" class="top-row">
+                        <span class="top-rank">#<%= i + 1 %></span>
+                        <span class="top-name"><%= p.title %></span>
+                        <span class="top-stat"><%= p.views || 0 %> views · <%= p.likes || 0 %> likes</span>
+                    </a>
+                <% }) %>
+            <% } else { %>
+                <div class="empty-state">No posts yet — publish a story to see analytics.</div>
+            <% } %>
+        </div>
+    </div>
+
+    <%- include('./partials/footer') %>
+
+    <script id="analytics-data" type="application/json"><%- JSON.stringify(monthly) %></script>
+    <script nonce="<%= cspNonce %>">
+        (() => {
+            const el = document.getElementById("activityChart");
+            if (!el || typeof Chart === "undefined") return;
+            let data;
+            try { data = JSON.parse(document.getElementById("analytics-data").textContent); }
+            catch (e) { return; }
+
+            new Chart(el, {
+                type: "line",
+                data: {
+                    labels: data.labels,
+                    datasets: [
+                        { label: "Posts", data: data.posts, borderColor: "#6366f1", backgroundColor: "rgba(99,102,241,0.1)", tension: 0.4, fill: true },
+                        { label: "Likes", data: data.likes, borderColor: "#ec4899", backgroundColor: "rgba(236,72,153,0.08)", tension: 0.4, fill: true },
+                        { label: "Comments", data: data.comments, borderColor: "#06b6d4", backgroundColor: "rgba(6,182,212,0.08)", tension: 0.4, fill: true }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: "bottom" } },
+                    scales: { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { grid: { display: false } } }
+                }
+            });
+        })();
+    </script>
+</body>
+
+</html>

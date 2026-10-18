@@ -14,7 +14,8 @@
     <%- include('./partials/nav', { searchQuery: searchQuery || "" }) %>
 
         <div class="editor-container">
-            <form method="post" action="/blog/edit/<%= blog._id %>?_csrf=<%= csrfToken %>" enctype="multipart/form-data" id="publishForm">
+            <form method="post" action="/blog/edit/<%= blog._id %>?_csrf=<%= csrfToken %>" enctype="multipart/form-data" id="publishForm"
+                data-autosave="edit-blog-<%= blog._id %>" novalidate>
 
 
 
@@ -164,12 +165,19 @@
 
                     <!-- Moves Actions to Bottom -->
                     <div class="editor-actions" style="margin-top: 30px; justify-content: flex-end;">
-                        <span id="word-count" class="word-counter" style="margin-right: auto;">0 words</span>
+                        <span id="word-count" class="word-counter" style="margin-right: 4px;">0 words</span>
+                        <span data-autosave-status class="autosave-status" style="margin-right: auto;"></span>
                         <button type="submit" name="action" value="draft" class="btn-secondary"
                             style="margin-right: 10px;">Save Draft</button>
                         <button type="submit" name="action" value="publish" class="btn-publish">Update</button>
                     </div>
                 </div>
+                <style>
+                    .autosave-status { font-size: 0.78rem; color: #9ca3af; transition: color 0.2s; }
+                    .autosave-status.is-saving { color: #f59e0b; }
+                    .autosave-status.is-saved { color: #10b981; }
+                    .btn-publish[disabled], .btn-secondary[disabled] { opacity: 0.6; cursor: not-allowed; }
+                </style>
 
             </form>
 
@@ -225,8 +233,13 @@
 
                     // Pre-fill Editor Content
                     // Using a hidden div to safely decode existing HTML content
-                    const initialContent = document.getElementById('body').value;
+                    const bodyInput = document.getElementById('body');
+                    const publishForm = document.getElementById('publishForm');
+                    const initialContent = bodyInput.value;
                     quill.clipboard.dangerouslyPasteHTML(0, initialContent);
+                    // Only auto-save after the editor is ready, so the initial
+                    // programmatic paste above doesn't register as a user edit.
+                    let editorReady = true;
 
 
                     // Generate Title Logic
@@ -239,7 +252,7 @@
                         const suggestionsDiv = document.getElementById("title-suggestions");
 
                         if (body.trim().length < 50) {
-                            alert("Please write some content first so AI can suggest titles!");
+                            window.showToast("Please write some content first so AI can suggest titles!");
                             return;
                         }
 
@@ -293,7 +306,7 @@
 
                         } catch (error) {
                             console.error("Title AI Error", error);
-                            alert(error.message || "Could not generate titles.");
+                            window.showToast(error.message || "Could not generate titles.");
                         } finally {
                             btn.innerHTML = '<i class="fas fa-magic"></i>';
                             btn.style.color = "#ccc";
@@ -306,6 +319,20 @@
                         var text = quill.getText();
                         var words = text.trim().split(/\s+/).filter(word => word.length > 0);
                         document.getElementById("word-count").innerText = `${words.length} words`;
+
+                        // Keep hidden body current so auto-save captures edits.
+                        if (editorReady) {
+                            bodyInput.value = quill.root.innerHTML;
+                            bodyInput.dispatchEvent(new Event("input", { bubbles: true }));
+                        }
+                    });
+
+                    // 💾 Restore editor content when the user restores a saved draft.
+                    publishForm.addEventListener("autosave:restored", function () {
+                        if (bodyInput.value) {
+                            quill.setContents([]);
+                            quill.clipboard.dangerouslyPasteHTML(bodyInput.value);
+                        }
                     });
 
                     // Trigger initial word count
@@ -370,7 +397,7 @@
                         const tone = document.getElementById("toneSelector").value;
 
                         if (!title.trim()) {
-                            alert("Please write a title first so AI knows what to generate!");
+                            window.showToast("Please write a title first so AI knows what to generate!");
                             return;
                         }
 
@@ -427,7 +454,7 @@
                             fallbackImg.src = fallbackUrl;
                             fallbackImg.onload = () => executeSuccess(fallbackUrl);
                             fallbackImg.onerror = () => {
-                                alert("AI Image Service is currently down. Please try uploading an image manually.");
+                                window.showToast("AI Image Service is currently down. Please try uploading an image manually.");
                                 aiBtn.innerHTML = originalText;
                                 aiBtn.disabled = false;
                             };
@@ -438,7 +465,7 @@
                     async function searchGiphy() {
                         const title = document.getElementById("title").value.trim();
                         if (!title) {
-                            alert("Please add a title first so we can find a matching GIF!");
+                            window.showToast("Please add a title first so we can find a matching GIF!");
                             return;
                         }
 
@@ -458,7 +485,7 @@
                             }
 
                             if (!data.data || data.data.length === 0) {
-                                alert("No GIFs found for this title.");
+                                window.showToast("No GIFs found for this title.");
                                 return;
                             }
 
@@ -483,7 +510,7 @@
 
                         } catch (error) {
                             console.error("GIPHY Error:", error);
-                            alert(error.message || "Failed to fetch GIF from GIPHY.");
+                            window.showToast(error.message || "Failed to fetch GIF from GIPHY.");
                         } finally {
                             btn.innerHTML = originalText;
                             btn.disabled = false;
@@ -507,7 +534,7 @@
                         const tone = document.getElementById("toneSelector").value;
 
                         if (!title.trim()) {
-                            alert("Please add a title first.");
+                            window.showToast("Please add a title first.");
                             return;
                         }
 
@@ -574,7 +601,7 @@
                             }
                         } catch (error) {
                             console.error("AI error:", error);
-                            alert("AI Generation Failed: " + error.message);
+                            window.showToast("AI Generation Failed: " + error.message);
 
                             // Try to reset button if found
                             const btn = document.querySelector('.btn-toolbar-ai');
@@ -603,7 +630,7 @@
                             }
 
                             if (!title) {
-                                alert("⚠️ Please add a title first so AI can suggest tags.");
+                                window.showToast("⚠️ Please add a title first so AI can suggest tags.");
                                 return;
                             }
 
@@ -638,7 +665,7 @@
 
                         } catch (error) {
                             console.error("Tag generation error:", error);
-                            alert("Tag Generation Failed: " + error.message);
+                            window.showToast("Tag Generation Failed: " + error.message);
 
                             const btn = document.querySelector('.btn-tag-ai');
                             if (btn) {
@@ -657,7 +684,16 @@
                         modal.classList.add('hidden');
                     }
 
+                    function setSubmitting(btn, label) {
+                        document.querySelectorAll('#publishForm button[type="submit"]').forEach(b => b.disabled = true);
+                        if (btn) {
+                            btn.disabled = true;
+                            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${label}`;
+                        }
+                    }
+
                     function submitFinal() {
+                        setSubmitting(document.getElementById('btn-confirm-publish'), 'Updating…');
                         document.getElementById('publishForm').submit();
                     }
 
@@ -685,6 +721,8 @@
                             // Populate body hidden input first
                             document.getElementById('body').value = quill.root.innerHTML;
 
+                            const draftBtn = [...this.querySelectorAll('button[type="submit"]')].find(b => b.value === 'draft');
+                            setSubmitting(draftBtn, 'Saving…');
                             this.submit();
                             return;
                         }
@@ -764,52 +802,41 @@
                         modal.classList.remove('hidden');
                     });
 
-                    // 👁️ Preview Logic
-                    function previewStory() {
+                    // 👁️ Preview Logic — save to session via POST, then open the
+                    // rendered preview over GET (new tab, else same tab).
+                    async function previewStory() {
                         const title = document.getElementById('title').value;
                         const body = quill.root.innerHTML;
-                        const aiCoverURL = document.getElementById('aiCoverURL').value; // Contains original URL or new AI URL
+                        const aiCoverURL = document.getElementById('aiCoverURL').value;
                         const coverInput = document.getElementById('coverImage');
 
-                        // Function to submit form
-                        const submitPreview = (coverBase64 = "") => {
-                            const form = document.createElement("form");
-                            form.method = "POST";
-                            form.action = "/blog/preview";
-                            form.target = "_blank"; // Open in new tab
-
-                            const inputs = {
-                                _csrf: "<%= csrfToken %>",
-                                title: title,
-                                body: body,
-                                aiCoverURL: aiCoverURL,
-                                coverImage: coverBase64
-                            };
-
-                            for (const [name, value] of Object.entries(inputs)) {
-                                const input = document.createElement("input");
-                                input.type = "hidden";
-                                input.name = name;
-                                input.value = value;
-                                form.appendChild(input);
+                        const savePreview = async (coverBase64 = "") => {
+                            const csrf = "<%= csrfToken %>";
+                            try {
+                                await fetch('/blog/preview', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'x-csrf-token': csrf },
+                                    body: new URLSearchParams({ _csrf: csrf, title, body, aiCoverURL, coverImage: coverBase64, from: 'edit', editId: '<%= blog._id %>' }),
+                                    credentials: 'include',
+                                    redirect: 'manual'
+                                });
+                            } catch (e) {
+                                if (window.showToast) window.showToast("Couldn't build preview. Try again.", "error");
+                                return;
                             }
-
-                            document.body.appendChild(form);
-                            form.submit();
-                            document.body.removeChild(form);
+                            const win = window.open('/blog/preview', '_blank');
+                            if (!win) window.location.href = '/blog/preview';
                         };
 
-                        // Handle Cover Image (Base64 if file, else just submit)
                         if (coverInput.files && coverInput.files[0]) {
                             const reader = new FileReader();
-                            reader.onload = function (e) {
-                                submitPreview(e.target.result);
-                            };
+                            reader.onload = (e) => savePreview(e.target.result);
                             reader.readAsDataURL(coverInput.files[0]);
                         } else {
-                            submitPreview();
+                            savePreview();
                         }
                     }
+                    window.previewStory = previewStory;
 
                     function updateCheckItem(id, isValid) {
                         const el = document.getElementById(id);

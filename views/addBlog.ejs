@@ -14,7 +14,8 @@
   <%- include('./partials/nav', { searchQuery: searchQuery || "" }) %>
 
     <div class="editor-container">
-      <form method="post" action="/blog?_csrf=<%= csrfToken %>" enctype="multipart/form-data" id="publishForm">
+      <form method="post" action="/blog?_csrf=<%= csrfToken %>" enctype="multipart/form-data" id="publishForm"
+        data-autosave="new-blog" novalidate>
 
 
 
@@ -156,13 +157,80 @@
           </div>
 
           <!-- Moves Actions to Bottom -->
-          <div class="editor-actions" style="margin-top: 30px; justify-content: flex-end;">
-            <span id="word-count" class="word-counter" style="margin-right: auto;">0 words</span>
-            <button type="submit" name="action" value="draft" class="btn-secondary" style="margin-right: 10px;">Save
-              Draft</button>
-            <button type="submit" name="action" value="publish" class="btn-publish">Publish</button>
+          <div class="editor-actions" style="margin-top: 30px; justify-content: flex-end; flex-wrap: wrap; gap: 10px;">
+            <span id="word-count" class="word-counter" style="margin-right: 4px;">0 words</span>
+            <span data-autosave-status class="autosave-status" style="margin-right: auto;"></span>
+            <div class="schedule-control">
+              <button type="button" id="scheduleToggle" class="schedule-pill" aria-expanded="false">
+                <i class="fas fa-clock"></i>
+                <span id="schedule-pill-label">Schedule for later</span>
+                <i class="fas fa-chevron-down schedule-caret"></i>
+              </button>
+              <div id="schedule-panel" class="schedule-panel hidden">
+                <div class="schedule-panel__title">Publish on</div>
+                <input type="datetime-local" name="publishAt" id="publishAt" class="schedule-input">
+                <div class="schedule-panel__row">
+                  <span id="tz-hint" class="tz-hint"></span>
+                  <button type="button" id="scheduleClear" class="schedule-clear">Clear</button>
+                </div>
+              </div>
+            </div>
+            <button type="submit" name="action" value="draft" class="btn-secondary">Save Draft</button>
+            <button type="submit" name="action" value="publish" class="btn-publish">
+              <span id="publish-label">Publish</span>
+            </button>
+            <div id="ready-hint" class="ready-hint" style="width: 100%; text-align: right;"></div>
           </div>
         </div>
+        <style>
+          .autosave-status { font-size: 0.78rem; color: #9ca3af; transition: color 0.2s; }
+          .autosave-status.is-saving { color: #f59e0b; }
+          .autosave-status.is-saved { color: #10b981; }
+          .btn-publish[disabled], .btn-secondary[disabled] { opacity: 0.6; cursor: not-allowed; }
+          .ready-hint { font-size: 0.78rem; margin-top: 4px; }
+          .ready-hint.ok { color: #10b981; }
+          .ready-hint.todo { color: #9ca3af; }
+          .ready-hint .chip { display: inline-block; background: #fef2f2; color: #ef4444; border-radius: 999px; padding: 1px 8px; margin-left: 4px; font-weight: 600; }
+
+          /* ⏰ Schedule control */
+          .schedule-control { position: relative; }
+          .schedule-pill {
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            border: 1px solid #e5e7eb; background: #fff; color: #4b5563;
+            font-size: 0.82rem; font-weight: 600; padding: 0.5rem 0.9rem;
+            border-radius: 999px; cursor: pointer; transition: all 0.15s;
+          }
+          .schedule-pill:hover { border-color: #c7d2fe; background: #f5f3ff; color: #4338ca; }
+          .schedule-pill .fa-clock { color: #6366f1; }
+          .schedule-caret { font-size: 0.65rem; opacity: 0.6; transition: transform 0.2s; }
+          .schedule-control.open .schedule-caret { transform: rotate(180deg); }
+          /* Active (a date is set) */
+          .schedule-pill.is-set {
+            border-color: #6366f1; background: linear-gradient(90deg, #6366f1, #8b5cf6); color: #fff;
+          }
+          .schedule-pill.is-set .fa-clock { color: #fff; }
+
+          .schedule-panel {
+            position: absolute; bottom: calc(100% + 8px); right: 0; z-index: 50;
+            width: 260px; background: #fff; border: 1px solid #e5e7eb; border-radius: 14px;
+            box-shadow: 0 12px 32px rgba(0,0,0,0.14); padding: 0.9rem; text-align: left;
+          }
+          .schedule-panel.hidden { display: none; }
+          .schedule-panel__title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #9ca3af; margin-bottom: 0.5rem; }
+          .schedule-input {
+            width: 100%; border: 1px solid #ddd; border-radius: 8px; padding: 0.5rem 0.6rem;
+            font-size: 0.85rem; color: #111;
+          }
+          .schedule-input:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
+          .schedule-panel__row { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-top: 0.6rem; }
+          .tz-hint { font-size: 0.7rem; color: #9ca3af; }
+          .schedule-clear {
+            border: none; background: transparent; color: #ef4444; font-size: 0.75rem; font-weight: 700;
+            cursor: pointer; padding: 0.2rem 0.4rem; border-radius: 6px;
+          }
+          .schedule-clear:hover { background: #fef2f2; }
+          @media (max-width: 600px) { .schedule-panel { right: auto; left: 0; } }
+        </style>
 
 
 
@@ -229,7 +297,7 @@
             const suggestionsDiv = document.getElementById("title-suggestions");
 
             if (body.trim().length < 50) {
-              alert("Please write some content first so AI can suggest titles!");
+              window.showToast("Please write some content first so AI can suggest titles!");
               return;
             }
 
@@ -283,7 +351,7 @@
 
             } catch (error) {
               console.error("Title AI Error", error);
-              alert(error.message || "Could not generate titles.");
+              window.showToast(error.message || "Could not generate titles.");
             } finally {
               btn.innerHTML = '<i class="fas fa-magic"></i>';
               btn.style.color = "#ccc";
@@ -292,10 +360,24 @@
           }
 
           // Custom Word Count implementation for Quill
+          const bodyInput = document.getElementById("body");
+          const publishForm = document.getElementById("publishForm");
           quill.on('text-change', function () {
             var text = quill.getText();
             var words = text.trim().split(/\s+/).filter(word => word.length > 0);
             document.getElementById("word-count").innerText = `${words.length} words`;
+
+            // Keep the hidden body field current so auto-save captures the editor.
+            bodyInput.value = quill.root.innerHTML;
+            bodyInput.dispatchEvent(new Event("input", { bubbles: true }));
+          });
+
+          // 💾 Restore editor content when the user restores a saved draft.
+          publishForm.addEventListener("autosave:restored", function () {
+            if (bodyInput.value) {
+              quill.setContents([]);
+              quill.clipboard.dangerouslyPasteHTML(bodyInput.value);
+            }
           });
 
           // Auto-resize textareas (Title only now)
@@ -353,7 +435,7 @@
             const tone = document.getElementById("toneSelector").value;
 
             if (!title.trim()) {
-              alert("Please write a title first so AI knows what to generate!");
+              window.showToast("Please write a title first so AI knows what to generate!");
               return;
             }
 
@@ -409,7 +491,7 @@
               fallbackImg.src = fallbackUrl;
               fallbackImg.onload = () => executeSuccess(fallbackUrl);
               fallbackImg.onerror = () => {
-                alert("AI Image Service is currently down. Please try uploading an image manually.");
+                window.showToast("AI Image Service is currently down. Please try uploading an image manually.");
                 aiBtn.innerHTML = originalText;
                 aiBtn.disabled = false;
               };
@@ -420,7 +502,7 @@
           async function searchGiphy() {
             const title = document.getElementById("title").value.trim();
             if (!title) {
-              alert("Please add a title first so we can find a matching GIF!");
+              window.showToast("Please add a title first so we can find a matching GIF!");
               return;
             }
 
@@ -441,7 +523,7 @@
               }
 
               if (!data.data || data.data.length === 0) {
-                alert("No GIFs found for this title.");
+                window.showToast("No GIFs found for this title.");
                 return;
               }
 
@@ -466,7 +548,7 @@
 
             } catch (error) {
               console.error("GIPHY Error:", error);
-              alert(error.message || "Failed to fetch GIF from GIPHY.");
+              window.showToast(error.message || "Failed to fetch GIF from GIPHY.");
             } finally {
               btn.innerHTML = originalText;
               btn.disabled = false;
@@ -490,7 +572,7 @@
             const tone = document.getElementById("toneSelector").value;
 
             if (!title.trim()) {
-              alert("Please add a title first.");
+              window.showToast("Please add a title first.");
               return;
             }
 
@@ -564,7 +646,7 @@
               }
             } catch (error) {
               console.error("AI error:", error);
-              alert("AI Generation Failed: " + error.message);
+              window.showToast("AI Generation Failed: " + error.message);
 
               // Try to reset button if found
               const btn = document.querySelector('.btn-toolbar-ai');
@@ -593,7 +675,7 @@
               }
 
               if (!title) {
-                alert("⚠️ Please add a title first so AI can suggest tags.");
+                window.showToast("⚠️ Please add a title first so AI can suggest tags.");
                 return;
               }
 
@@ -628,7 +710,7 @@
 
             } catch (error) {
               console.error("Tag generation error:", error);
-              alert("Tag Generation Failed: " + error.message);
+              window.showToast("Tag Generation Failed: " + error.message);
 
               const btn = document.querySelector('.btn-tag-ai');
               if (btn) {
@@ -647,7 +729,20 @@
             modal.classList.add('hidden');
           }
 
+          // Disable the action buttons and show a spinner so nobody double-submits
+          // during the (several-second) cover upload + save.
+          function setSubmitting(btn, label) {
+            document.querySelectorAll('#publishForm button[type="submit"]').forEach(b => b.disabled = true);
+            if (btn) {
+              btn.disabled = true;
+              btn.dataset._prev = btn.innerHTML;
+              btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${label}`;
+            }
+          }
+
           function submitFinal() {
+            const btn = document.getElementById('btn-confirm-publish');
+            setSubmitting(btn, 'Publishing…');
             document.getElementById('publishForm').submit();
           }
 
@@ -675,6 +770,8 @@
               // Populate body hidden input first
               document.getElementById('body').value = quill.root.innerHTML;
 
+              const draftBtn = [...this.querySelectorAll('button[type="submit"]')].find(b => b.value === 'draft');
+              setSubmitting(draftBtn, 'Saving…');
               this.submit();
               return;
             }
@@ -723,51 +820,43 @@
           });
 
           // 👁️ Preview Logic
-          function previewStory() {
+          // Save the draft to the session via POST, then open the rendered
+          // preview. Opening over GET (new tab, else same tab) avoids the old
+          // target="_blank" + POST behaviour that broke when popups are blocked.
+          async function previewStory() {
             const title = document.getElementById('title').value;
             const body = quill.root.innerHTML;
             const aiCoverURL = document.getElementById('aiCoverURL').value;
             const coverInput = document.getElementById('coverImage');
 
-            // Function to submit form
-            const submitPreview = (coverBase64 = "") => {
-              const form = document.createElement("form");
-              form.method = "POST";
-              form.action = "/blog/preview";
-              form.target = "_blank"; // Open in new tab
-
-              const inputs = {
-                _csrf: "<%= csrfToken %>",
-                title: title,
-                body: body,
-                aiCoverURL: aiCoverURL,
-                coverImage: coverBase64
-              };
-
-              for (const [name, value] of Object.entries(inputs)) {
-                const input = document.createElement("input");
-                input.type = "hidden";
-                input.name = name;
-                input.value = value;
-                form.appendChild(input);
+            const savePreview = async (coverBase64 = "") => {
+              const csrf = "<%= csrfToken %>";
+              try {
+                await fetch('/blog/preview', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'x-csrf-token': csrf },
+                  body: new URLSearchParams({ _csrf: csrf, title, body, aiCoverURL, coverImage: coverBase64, from: 'new' }),
+                  credentials: 'include',
+                  redirect: 'manual' // we don't need the response body; just persist the session
+                });
+              } catch (e) {
+                if (window.showToast) window.showToast("Couldn't build preview. Try again.", "error");
+                return;
               }
-
-              document.body.appendChild(form);
-              form.submit();
-              document.body.removeChild(form);
+              // Open the rendered preview — new tab if allowed, else same tab.
+              const win = window.open('/blog/preview', '_blank');
+              if (!win) window.location.href = '/blog/preview';
             };
 
-            // Handle Cover Image (Base64 if file, else just submit)
             if (coverInput.files && coverInput.files[0]) {
               const reader = new FileReader();
-              reader.onload = function (e) {
-                submitPreview(e.target.result);
-              };
+              reader.onload = (e) => savePreview(e.target.result);
               reader.readAsDataURL(coverInput.files[0]);
             } else {
-              submitPreview();
+              savePreview();
             }
           }
+          window.previewStory = previewStory;
 
           function updateCheckItem(id, isValid) {
             const el = document.getElementById(id);
@@ -791,7 +880,98 @@
             if (event.target == modal) {
               closeChecklist();
             }
-          }
+          };
+
+          // ⏰ Scheduling control: toggle pill + popover, can't pick the past,
+          // shows the reader's timezone, and flips the Publish button to Schedule.
+          (function () {
+            const control = document.querySelector('.schedule-control');
+            const toggle = document.getElementById('scheduleToggle');
+            const panel = document.getElementById('schedule-panel');
+            const publishAt = document.getElementById('publishAt');
+            const tzHint = document.getElementById('tz-hint');
+            const pill = toggle;
+            const pillLabel = document.getElementById('schedule-pill-label');
+            const clearBtn = document.getElementById('scheduleClear');
+            const publishLabel = document.getElementById('publish-label');
+            if (!control || !publishAt) return;
+
+            // No scheduling in the past.
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            publishAt.min = now.toISOString().slice(0, 16);
+
+            if (tzHint) {
+              const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "local time";
+              tzHint.textContent = tz;
+            }
+
+            const openPanel = (open) => {
+              panel.classList.toggle('hidden', !open);
+              control.classList.toggle('open', open);
+              toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+              if (open) setTimeout(() => publishAt.focus(), 50);
+            };
+
+            const fmt = (val) => {
+              const d = new Date(val);
+              if (isNaN(d)) return '';
+              return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+            };
+
+            const refresh = () => {
+              if (publishAt.value) {
+                pill.classList.add('is-set');
+                pillLabel.textContent = fmt(publishAt.value);
+                if (publishLabel) publishLabel.textContent = 'Schedule';
+              } else {
+                pill.classList.remove('is-set');
+                pillLabel.textContent = 'Schedule for later';
+                if (publishLabel) publishLabel.textContent = 'Publish';
+              }
+            };
+
+            toggle.addEventListener('click', (e) => {
+              e.stopPropagation();
+              openPanel(panel.classList.contains('hidden'));
+            });
+            publishAt.addEventListener('change', refresh);
+            publishAt.addEventListener('input', refresh);
+            if (clearBtn) clearBtn.addEventListener('click', () => { publishAt.value = ''; refresh(); openPanel(false); });
+            document.addEventListener('click', (e) => {
+              if (!control.contains(e.target)) openPanel(false);
+            });
+            refresh();
+          })();
+
+          // ✅ Live publish-readiness hint — tells writers what's left before they
+          // hit Publish, instead of only finding out in the modal.
+          (function () {
+            const hint = document.getElementById('ready-hint');
+            if (!hint) return;
+            const refresh = () => {
+              const missing = [];
+              if (!document.getElementById('title').value.trim()) missing.push('title');
+              const hasCover = (document.getElementById('coverImage').files || []).length > 0
+                || document.getElementById('aiCoverURL').value !== "";
+              if (!hasCover) missing.push('cover');
+              const words = quill.getText().trim().split(/\s+/).filter(Boolean).length;
+              if (words < 50) missing.push(`${50 - words} more words`);
+              if (!document.querySelector('input[name="category"]:checked')) missing.push('category');
+              if (!document.getElementById('tags').value.trim()) missing.push('tags');
+
+              if (missing.length === 0) {
+                hint.className = 'ready-hint ok';
+                hint.innerHTML = '<i class="fas fa-check-circle"></i> Ready to publish';
+              } else {
+                hint.className = 'ready-hint todo';
+                hint.innerHTML = 'To publish, add: ' + missing.map(m => `<span class="chip">${m}</span>`).join('');
+              }
+            };
+            ['input', 'change'].forEach(ev => document.getElementById('publishForm').addEventListener(ev, refresh));
+            quill.on('text-change', refresh);
+            refresh();
+          })();
         </script>
 </body>
 

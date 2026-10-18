@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <%- include('./partials/header') %>
+    <style>
+        .history-container { max-width: 900px; margin: 8rem auto 4rem; padding: 0 1.5rem; }
+        .history-title { font-weight: 800; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.75rem; }
+        .history-sub { color: #6c757d; margin-bottom: 2rem; }
+        .history-grid { display: grid; gap: 1.25rem; }
+        .history-card {
+            display: flex; gap: 1.25rem; align-items: center; text-decoration: none; color: inherit;
+            background: #fff; border: 1px solid rgba(0,0,0,0.06); border-radius: 12px; padding: 1.1rem;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.04); transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .history-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+        .history-img { width: 110px; height: 72px; object-fit: cover; border-radius: 8px; flex-shrink: 0; background: #f0f0f0; }
+        .history-info { flex: 1; min-width: 0; }
+        .history-cat { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #6366f1; }
+        .history-name { font-size: 1.15rem; font-weight: 700; margin: 0.2rem 0 0.4rem; color: #212529; }
+        .history-meta { font-size: 0.82rem; color: #6c757d; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+        .history-when { margin-left: auto; font-size: 0.8rem; color: #adb5bd; white-space: nowrap; }
+        .empty-state { text-align: center; padding: 4rem 1rem; color: #6c757d; }
+        @media (max-width: 600px) {
+            .history-card { flex-direction: column; align-items: flex-start; }
+            .history-img { width: 100%; height: 160px; }
+            .history-when { margin-left: 0; }
+        }
+    </style>
+</head>
+
+<body>
+    <%- include('./partials/nav', { searchQuery: '' }) %>
+
+    <div class="history-container">
+        <h1 class="history-title"><i class="fas fa-clock-rotate-left text-primary"></i> Recently Read</h1>
+        <p class="history-sub">Jump back into the stories you've been reading.</p>
+
+        <% if (!history || history.length === 0) { %>
+            <div class="empty-state">
+                <i class="fas fa-book-open fa-3x mb-3" style="opacity: 0.3;"></i>
+                <h3>Nothing here yet</h3>
+                <p>Articles you open will show up here so you can pick up where you left off.</p>
+                <a href="/" class="btn btn-primary mt-3">Explore Stories</a>
+            </div>
+        <% } else { %>
+            <div class="history-grid">
+                <% history.forEach(entry => { const blog = entry.blogId; %>
+                    <a href="/blog/<%= blog._id %>" class="history-card">
+                        <img loading="lazy"
+                             src="<%= typeof optimizeImage === 'function' ? optimizeImage(blog.coverImageURL || '/images/default-cover.png', { width: 300, crop: 'fill' }) : (blog.coverImageURL || '/images/default-cover.png') %>"
+                             alt="" class="history-img" data-fallback="/images/default-cover.png">
+                        <div class="history-info">
+                            <% if (blog.category) { %><span class="history-cat"><%= blog.category %></span><% } %>
+                            <h2 class="history-name"><%= blog.title %></h2>
+                            <div class="history-meta">
+                                <% if (blog.createdBy) { %><span>by <%= blog.createdBy.fullName %></span><% } %>
+                                <span>·</span>
+                                <span><%= blog.readTime || 1 %> min read</span>
+                            </div>
+                        </div>
+                        <span class="history-when">read <%= moment(entry.viewedAt).fromNow() %></span>
+                    </a>
+                <% }) %>
+            </div>
+        <% } %>
+    </div>
+
+    <%- include('./partials/footer') %>
+</body>
+
+</html>

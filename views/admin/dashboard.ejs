@@ -19,10 +19,14 @@
             }
 
             .admin-container {
+                width: 100%;
                 max-width: 1100px;
                 margin: 8rem auto 4rem;
                 /* Increased from 6rem */
                 padding: 0 1.5rem;
+                /* body is a flex column (sticky footer); keep this panel full-width
+                   on every tab instead of shrink-wrapping to the Analytics charts. */
+                align-self: center;
             }
 
             /* --- Stat Cards --- */
@@ -138,6 +142,36 @@
             .table-custom tr:last-child td {
                 border-bottom: none;
             }
+
+            /* Keep every tab's content box the EXACT same width & height so
+               switching Users / Content / Analytics never resizes the panel. */
+            #adminTabsContent,
+            #adminTabsContent .tab-pane {
+                min-height: 600px;
+            }
+
+            /* Users & Content: the single card fills the panel; the table scrolls inside. */
+            #users > .card,
+            #blogs > .card {
+                min-height: 600px;
+                display: flex;
+                flex-direction: column;
+            }
+
+            /* Let the full user/blog list show (no inner scroll cap) so every
+               row is visible; the pane min-height keeps short tabs from shrinking. */
+            #users .table-responsive,
+            #blogs .table-responsive {
+                flex: 1 1 auto;
+            }
+
+            .table-custom thead th {
+                position: sticky;
+                top: 0;
+                background: #fff;
+                z-index: 2;
+            }
+
 
             .role-badge {
                 padding: 4px 10px;
@@ -309,10 +343,10 @@
                 <h1 class="fw-light m-0">Dashboard <span class="fs-5 text-muted ms-2">Admin Panel</span></h1>
                 <div class="d-flex gap-2">
                     <a href="/admin/moderation" class="btn btn-sm btn-outline-danger">
-                        <i class="bi bi-shield-exclamation me-1"></i> Moderation Logs
+                        <i class="fas fa-shield-halved me-1"></i> Moderation Logs
                     </a>
                     <button class="btn btn-sm btn-outline-primary" data-action="reload"><i
-                            class="bi bi-arrow-clockwise"></i> Refresh</button>
+                            class="fas fa-rotate-right"></i> Refresh</button>
                 </div>
             </div>
 
@@ -348,21 +382,21 @@
             <ul class="nav nav-pills mb-4 bg-light p-2 rounded-3 gap-2" id="adminTabs" role="tablist">
                 <li class="nav-item" role="presentation">
                     <button class="nav-link active rounded-2" id="users-tab" data-bs-toggle="pill"
-                        data-bs-target="#users" type="button" role="tab"><i class="bi bi-people me-2"></i>Users</button>
+                        data-bs-target="#users" type="button" role="tab"><i class="fas fa-users me-2"></i>Users</button>
                 </li>
                 <li class="nav-item" role="presentation">
                     <button class="nav-link rounded-2" id="blogs-tab" data-bs-toggle="pill" data-bs-target="#blogs"
-                        type="button" role="tab"><i class="bi bi-journal-text me-2"></i>Content</button>
+                        type="button" role="tab"><i class="fas fa-file-lines me-2"></i>Content</button>
                 </li>
 
                 <li class="nav-item" role="presentation">
                     <button class="nav-link rounded-2" id="analytics-tab" data-bs-toggle="pill"
                         data-bs-target="#analytics" type="button" role="tab"><i
-                            class="bi bi-graph-up-arrow me-2"></i>Analytics</button>
+                            class="fas fa-chart-line me-2"></i>Analytics</button>
                 </li>
             </ul>
 
-            <div class="tab-content" id="adminTabsContent" style="min-height: 60vh;">
+            <div class="tab-content" id="adminTabsContent">
 
                 <!-- � Users Tab -->
                 <div class="tab-pane fade show active" id="users" role="tabpanel">

@@ -1,3 +1,11 @@
+<%
+    // Escape, then style @mentions. Escaping first keeps this XSS-safe.
+    function renderCommentBody(text) {
+        const esc = String(text || "").replace(/[&<>"']/g, c =>
+            ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        return esc.replace(/@([a-zA-Z0-9_]+)/g, '<span class="mention">@$1</span>');
+    }
+%>
 <div class="comment-card <%= comment.isPinned ? 'is-pinned' : '' %> <%= (comment.createdBy && blog.createdBy && String(comment.createdBy._id) === String(blog.createdBy._id)) ? 'is-author-comment' : '' %> <%= comment.isDeleted ? 'is-deleted-comment' : '' %>"
     id="comment-<%= comment._id %>">
 
@@ -41,12 +49,18 @@
 
                 <!-- Reaction Button -->
                 <% const emojis = ['👍', '❤️', '🔥', '😂']; const reactionCounts = {};
+                   // Normalize reactions to a plain object. On socket-injected comments it's a
+                   // Mongoose Map (where Object.values leaks internal props); on reloads it's lean (object).
+                   let reactionsObj = {};
                    if (comment.reactions) {
-                       Object.values(comment.reactions).forEach(r => {
-                           reactionCounts[r] = (reactionCounts[r] || 0) + 1;
-                       });
+                       reactionsObj = (typeof comment.reactions.get === 'function' && typeof comment.reactions.entries === 'function')
+                           ? Object.fromEntries(comment.reactions)
+                           : comment.reactions;
                    }
-                   const myReaction = (user && comment.reactions && comment.reactions[user._id.toString()]) || null;
+                   Object.values(reactionsObj).forEach(r => {
+                       reactionCounts[r] = (reactionCounts[r] || 0) + 1;
+                   });
+                   const myReaction = (user && reactionsObj[user._id.toString()]) || null;
                    const hasReactions = Object.keys(reactionCounts).length > 0;
                 %>
                 <div class="reaction-wrapper" style="position: relative; margin-left: auto;">
@@ -70,7 +84,7 @@
             </div>
 
             <div class="comment-body">
-                <p><%= comment.content %></p>
+                <p><%- renderCommentBody(comment.content) %></p>
             </div>
 
             <!-- Actions Bar -->
