@@ -1011,7 +1011,7 @@ router.post("/forgot-password", emailLimiter, async (req, res) => {
     await user.save();
 
     // Send Reset Email
-    const baseUrl = process.env.BASE_URL || `http://${req.headers.host}`;
+    const baseUrl = process.env.BASE_URL || process.env.RENDER_EXTERNAL_URL || `http://${req.headers.host}`;
     const resetLink = `${baseUrl}/user/reset-password/${token}`;
     const transporter = await require("../services/emailService").createTransporter(); // Assuming export, or I need to import createTransporter properly if not exported. 
     // Wait, createTransporter is internal in emailService. Let's add a sendResetPasswordEmail function to emailService.js instead.

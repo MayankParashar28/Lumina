@@ -31,7 +31,7 @@ const createTransporter = async () => {
 
 const sendVerificationEmail = async (email, token) => {
   const transporter = await createTransporter();
-  const baseUrl = process.env.BASE_URL || "http://localhost:8000";
+  const baseUrl = process.env.BASE_URL || process.env.RENDER_EXTERNAL_URL || "http://localhost:8000";
   const verificationLink = `${baseUrl}/user/verify/${token}`;
 
   const info = await transporter.sendMail({

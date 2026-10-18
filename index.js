@@ -99,6 +99,40 @@ app.set("trust proxy", 1);
 // Middleware
 app.use(compression()); // 🚀 Enable Gzip/Brotli Compression
 
+// 🧱 Phase-5: time every request (rate / latency / errors) for Prometheus.
+const metrics = require("./services/metrics");
+app.use(metrics.httpMetricsMiddleware);
+
+// 🩺 Shallow health check for the load balancer / keep-alive ping (fast).
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "ok", uptime: process.uptime() });
+});
+
+// 🩺 Deep health check — verifies Mongo + Redis so monitoring can alert on outages.
+app.get("/healthz", async (req, res) => {
+  const mongo = mongoose.connection.readyState === 1 ? "up" : "down";
+  const redisSvcLocal = require("./services/redis");
+  let redis = "disabled";
+  if (redisSvcLocal.enabled) {
+    try { await redisSvcLocal.client.ping(); redis = "up"; } catch (_) { redis = "down"; }
+  }
+  const ok = mongo === "up" && redis !== "down";
+  res.status(ok ? 200 : 503).json({ status: ok ? "ok" : "degraded", mongo, redis, uptime: process.uptime() });
+});
+
+// 📈 Prometheus metrics. Guard with METRICS_TOKEN (Bearer) when set so it isn't public.
+app.get("/metrics", async (req, res) => {
+  if (process.env.METRICS_TOKEN && req.get("authorization") !== `Bearer ${process.env.METRICS_TOKEN}`) {
+    return res.status(401).end();
+  }
+  try {
+    res.set("Content-Type", metrics.register.contentType);
+    res.end(await metrics.register.metrics());
+  } catch (e) {
+    res.status(500).end(e.message);
+  }
+});
+
 // 🔐 Per-request CSP nonce for inline <script> blocks. This lets us drop
 // 'unsafe-inline' and 'unsafe-eval' from script-src (so injected <script>
 // tags can't execute). Must run before helmet so the directive can read it.
@@ -139,13 +173,17 @@ app.use(helmet({
       imgSrc: ["'self'", "data:", "https:", "https://api.dicebear.com"],
       connectSrc: [
         "'self'",
+        "wss:",
+        "ws:",
         "https://ka-f.fontawesome.com",
         "https://cdn.jsdelivr.net",
         "https://cdnjs.cloudflare.com",
         "https://unpkg.com",
         "https://analytics.ahrefs.com",
         "https://www.google-analytics.com",
-        "https://region1.google-analytics.com"
+        "https://region1.google-analytics.com",
+        // Allow the real-time host (HTTP polling + WebSocket) when configured.
+        ...(process.env.SOCKET_URL ? [process.env.SOCKET_URL, process.env.SOCKET_URL.replace(/^http/, "ws")] : [])
       ],
     },
   },
@@ -153,6 +191,48 @@ app.use(helmet({
 app.use(cookieParser());
 
 app.use(checkForAuthenticationCookie("token"));
+
+// 🧱 Phase-3 scaling: anonymous GETs to public pages (landing + a published blog)
+// can be served cookie-less and cached by a CDN. Mark them so the session/CSRF/
+// flash/passport layers below are skipped (no Set-Cookie), and tag the response
+// cacheable. Logged-in or interactive requests are untouched (and carry a cookie,
+// so a CDN rule bypasses cache for them). See docs/SCALING.md.
+const PUBLIC_BLOG_RE = /^\/blog\/[a-f\d]{24}$/i;
+app.use((req, res, next) => {
+  if (req.method === "GET" && !req.user && (req.path === "/" || PUBLIC_BLOG_RE.test(req.path))) {
+    req.publicCache = true;
+    res.set("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300");
+  }
+  next();
+});
+
+// ⚡ In-process HTML micro-cache for those anonymous public pages — serves repeat
+// hits from memory (<1ms) instead of re-querying Mongo and re-rendering EJS.
+const pageCache = require("./services/pageCache");
+app.use((req, res, next) => {
+  if (!req.publicCache || !pageCache.enabled()) return next();
+  // Capture the full path HERE (app level). Inside a mounted router req.path becomes
+  // relative, so we must key get + set off the same captured value.
+  const key = req.originalUrl.split("?")[0];
+  const hit = pageCache.get(key);
+  if (hit) {
+    res.set("Content-Type", hit.type);
+    res.set("X-Cache", "HIT");
+    return res.send(hit.body);
+  }
+  res.set("X-Cache", "MISS");
+  const origSend = res.send.bind(res);
+  res.send = (body) => {
+    try {
+      if (res.statusCode === 200 && typeof body === "string") {
+        pageCache.set(key, body, res.get("Content-Type") || "text/html; charset=utf-8");
+      }
+    } catch (_) {}
+    return origSend(body);
+  };
+  next();
+});
+
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
@@ -164,6 +244,12 @@ app.use(express.static(path.resolve("./public"), {
 // Removing redundant express.static("public") call
 app.use((req, res, next) => {
   res.locals.user = req.user || null;
+  // Real-time (Socket.io) config. `socketUrl` points the client at a persistent
+  // real-time host when set; otherwise same-origin. `realtimeEnabled` is false on
+  // Vercel (serverless can't hold WebSockets) unless a SOCKET_URL is given, so the
+  // client doesn't even try to connect there — no failed requests, no console noise.
+  res.locals.socketUrl = process.env.SOCKET_URL || "";
+  res.locals.realtimeEnabled = !!process.env.SOCKET_URL || process.env.VERCEL !== "1";
   res.locals.path = req.path;
   res.locals.canonicalPath = req.path; // 🔍 SEO: Canonical URL for all pages
   app.locals.optimizeImage = optimizeImage;
@@ -229,20 +315,19 @@ if (redisSvc.enabled) {
   });
 }
 
-// Session Configuration
-app.use(
-  session({
-    secret: process.env.SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false, // 🔒 Fixed: Don't create sessions for anonymous visitors
-    store: sessionStore,
-    cookie: {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production", // 🔒 Only require HTTPS in production so local HTTP dev works
-      sameSite: "lax",
-    }
-  })
-);
+// Session Configuration — skipped for public-cacheable requests so they set no cookie.
+const sessionMiddleware = session({
+  secret: process.env.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false, // 🔒 Fixed: Don't create sessions for anonymous visitors
+  store: sessionStore,
+  cookie: {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production", // 🔒 Only require HTTPS in production so local HTTP dev works
+    sameSite: "lax",
+  }
+});
+app.use((req, res, next) => (req.publicCache ? next() : sessionMiddleware(req, res, next)));
 
 // CSRF Protection — session-based; token comes from the _csrf form field, the
 // x-csrf-token header, or the _csrf query param. The query param is needed for
@@ -259,21 +344,34 @@ const { generateToken, csrfSynchronisedProtection } = csrfSync({
 const csrfProtection = csrfSynchronisedProtection;
 
 app.use((req, res, next) => {
-  if (req.path === "/ai/generate-comment-suggestions") {
+  // Skip CSRF for public-cacheable requests (no session) and the AI exemption.
+  if (req.publicCache || req.path === "/ai/generate-comment-suggestions") {
     return next();
   }
   csrfProtection(req, res, next);
 });
 
-app.use(passport.initialize());
-app.use(passport.session()); // Persistent login sessions
+// Passport + flash need a session, so skip them for public-cacheable requests.
+const passportInit = passport.initialize();
+const passportSession = passport.session();
+const flashMiddleware = flash();
+app.use((req, res, next) => (req.publicCache ? next() : passportInit(req, res, next)));
+app.use((req, res, next) => (req.publicCache ? next() : passportSession(req, res, next)));
+app.use((req, res, next) => (req.publicCache ? next() : flashMiddleware(req, res, next)));
 
-app.use(flash());
 app.use((req, res, next) => {
-  res.locals.success_msg = req.flash("success");
-  res.locals.error_msg = req.flash("error");
-  res.locals.error = res.locals.error_msg; // Alias for compatibility with signin/signup
-  res.locals.csrfToken = generateToken(req); // 🛡️ CSRF Token for all forms
+  if (req.publicCache) {
+    // Safe, static defaults so templates render without a session/CSRF/flash.
+    res.locals.success_msg = [];
+    res.locals.error_msg = [];
+    res.locals.error = [];
+    res.locals.csrfToken = "";
+  } else {
+    res.locals.success_msg = req.flash("success");
+    res.locals.error_msg = req.flash("error");
+    res.locals.error = res.locals.error_msg; // Alias for compatibility with signin/signup
+    res.locals.csrfToken = generateToken(req); // 🛡️ CSRF Token for all forms
+  }
   next();
 });
 
@@ -560,6 +658,18 @@ if (redisSvc.enabled) {
 
 app.set("io", io);
 
+// 🧱 Phase-4 scaling: give background jobs access to Socket.io (for real-time
+// notification emits), and run the in-process worker unless a separate worker is
+// used (QUEUE_WORKER_INLINE=false).
+require("./services/jobs").setIo(io);
+if (process.env.NODE_ENV !== "test") {
+  const queue = require("./services/queue");
+  if (process.env.QUEUE_WORKER_INLINE !== "false") {
+    queue.startWorker();
+    queue.scheduleRepeatables();
+  }
+}
+
 // Static fallback for socket.io client bundle (ensures /socket.io/socket.io.js never 404s on serverless)
 try {
   const socketIoClientDist = path.join(__dirname, "node_modules", "socket.io", "client-dist");
@@ -665,9 +775,37 @@ app.get("/cron/publish-scheduled", async (req, res) => {
   res.json({ published });
 });
 
-// Interval for long-lived servers (no-op on serverless cold-starts; skipped in tests).
-if (process.env.NODE_ENV !== "test") {
+// Interval for long-lived servers. When the queue is on, the repeatable BullMQ job
+// handles scheduled publishing instead (see services/queue.js), so skip the timer.
+if (process.env.NODE_ENV !== "test" && !require("./services/queue").queuesEnabled) {
   setInterval(() => publishDueScheduled(app.get("io")), 60 * 1000).unref?.();
+}
+
+// 🏃 Keep-Alive Ping — prevents Render free-tier from spinning down after 15 min of inactivity.
+// Only runs when deployed on Render (RENDER_EXTERNAL_URL is auto-injected by the platform).
+// Pings /health every 10 minutes. This is a no-op in local dev and tests.
+if (process.env.NODE_ENV !== "test" && process.env.RENDER_EXTERNAL_URL) {
+  const https = require("https");
+  const http = require("http");
+  const keepAliveUrl = `${process.env.RENDER_EXTERNAL_URL}/health`;
+  const pingInterval = 10 * 60 * 1000; // 10 minutes
+
+  const pingServer = () => {
+    const client = keepAliveUrl.startsWith("https") ? https : http;
+    client.get(keepAliveUrl, (res) => {
+      logger.info(`🏃 Keep-alive ping → ${keepAliveUrl} [${res.statusCode}]`);
+    }).on("error", (err) => {
+      logger.warn(`⚠️ Keep-alive ping failed: ${err.message}`);
+    });
+  };
+
+  // Wait 30s after boot before starting pings so the server is fully ready.
+  setTimeout(() => {
+    pingServer();
+    setInterval(pingServer, pingInterval).unref?.();
+  }, 30000);
+
+  logger.info(`🏃 Keep-alive self-ping enabled → ${keepAliveUrl} (every 10 min)`);
 }
 
 
@@ -701,7 +839,7 @@ app.use((err, req, res, next) => {
 
 // Start Server (skipped under test — supertest binds its own ephemeral port)
 if (process.env.NODE_ENV !== "test") {
-  const serverInstance = server.listen(port, () => logger.info(`🚀 App listening on port ${port}`));
+  const serverInstance = server.listen(port, "0.0.0.0", () => logger.info(`🚀 App listening on port ${port}`));
 
   // 🛑 Graceful Shutdown Logic
   const gracefulShutdown = () => {

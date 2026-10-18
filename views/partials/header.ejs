@@ -20,7 +20,7 @@
 <title><%= locals.title || 'Lumina - The Voice of the Bold' %></title>
 
 <!-- ✅ Canonical URL: Prevents duplicate page indexing -->
-<% const BASE_URL = process.env.BASE_URL || 'https://lluminaa.vercel.app'; %>
+<% const BASE_URL = process.env.BASE_URL || process.env.RENDER_EXTERNAL_URL || 'https://lluminaa.vercel.app'; %>
 <% const canonicalPath = locals.canonicalPath || '/'; %>
 <link rel="canonical" href="<%= BASE_URL + canonicalPath %>">
 

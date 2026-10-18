@@ -18,6 +18,8 @@ const axios = require("axios"); // Import Axios for GIPHY Proxy
 
 const { generateEmbedding, cosineSimilarity } = require("../services/ai"); // Import AI Service
 const { vectorSearchBlogs } = require("../services/vectorSearch"); // Phase-2: Atlas kNN (falls back to cosine)
+const { enqueue } = require("../services/queue"); // Phase-4: background jobs (falls back to inline)
+const pageCache = require("../services/pageCache"); // micro-cache for anon public pages
 const logger = require("../services/logger"); // Structured Logging
 const rateLimit = require("express-rate-limit");
 
@@ -657,6 +659,9 @@ router.post("/comment/:blogId", commentLimiter, async (req, res) => {
     if (io) {
       const populatedComment = await Comment.findById(comment._id).populate("createdBy", "fullName profilePic");
 
+      // A new comment changes the blog page — drop its cached copy.
+      pageCache.bustBlog(req.params.blogId);
+
       // Render the partial to a string
       res.render("partials/comment-thread", {
         comment: populatedComment,
@@ -1104,6 +1109,9 @@ router.post("/edit/:id", upload.single("coverImage"), async (req, res) => {
     // Save initial blog immediately
     await blog.save();
 
+    // Edited content is cached under its page (and may show on the landing) — drop both.
+    pageCache.bustBlog(blog._id.toString());
+
     req.flash("success", "Blog updated successfully!");
     return res.redirect(`/blog/${blog._id}`);
 
@@ -1132,6 +1140,7 @@ router.post("/delete/:blogId", async (req, res) => {
     }
 
     await blog.deleteOne();
+    pageCache.bustBlog(req.params.blogId);
     return res.redirect("/");
   } catch (error) {
     logger.error("❌ Error deleting blog:", error);
@@ -1311,56 +1320,18 @@ router.post("/", blogLimiter, upload.single("coverImage"), async (req, res) => {
       publishAt: scheduledAt,
     });
 
-    // ⚡ Background AI: Generate Embedding (Fire-and-forget)
-    // This allows the user to see their post immediately while AI works in the background.
+    // A new post changes the landing feed — drop the cached landing page.
+    pageCache.bustBlog(blog._id.toString());
+
+    // ⚡ Phase-4: embedding generation runs as a background job (off the request
+    // path, retried, rate-limit-friendly) instead of a fire-and-forget promise.
     const fullText = `${title} ${finalBody.replace(/<[^>]*>/g, '')}`;
-    generateEmbedding(fullText).then(async (embedding) => {
-      if (embedding && embedding.length > 0) {
-        await Blog.findByIdAndUpdate(blog._id, { embedding });
+    enqueue("embed", { blogId: blog._id.toString(), text: fullText });
 
-      }
-    }).catch(err => logger.error("⚠️ Background Embedding Error:", err));
-
-    // ✅ Save Notification (Only if Published)
+    // ✅ Notification fan-out (self + followers) runs as a background job so a
+    // popular author's publish doesn't block the request on a huge insertMany.
     if (blogStatus === "published") {
-      const selfNotification = new Notification({
-        userId: req.user._id, // User receiving notification
-        senderId: req.user._id, // The uploader
-        type: "blog_upload",
-        message: `You successfully uploaded a new blog: "${title}"`,
-        blogId: blog._id, // Deep Link Support
-        targetUrl: `/blog/${blog._id}`, // 🎯 Deep Link
-        read: false,  // Mark notification as unread initially
-        createdAt: new Date(),
-      });
-      await selfNotification.save();
-
-      // ✅ Notify All Followers
-      const user = await User.findById(req.user._id).populate("followers", "fullName profilePic");
-      if (user && user.fullName) {
-        const followerNotifications = user.followers.map((follower) => ({
-          userId: follower._id, // Follower receiving the notification
-          senderId: req.user._id, // User who uploaded the blog
-          type: "blog_upload",
-          message: `${user.fullName} uploaded a new blog: "${title}"`,
-          blogId: blog._id, // Deep Link Support
-          targetUrl: `/blog/${blog._id}`, // 🎯 Deep Link
-          read: false,
-          createdAt: new Date(),
-        }));
-
-        await Notification.insertMany(followerNotifications);
-
-        // 📢 Real-time Notify Followers
-        const io = req.app.get("io");
-        if (io) {
-          followerNotifications.forEach(n => {
-            io.to(`user:${n.userId}`).emit("new_notification", {
-              message: n.message
-            });
-          });
-        }
-      }
+      enqueue("fanout", { authorId: req.user._id.toString(), blogId: blog._id.toString(), title });
     } else if (blogStatus === "scheduled") {
       req.flash("success", `🗓️ Scheduled — this post will publish on ${scheduledAt.toLocaleString()}.`);
       return res.redirect("/blog/drafts");

@@ -835,14 +835,15 @@
         <div id="float-layer" class="float-layer" aria-hidden="true"></div>
 
         <%- include('./partials/footer') %>
-            <!-- ⚡ Socket.io Real-time Comments -->
+            <!-- ⚡ Socket.io Real-time Comments (only when a real-time host is available) -->
+            <% if (locals.realtimeEnabled) { %>
             <script nonce="<%= cspNonce %>" src="https://cdn.jsdelivr.net/npm/socket.io-client@4.8.1/dist/socket.io.min.js"></script>
             <script nonce="<%= cspNonce %>">
                 (() => {
                     if (typeof io !== "function") return;
                     let socket = null;
                     try {
-                        socket = io({
+                        socket = <%- locals.socketUrl ? `io("${locals.socketUrl}", ` : 'io(' %>{
                             reconnectionAttempts: 2,
                             timeout: 3000,
                         });
@@ -953,6 +954,7 @@
                     });
                 })();
             </script>
+            <% } %>
 </body>
 
 </html>

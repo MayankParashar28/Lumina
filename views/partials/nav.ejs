@@ -137,7 +137,9 @@
 
 
     <!-- Scripts -->
+    <% if (locals.realtimeEnabled) { %>
     <script nonce="<%= cspNonce %>" src="https://cdn.jsdelivr.net/npm/socket.io-client@4.8.1/dist/socket.io.min.js"></script>
+    <% } %>
     <script nonce="<%= cspNonce %>">
       // Notification Count
       async function updateNotificationCount() {
@@ -207,11 +209,11 @@
         });
       });
 
-      // 🔄 Real-Time Notifications
-      <% if (locals.user) { %>
+      // 🔄 Real-Time Notifications (only when a real-time host is available)
+      <% if (locals.user && locals.realtimeEnabled) { %>
         if (typeof io === "function") {
           try {
-            const socket = io({
+            const socket = <%- locals.socketUrl ? `io("${locals.socketUrl}", ` : 'io(' %>{
               reconnectionAttempts: 2,
               timeout: 3000,
               autoConnect: true,
