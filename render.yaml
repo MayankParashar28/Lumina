@@ -44,3 +44,24 @@ services:
         sync: false
       - key: GIPHY_API_KEY
         sync: false
+
+# The web service above runs background jobs in-process (default), so no separate
+# worker is required on the free tier. To DECOUPLE the worker at scale (needs a paid
+# plan — Render Background Workers aren't free), uncomment the service below and set
+# QUEUE_WORKER_INLINE=false on the web service so it only enqueues:
+#
+#  - type: worker
+#    name: lumina-worker
+#    runtime: node
+#    plan: starter
+#    buildCommand: npm install
+#    startCommand: node worker.js
+#    autoDeploy: true
+#    envVars:
+#      - key: NODE_ENV
+#        value: production
+#      - key: MONGODB_URL
+#        sync: false
+#      - key: REDIS_URL
+#        sync: false
+#      # ...plus the same GOOGLE_*, CLOUDINARY_*, EMAIL_* vars the jobs need

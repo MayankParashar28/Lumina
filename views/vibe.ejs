@@ -45,7 +45,7 @@
         .match-pct { font-size: 0.78rem; font-weight: 800; color: #4f46e5; flex-shrink: 0; min-width: 34px; text-align: right; }
 
         /* Authors — compact, polished cards, ~3–4 per row */
-        .author-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 0.9rem; }
+        .author-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.9rem; }
         .author-card {
             position: relative; display: flex; align-items: center; gap: 0.85rem; background: #fff;
             border: 1px solid rgba(0,0,0,0.06); border-radius: 14px; padding: 0.95rem 1rem;
@@ -72,7 +72,7 @@
         .author-card .match-pct { font-size: 0.72rem; }
 
         /* Posts — compact cards, ~4 per row */
-        .vibe-post-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; }
+        .vibe-post-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
         .vibe-post {
             position: relative; text-decoration: none; color: inherit; background: #fff; border: 1px solid rgba(0,0,0,0.06);
             border-radius: 14px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.04);
@@ -97,7 +97,11 @@
 
         .vibe-empty { text-align: center; padding: 4rem 1rem; color: #6b7280; }
         .vibe-empty i { opacity: 0.3; }
-        @media (max-width: 600px) { .vibe-title { font-size: 2rem; } .vibe-hero { padding: 2.2rem 1.25rem; } }
+        /* Fixed columns that step down with screen size (not width-guessed). */
+        @media (max-width: 1000px) { .vibe-post-grid { grid-template-columns: repeat(3, 1fr); } .author-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 680px)  { .vibe-post-grid { grid-template-columns: repeat(2, 1fr); } .author-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 420px)  { .vibe-post-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 600px)  { .vibe-title { font-size: 2rem; } .vibe-hero { padding: 2.2rem 1.25rem; } }
     </style>
 </head>
 
