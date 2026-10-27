@@ -22,8 +22,10 @@ try {
     ({ Queue, Worker } = require("bullmq"));
     IORedis = require("ioredis");
     // BullMQ needs its own connection with maxRetriesPerRequest: null.
+    const queueConn = new IORedis(process.env.REDIS_URL, { maxRetriesPerRequest: null });
+    queueConn.on("error", (e) => logger.error("❌ BullMQ Queue Redis error:", e.message));
     queue = new Queue(QUEUE_NAME, {
-      connection: new IORedis(process.env.REDIS_URL, { maxRetriesPerRequest: null }),
+      connection: queueConn,
     });
     queuesEnabled = true;
   }
@@ -55,10 +57,13 @@ async function enqueue(name, data, opts = {}) {
 // Start a BullMQ worker in this process. Called by index.js (inline) and worker.js.
 function startWorker() {
   if (!queuesEnabled) return null;
+  const workerConn = new IORedis(process.env.REDIS_URL, { maxRetriesPerRequest: null });
+  workerConn.on("error", (e) => logger.error("❌ BullMQ Worker Redis error:", e.message));
   const worker = new Worker(QUEUE_NAME, async (job) => jobs.runJob(job.name, job.data), {
-    connection: new IORedis(process.env.REDIS_URL, { maxRetriesPerRequest: null }),
+    connection: workerConn,
     concurrency: Number(process.env.QUEUE_CONCURRENCY) || 5,
   });
+  worker.on("error", (err) => logger.error("❌ BullMQ Worker error:", err && err.message));
   worker.on("failed", (job, err) => logger.error(`❌ Job "${job && job.name}" failed:`, err && err.message));
   logger.info("✅ Background worker started (BullMQ).");
   return worker;

@@ -16,14 +16,17 @@ try {
 }
 
 const REDIS_URL = process.env.REDIS_URL;
-const enabled = !!(REDIS_URL && Redis);
+const enabled = !!(REDIS_URL && Redis && process.env.REDIS_DISABLED !== "true");
 
 // Keep a bad/unreachable Redis from crashing the app. Commands fail fast and the
 // app keeps serving (degraded) instead of taking an unhandled exception. Always
 // attach an 'error' handler — an EventEmitter with none throws on 'error'.
 const CLIENT_OPTS = {
   maxRetriesPerRequest: null, // don't throw MaxRetriesPerRequestError (which crashed the app)
-  retryStrategy: (times) => Math.min(times * 200, 5000), // back off, keep reconnecting
+  retryStrategy: (times) => {
+    if (times > 5) return null; // stop reconnecting indefinitely if broken or quota exhausted
+    return Math.min(times * 200, 3000);
+  },
 };
 const attachHandlers = (c, label) => {
   c.on("error", (e) => logger.error(`❌ Redis ${label} error:`, e.message));
@@ -99,7 +102,14 @@ function makeRateLimitStore(prefix) {
     const { RedisStore } = require("rate-limit-redis");
     return new RedisStore({
       prefix,
-      sendCommand: (...args) => client.call(...args),
+      sendCommand: async (...args) => {
+        try {
+          return await client.call(...args);
+        } catch (err) {
+          logger.error(`❌ rate-limit-redis command error:`, err.message);
+          return null;
+        }
+      },
     });
   } catch (e) {
     logger.error("rate-limit-redis unavailable, using memory store:", e.message);
