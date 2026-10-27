@@ -814,34 +814,50 @@ router.get(
 
 router.get(
   "/auth/google/callback",
-  passport.authenticate("google", { failureRedirect: "/user/signin" }),
-  async (req, res) => {
-    // Successful authentication
-    // Generate our JWT token so it works with our existing system
+  (req, res, next) => {
+    passport.authenticate("google", (err, user, info) => {
+      if (err) {
+        console.error("🔥 Google Auth Strategy Error:", err);
+        return res.redirect("/user/signin");
+      }
+      if (!user) {
+        return res.redirect("/user/signin");
+      }
+      req.logIn(user, (loginErr) => {
+        if (loginErr) {
+          console.error("🔥 Google req.logIn Error:", loginErr);
+          return res.redirect("/user/signin");
+        }
 
-    // Create token manually since Google users are already verified
-    const payload = {
-      _id: req.user._id,
-      email: req.user.email,
-      profilePic: req.user.profilePic,
-      role: req.user.role,
-    };
-    const jwtToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' }); // 🔒 Fixed: Added expiry
+        const payload = {
+          _id: user._id,
+          email: user.email,
+          profilePic: user.profilePic,
+          role: user.role,
+        };
+        const jwtToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' });
 
-    // 🛡️ Security: Regenerate Session ID
-    req.session.regenerate((err) => {
-      if (err) console.error("Session Regeneration Error:", err);
+        const setCookieAndRedirect = () => {
+          res.cookie("token", jwtToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "Lax",
+            path: "/",
+            maxAge: 7 * 86400 * 1000,
+          });
+          return res.redirect("/");
+        };
 
-      res.cookie("token", jwtToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "Strict",
-        path: "/",
-        maxAge: 86400 * 1000,
+        if (req.session && typeof req.session.regenerate === "function") {
+          req.session.regenerate((regErr) => {
+            if (regErr) console.error("Session Regeneration Error:", regErr);
+            setCookieAndRedirect();
+          });
+        } else {
+          setCookieAndRedirect();
+        }
       });
-
-      res.redirect("/");
-    });
+    })(req, res, next);
   }
 );
 

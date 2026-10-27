@@ -8,13 +8,18 @@ passport.use(
         {
             clientID: process.env.GOOGLE_CLIENT_ID,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-            callbackURL: "/user/auth/google/callback",
+            callbackURL: process.env.GOOGLE_CALLBACK_URL || "/user/auth/google/callback",
             proxy: true,
         },
         async (accessToken, refreshToken, profile, done) => {
             try {
+                const email = profile.emails && profile.emails[0] ? profile.emails[0].value : null;
+                if (!email) {
+                    return done(new Error("No email found in Google profile"), null);
+                }
+
                 // 1. Check if user already exists with this email
-                let user = await User.findOne({ email: profile.emails[0].value });
+                let user = await User.findOne({ email });
 
                 if (user) {
                     // User exists, log them in
@@ -23,12 +28,15 @@ passport.use(
                     // 2. If not, create a new user
                     // Generate a random password since they verify via Google
                     const randomPassword = crypto.randomBytes(16).toString("hex");
+                    const profilePic = (profile.photos && profile.photos[0] && profile.photos[0].value)
+                        ? profile.photos[0].value
+                        : "/images/default-avatar.png";
 
                     user = await User.create({
-                        fullName: profile.displayName,
-                        email: profile.emails[0].value,
+                        fullName: profile.displayName || "Google User",
+                        email,
                         password: randomPassword,
-                        profilePic: profile.photos[0].value,
+                        profilePic,
                         isVerified: true, // Trusted provider
                         role: "USER"
                     });
