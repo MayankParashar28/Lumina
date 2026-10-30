@@ -77,16 +77,24 @@ const logger = winston.createLogger({
 });
 
 //
-// If we're not in production then log to the `console` with the format:
-// `${info.level}: ${info.message} JSON.stringify({ ...rest }) `
+// Always log to the console. Hosting platforms (Render, Heroku, Fly, Docker)
+// capture stdout/stderr and show that as "the logs" — they never read files
+// from inside the container, and the container filesystem is wiped on every
+// restart. Without this transport, production errors go only to the files
+// above, i.e. nowhere anyone will ever look, and an empty log stream reads as
+// "healthy" when it actually means "blind".
 //
-if (process.env.NODE_ENV !== 'production') {
-    logger.add(new winston.transports.Console({
-        format: winston.format.combine(
-            winston.format.colorize(),
-            winston.format.simple()
-        ),
-    }));
-}
+// Production gets the logger's structured JSON (one object per line, which log
+// aggregators can parse); development gets the short colorized form.
+logger.add(new winston.transports.Console(
+    process.env.NODE_ENV === 'production'
+        ? {} // inherit the JSON format defined on the logger above
+        : {
+            format: winston.format.combine(
+                winston.format.colorize(),
+                winston.format.simple()
+            ),
+        }
+));
 
 module.exports = logger;
