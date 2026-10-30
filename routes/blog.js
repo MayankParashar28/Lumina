@@ -24,6 +24,7 @@ const logger = require("../services/logger"); // Structured Logging
 const rateLimit = require("express-rate-limit");
 
 const { wantsJson } = require("../utils/http");
+const { sanitizePostBody } = require("../utils/sanitize");
 
 const router = Router();
 
@@ -135,7 +136,9 @@ function renderPreview(req, res, data) {
 router.post("/preview", (req, res) => {
   try {
     const { title, body, aiCoverURL, coverImage, from, editId } = req.body;
-    req.session.previewData = { title, body, aiCoverURL, coverImage, from, editId };
+    // The preview renders this body into the blog template, so it goes through
+    // the same allowlist a stored post does.
+    req.session.previewData = { title, body: sanitizePostBody(body || ""), aiCoverURL, coverImage, from, editId };
     // Persist the session BEFORE redirecting — the store is async, and the
     // browser follows the 303 immediately, so without this the GET can arrive
     // before the write lands and see no preview data.
@@ -1013,10 +1016,12 @@ router.post("/edit/:id", upload.single("coverImage"), async (req, res) => {
       }
     }
 
-    // Validation: 50 Word Minimum
+    // 🧼 Sanitise first, so the word count below measures the text that will
+    // actually be stored rather than whatever markup was posted.
+    const cleanBody = sanitizePostBody(body || "");
 
     // Validation: 50 Word Minimum
-    const textBody = body ? body.replace(/<[^>]*>/g, '').trim() : "";
+    const textBody = cleanBody.replace(/<[^>]*>/g, '').trim();
     const wordCount = textBody.split(/\s+/).filter(word => word.length > 0).length;
 
     if (wordCount < 50) {
@@ -1026,7 +1031,7 @@ router.post("/edit/:id", upload.single("coverImage"), async (req, res) => {
 
     // Update Fields
     blog.title = title;
-    blog.body = body;
+    blog.body = cleanBody;
     blog.category = category;
 
     if (tags) {
@@ -1214,7 +1219,9 @@ router.post("/", blogLimiter, upload.single("coverImage"), async (req, res) => {
 
     const isDraft = req.body.action === "draft";
     const tagArray = tags ? tags.split(",").map(tag => tag.trim()).filter(Boolean) : [];
-    let finalBody = body?.trim() || "";
+    // 🧼 Sanitise before any validation runs: a body that is nothing but a
+    // <script> must read as empty, not as content.
+    let finalBody = sanitizePostBody(body || "").trim();
 
     // Drafts are intentionally lenient: a title + some content is enough, so you
     // can save unfinished work. Cover/category/tags/length are only enforced when

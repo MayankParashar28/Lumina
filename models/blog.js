@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const { model } = require("mongoose");
 const { Schema } = require("mongoose");
 const User = require("./user"); // Ensure "User" model exists
+const { sanitizePostBody } = require("../utils/sanitize");
 
 const blogSchema = new mongoose.Schema(
   {
@@ -82,6 +83,21 @@ const blogSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// 🧼 Sanitise the body before anything else looks at it.
+//
+// The routes sanitise too, so their own length/emptiness checks run against what
+// will actually be stored — but this hook is the backstop: a future write path
+// that forgets, or a script run by hand, still cannot put executable markup in
+// the database. It runs on validate rather than save so `required` sees the
+// sanitised value (a body made of nothing but <script> collapses to "" and is
+// rejected) and so readTime below is computed from the real text.
+blogSchema.pre("validate", function (next) {
+  if (this.isModified("body") && typeof this.body === "string") {
+    this.body = sanitizePostBody(this.body);
+  }
+  next();
+});
 
 // ✅ Calculate readTime before saving
 blogSchema.pre("save", function (next) {
