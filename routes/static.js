@@ -7,7 +7,10 @@ const router = Router();
 router.get("/sitemap.xml", async (req, res) => {
     try {
         const blogs = await Blog.find({ status: "published" }).select("_id updatedAt");
-        const baseUrl = "https://lluminaa.vercel.app";
+        // Was hardcoded to the old Vercel domain, so the sitemap advertised URLs on
+        // a host this deployment may not even serve. Follow the configured origin.
+        const baseUrl = (process.env.BASE_URL || process.env.RENDER_EXTERNAL_URL || `${req.protocol}://${req.get("host")}`)
+            .replace(/\/+$/, "");
 
         let sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">

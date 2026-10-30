@@ -4,7 +4,11 @@ const ModerationLog = require("../models/moderationLog");
 
 // Default bad-words list might be missing some common terms depending on the version
 // We explicitly add them to be safe.
-filter.addWords("bullshit", "dumbass", "fucker", "idiot", "stupid");
+// Note: "idiot" and "stupid" were deliberately removed. The filter matches single
+// words with no context, so they rejected ordinary writing ("a stupid mistake",
+// quoting someone) and blocked legitimate posts and comments outright. Contextual
+// judgement is the AI pass below; this list is for unambiguous slurs/profanity.
+filter.addWords("bullshit", "dumbass", "fucker");
 
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 

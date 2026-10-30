@@ -8,7 +8,8 @@
 // By default the web process also runs the worker (no extra service needed). For
 // real decoupling at scale, run `node worker.js` as a separate process (e.g. a
 // Render Background Worker) and set QUEUE_WORKER_INLINE=false on the web service.
-const { enabled: redisEnabled } = require("./redis");
+const redisSvc = require("./redis");
+const { enabled: redisEnabled } = redisSvc;
 const jobs = require("./jobs");
 const logger = require("./logger");
 
@@ -27,6 +28,11 @@ try {
     queue = new Queue(QUEUE_NAME, {
       connection: queueConn,
     });
+    // BullMQ forwards connection failures as an 'error' event on the Queue, and
+    // an 'error' event with no listener throws — that is how an unreachable or
+    // out-of-quota Redis took the whole web process down on boot. Jobs fall back
+    // to running inline (see enqueue below), so logging here is enough.
+    queue.on("error", (e) => logger.error("❌ BullMQ Queue error:", e && e.message));
     queuesEnabled = true;
   }
 } catch (e) {
@@ -43,7 +49,9 @@ const DEFAULT_OPTS = {
 
 // Enqueue a job, or run it inline (fire-and-forget) when queues are off.
 async function enqueue(name, data, opts = {}) {
-  if (queuesEnabled) {
+  // `queuesEnabled` is decided at startup; isUsable() also covers Redis having
+  // failed since then, so we don't retry a queue we know is down.
+  if (queuesEnabled && redisSvc.isUsable()) {
     try {
       await queue.add(name, data, { ...DEFAULT_OPTS, ...opts });
       return;
@@ -64,6 +72,7 @@ function startWorker() {
     concurrency: Number(process.env.QUEUE_CONCURRENCY) || 5,
   });
   worker.on("error", (err) => logger.error("❌ BullMQ Worker error:", err && err.message));
+  worker.on("ioredis:close", () => logger.warn("⚠️ BullMQ Worker Redis connection closed."));
   worker.on("failed", (job, err) => logger.error(`❌ Job "${job && job.name}" failed:`, err && err.message));
   logger.info("✅ Background worker started (BullMQ).");
   return worker;

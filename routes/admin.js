@@ -3,6 +3,7 @@ const User = require("../models/user");
 const Blog = require("../models/blog");
 const Comment = require("../models/comment");
 const ModerationLog = require("../models/moderationLog"); // 🛡️ Import Model
+const Notification = require("../models/Notification");
 const logger = require("../services/logger"); // Structured Logging
 
 const { checkForAdmin } = require("../middleware/admin");
@@ -173,10 +174,25 @@ router.post("/user/delete/:id", async (req, res) => {
             return res.redirect("/admin");
         }
 
-        await User.findByIdAndDelete(req.params.id);
-        // Optionally delete their blogs too? For now, keep it simple.
+        // Remove the content along with the account. Leaving it behind orphaned
+        // every blog and comment they wrote: templates fall back to "Unknown User",
+        // and the comment-delete path dereferenced the missing author and threw.
+        const blogIds = (await Blog.find({ createdBy: req.params.id }).select("_id").lean())
+            .map((b) => b._id);
 
-        req.flash("success", "User has been banned and deleted.");
+        await Promise.all([
+            Blog.deleteMany({ createdBy: req.params.id }),
+            Comment.deleteMany({ $or: [{ createdBy: req.params.id }, { blogId: { $in: blogIds } }] }),
+            Notification.deleteMany({ $or: [{ userId: req.params.id }, { senderId: req.params.id }] }),
+            // Drop them from everyone else's follower/following lists.
+            User.updateMany(
+                { $or: [{ followers: req.params.id }, { following: req.params.id }] },
+                { $pull: { followers: req.params.id, following: req.params.id } }
+            ),
+        ]);
+        await User.findByIdAndDelete(req.params.id);
+
+        req.flash("success", "User has been banned and deleted, along with their posts and comments.");
         res.redirect("/admin");
     } catch (error) {
         logger.error("Delete User Error:", error);

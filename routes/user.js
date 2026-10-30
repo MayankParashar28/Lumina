@@ -6,7 +6,9 @@ const jwt = require("jsonwebtoken");
 const rateLimit = require("express-rate-limit");
 const crypto = require("crypto");
 const { sendVerificationEmail } = require("../services/emailService");
+const { hashPassword } = require("../services/password");
 const passport = require("passport");
+const { googleEnabled } = require("../services/passport");
 const logger = require("../services/logger"); // Structured Logging
 // Shared rate-limit counters across instances (Redis when enabled, else memory).
 const { makeRateLimitStore } = require("../services/redis");
@@ -48,6 +50,18 @@ const User = require("../models/user");
 const Blog = require("../models/blog");
 const Comment = require("../models/comment");
 const redirectIfAuthenticated = require("../middleware/redirectIfAuthenticated");
+
+// 🍪 One definition for the auth cookie, so every sign-in path (password, Google,
+// email verification) agrees. `sameSite: "lax"` is deliberate: "strict" drops the
+// cookie on inbound links from email or social, which makes users look logged out.
+// maxAge matches the 7-day JWT lifetime rather than expiring the cookie first.
+const AUTH_COOKIE = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "lax",
+  path: "/",
+  maxAge: 7 * 86400 * 1000,
+};
 // ... (imports are handled, just updating the relevant chunks below)
 
 // view other user profile
@@ -82,8 +96,9 @@ router.get("/profile/:userId", async (req, res) => {
       }
     }
 
-    // Calculate Stats
-    const totalLikes = blogs.reduce((acc, blog) => acc + (blog.likes ? blog.likes.length : 0), 0);
+    // Calculate Stats. `likes` is a Number on the blog schema, not an array —
+    // reading .length here produced NaN, which the view rendered as "0 Likes".
+    const totalLikes = blogs.reduce((acc, blog) => acc + (blog.likes || 0), 0);
 
     // Count comments on these blogs
     const blogIds = blogs.map(b => b._id);
@@ -724,7 +739,9 @@ router.post("/follow/:userId", async (req, res) => {
   }
 });
 
-router.get("/signin", authLimiter, redirectIfAuthenticated, (req, res) => {
+// Note: no authLimiter here. It belongs on the POST only — sharing it with the
+// GET let a handful of page views (or a reload) lock a visitor out of the form.
+router.get("/signin", redirectIfAuthenticated, (req, res) => {
   return res.render("signin", {
     title: "Sign In - Lumina",
     metaDescription: "Welcome back to Lumina. Log in to continue your journey and explore new stories, connect with writers, and share your own unique perspectives today!..."
@@ -790,13 +807,7 @@ router.post("/signin", authLimiter, async (req, res) => {
       // Store new session data if needed (e.g., user info slightly)
       // For now, we rely on JWT, but this rotates the connect.sid
 
-      res.cookie("token", token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "Strict",
-        path: "/",
-        maxAge: 86400 * 1000,
-      });
+      res.cookie("token", token, AUTH_COOKIE);
 
       return res.redirect("/");
     });
@@ -807,13 +818,25 @@ router.post("/signin", authLimiter, async (req, res) => {
 });
 
 // 🔹 Google Authentication Routes
+// Both routes 404 rather than throwing "Unknown authentication strategy" when
+// GOOGLE_CLIENT_ID/SECRET aren't configured and the strategy was never registered.
+const requireGoogle = (req, res, next) => {
+  if (!googleEnabled) {
+    req.flash("error", "Google sign-in isn't configured on this server.");
+    return res.redirect("/user/signin");
+  }
+  next();
+};
+
 router.get(
   "/auth/google",
+  requireGoogle,
   passport.authenticate("google", { scope: ["profile", "email"] })
 );
 
 router.get(
   "/auth/google/callback",
+  requireGoogle,
   (req, res, next) => {
     passport.authenticate("google", (err, user, info) => {
       if (err) {
@@ -838,13 +861,7 @@ router.get(
         const jwtToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' });
 
         const setCookieAndRedirect = () => {
-          res.cookie("token", jwtToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "Lax",
-            path: "/",
-            maxAge: 7 * 86400 * 1000,
-          });
+          res.cookie("token", jwtToken, AUTH_COOKIE);
           return res.redirect("/");
         };
 
@@ -921,15 +938,10 @@ router.post("/signup", authLimiter, async (req, res) => {
   // Generate verification token
   const verificationToken = crypto.randomBytes(32).toString("hex");
 
-  // Hashing is handled by User model pre-save, but PendingUser needs manual hashing or similar pre-save? 
-  // Wait, PendingUser schema I created earlier DOES NOT have encryption logic.
-  // I should add hashing to PendingUser or hash manually here.
-  // Let's hash manually here to be safe and simple, relying on crypto.
-
-  const salt = crypto.randomBytes(16).toString("hex");
-  const hashedPassword = crypto.createHmac("sha256", salt)
-    .update(password)
-    .digest("hex");
+  // PendingUser has no pre-save hook, so hash here with the same scrypt helper the
+  // User model uses. The verify step moves these fields across untouched
+  // (_skipHash), so both collections must share one hash format.
+  const { salt, hash: hashedPassword } = await hashPassword(password);
 
   await PendingUser.create({
     fullName,
@@ -992,13 +1004,7 @@ router.get("/verify/:token", verifyLimiter, async (req, res) => {
     };
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' }); // 🔒 Fixed: Added expiry
 
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "Strict",
-      path: "/",
-      maxAge: 86400 * 1000,
-    });
+    res.cookie("token", token, AUTH_COOKIE);
 
     return res.redirect("/");
   } catch (error) {
@@ -1015,33 +1021,30 @@ router.post("/forgot-password", emailLimiter, async (req, res) => {
   const email = String(req.body.email || "").toLowerCase().trim();
   try {
     const user = await User.findOne({ email });
-    if (!user) {
-      // Catch 1: If user not found, show error
-      req.flash("error", "No account found with this email address.");
-      return res.redirect("/user/forgot-password");
+
+    // 🔒 Always answer the same way, whether or not the address has an account.
+    // Telling the caller "no account found" turns this form into a way to check
+    // which email addresses are registered.
+    if (user) {
+      const token = crypto.randomBytes(32).toString("hex");
+      user.resetPasswordToken = token;
+      user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
+      await user.save();
+
+      const baseUrl = process.env.BASE_URL || process.env.RENDER_EXTERNAL_URL || `http://${req.headers.host}`;
+      const resetLink = `${baseUrl}/user/reset-password/${token}`;
+      await require("../services/emailService").sendResetPasswordEmail(email, resetLink);
+    } else {
+      logger.info("Password reset requested for an address with no account.");
     }
 
-    const token = crypto.randomBytes(32).toString("hex");
-    user.resetPasswordToken = token;
-    user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
-    await user.save();
-
-    // Send Reset Email
-    const baseUrl = process.env.BASE_URL || process.env.RENDER_EXTERNAL_URL || `http://${req.headers.host}`;
-    const resetLink = `${baseUrl}/user/reset-password/${token}`;
-    const transporter = await require("../services/emailService").createTransporter(); // Assuming export, or I need to import createTransporter properly if not exported. 
-    // Wait, createTransporter is internal in emailService. Let's add a sendResetPasswordEmail function to emailService.js instead.
-    // For now, I will use sendVerificationEmail style logic inside emailService.
-
-    await require("../services/emailService").sendResetPasswordEmail(email, resetLink);
-
-    // Render the confirmation page instead of redirecting
     return res.render("reset-sent", { email });
 
   } catch (error) {
     logger.error("Forgot Password Error:", error);
-    req.flash("error", "Something went wrong.");
-    return res.redirect("/user/forgot-password");
+    // Still don't reveal whether the address exists — the generic page is safe
+    // either way, and the failure is recorded in the logs above.
+    return res.render("reset-sent", { email });
   }
 });
 

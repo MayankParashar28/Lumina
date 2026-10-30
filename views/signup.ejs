@@ -53,6 +53,7 @@
                         </button>
                     </form>
 
+                    <% if (googleAuthEnabled) { %>
                     <div class="google-auth-wrapper">
                         <a href="/user/auth/google"
                             class="btn-google d-flex align-items-center justify-content-center text-decoration-none">
@@ -61,6 +62,7 @@
                             <span>Continue with Google</span>
                         </a>
                     </div>
+                    <% } %>
 
                     <div class="auth-footer text-center mt-5">
                         Already have an account? <a href="/user/signin">Sign In</a>

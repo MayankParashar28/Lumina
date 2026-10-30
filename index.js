@@ -38,10 +38,13 @@ const staticRoute = require("./routes/static");
 const adminRoute = require("./routes/admin"); // 🛡️ Import Admin Route
 
 // MongoDB Connection
-const URI = process.env.MONGODB_URL || "mongodb://localhost:27017/blogiFy";
-if (!URI) {
-  throw new Error("❌ MONGODB_URL is not defined in .env. Please add it.");
+// In production there's no sensible local fallback — failing fast beats silently
+// pointing at a localhost database that isn't there. (The old `if (!URI)` check
+// below the fallback could never fire.)
+if (!process.env.MONGODB_URL && process.env.NODE_ENV === "production") {
+  throw new Error("❌ MONGODB_URL is not defined. Please set it.");
 }
+const URI = process.env.MONGODB_URL || "mongodb://localhost:27017/blogiFy";
 
 
 // In tests, the test suite manages its own in-memory MongoDB connection.
@@ -113,7 +116,11 @@ app.get("/healthz", async (req, res) => {
   const mongo = mongoose.connection.readyState === 1 ? "up" : "down";
   const redisSvcLocal = require("./services/redis");
   let redis = "disabled";
-  if (redisSvcLocal.enabled) {
+  if (redisSvcLocal.isDegraded()) {
+    // Reachable-or-not, we've stopped relying on it and are serving from the
+    // in-process fallbacks. That's healthy-but-reduced, not an outage.
+    redis = "degraded";
+  } else if (redisSvcLocal.enabled) {
     try { await redisSvcLocal.client.ping(); redis = "up"; } catch (_) { redis = "down"; }
   }
   const ok = mongo === "up" && redis !== "down";
@@ -218,14 +225,31 @@ app.use((req, res, next) => {
   if (hit) {
     res.set("Content-Type", hit.type);
     res.set("X-Cache", "HIT");
+    // 🔐 The cached HTML still carries the nonce from the render that produced
+    // it, but helmet has already written a CSP header containing *this*
+    // request's fresh nonce. Left alone the two disagree and the browser blocks
+    // every inline <script> in the page — including the one on /blog/:id that
+    // injects the article body, so the post would render empty. Re-point the
+    // header at the nonce that's actually in the markup we're about to send.
+    if (hit.nonce && res.locals.cspNonce) {
+      const csp = res.get("Content-Security-Policy");
+      if (csp) {
+        res.set(
+          "Content-Security-Policy",
+          csp.split(`'nonce-${res.locals.cspNonce}'`).join(`'nonce-${hit.nonce}'`)
+        );
+      }
+      res.locals.cspNonce = hit.nonce;
+    }
     return res.send(hit.body);
   }
   res.set("X-Cache", "MISS");
   const origSend = res.send.bind(res);
+  const renderNonce = res.locals.cspNonce;
   res.send = (body) => {
     try {
       if (res.statusCode === 200 && typeof body === "string") {
-        pageCache.set(key, body, res.get("Content-Type") || "text/html; charset=utf-8");
+        pageCache.set(key, body, res.get("Content-Type") || "text/html; charset=utf-8", renderNonce);
       }
     } catch (_) {}
     return origSend(body);
@@ -252,6 +276,8 @@ app.use((req, res, next) => {
   res.locals.realtimeEnabled = !!process.env.SOCKET_URL || process.env.VERCEL !== "1";
   res.locals.path = req.path;
   res.locals.canonicalPath = req.path; // 🔍 SEO: Canonical URL for all pages
+  // Hide the "Continue with Google" button when the strategy isn't configured.
+  res.locals.googleAuthEnabled = require("./services/passport").googleEnabled;
   app.locals.optimizeImage = optimizeImage;
 
   // 🔍 SEO: Set default title & meta based on route patterns
@@ -293,15 +319,10 @@ if (!process.env.SESSION_SECRET) {
 // 🧱 Phase-1 scaling: shared Redis layer (sessions, cache, rate-limit, sockets).
 const redisSvc = require("./services/redis");
 
-let sessionStore;
-if (redisSvc.enabled) {
-  // Redis sessions: fast, shared across instances, and takes session load off Mongo.
-  // connect-redis v7 (CommonJS) exposes the store as the `.default` export.
-  const RedisStore = require("connect-redis").default || require("connect-redis").RedisStore;
-  sessionStore = new RedisStore({ client: redisSvc.client, prefix: "sess:", ttl: 24 * 60 * 60 });
-  logger.info("✅ Sessions stored in Redis.");
-} else {
-  sessionStore = MongoStore.create({
+// Mongo-backed sessions: always available, and the fallback when Redis isn't.
+// Built on demand so the healthy Redis path doesn't open a second connection.
+const makeMongoSessionStore = () => {
+  const store = MongoStore.create({
     mongoUrl: URI,
     ttl: 24 * 60 * 60,
     crypto: {
@@ -310,9 +331,34 @@ if (redisSvc.enabled) {
     autoRemove: 'native',
     touchAfter: 24 * 3600
   });
-  sessionStore.on('error', function (error) {
-    console.error('Session Store Error:', error);
+  store.on('error', function (error) {
+    logger.error('Session Store Error:', error);
   });
+  return store;
+};
+
+let sessionStore;
+if (redisSvc.enabled) {
+  // Redis sessions: fast, shared across instances, and takes session load off Mongo.
+  // connect-redis v7 (CommonJS) exposes the store as the `.default` export.
+  const RedisStore = require("connect-redis").default || require("connect-redis").RedisStore;
+  const redisSessionStore = new RedisStore({ client: redisSvc.client, prefix: "sess:", ttl: 24 * 60 * 60 });
+
+  // ...but it must not be a single point of failure. When the managed Redis
+  // stopped answering (request quota exhausted), connect-redis never called back
+  // and every session-bearing route hung. Wrap it so those calls time out and
+  // retry against Mongo instead.
+  const { FallbackSessionStore } = require("./services/sessionStore");
+  sessionStore = new FallbackSessionStore({
+    primary: redisSessionStore,
+    fallback: makeMongoSessionStore,
+    isPrimaryUsable: redisSvc.isUsable,
+    onPrimaryError: (err) => redisSvc.noteFailure(err, "session-store"),
+  });
+  logger.info("✅ Sessions stored in Redis (falling back to Mongo if it stops answering).");
+} else {
+  sessionStore = makeMongoSessionStore();
+  logger.info("✅ Sessions stored in MongoDB.");
 }
 
 // Session Configuration — skipped for public-cacheable requests so they set no cookie.
@@ -646,14 +692,24 @@ const io = socketIo(server); // Create Socket.io server
 // one node, broken once you run more than one. (Requires a persistent host; Vercel
 // serverless cannot hold websockets at all.)
 if (redisSvc.enabled) {
-  try {
-    const { createAdapter } = require("@socket.io/redis-adapter");
-    const { pubClient, subClient } = redisSvc.makePubSub();
-    io.adapter(createAdapter(pubClient, subClient));
-    logger.info("✅ Socket.io using Redis adapter (multi-instance fan-out ready).");
-  } catch (e) {
-    logger.error("⚠️ Socket.io Redis adapter setup failed, using single-node:", e.message);
-  }
+  // Confirm the connection actually works BEFORE wiring the adapter. The adapter
+  // subscribes the moment it's installed, and a subscribe on a dead client
+  // rejects deep inside the library where we can't catch it — which is how a
+  // Redis outage produced unhandled rejections during boot. No sockets are
+  // connected this early, so installing the adapter a tick later is harmless.
+  redisSvc.client
+    .ping()
+    .then(() => {
+      const { createAdapter } = require("@socket.io/redis-adapter");
+      const { pubClient, subClient } = redisSvc.makePubSub();
+      if (!pubClient || !subClient) return;
+      io.adapter(createAdapter(pubClient, subClient));
+      logger.info("✅ Socket.io using Redis adapter (multi-instance fan-out ready).");
+    })
+    .catch((e) => {
+      redisSvc.noteFailure(e, "socket-adapter");
+      logger.error("⚠️ Socket.io Redis adapter unavailable, using single-node fan-out:", e.message);
+    });
 }
 
 app.set("io", io);
@@ -668,6 +724,19 @@ if (process.env.NODE_ENV !== "test") {
     queue.startWorker();
     queue.scheduleRepeatables();
   }
+}
+
+// Serve DOMPurify from node_modules instead of a CDN. The blog page sanitises and
+// injects the article body with it, so a blocked/unreachable CDN meant the post
+// body never rendered at all. Local + versioned also removes the need for an SRI
+// hash on a third-party script.
+try {
+  app.use(
+    "/vendor/dompurify",
+    express.static(path.join(__dirname, "node_modules", "dompurify", "dist"), { maxAge: "1y" })
+  );
+} catch (e) {
+  logger.warn("⚠️ Could not mount local DOMPurify:", e.message);
 }
 
 // Static fallback for socket.io client bundle (ensures /socket.io/socket.io.js never 404s on serverless)
@@ -835,6 +904,24 @@ app.use((err, req, res, next) => {
     metaDescription: 'An error occurred while processing your request. We are looking into it! Return to the homepage to continue reading the latest innovative narratives!...',
     noIndex: true
   });
+});
+
+// 🛡️ Last-resort process guards.
+//
+// A rejected promise nobody handled terminates Node by default. Libraries that
+// kick off un-awaited work in their constructors (rate-limit-redis loads its Lua
+// scripts this way) turned a degraded dependency into a boot crash-loop that took
+// the whole site offline. Log and keep serving instead — the fallbacks in
+// services/redis.js mean a reduced-capability process is still a useful one.
+process.on("unhandledRejection", (reason) => {
+  logger.error("⚠️ Unhandled promise rejection (continuing):", reason instanceof Error ? reason : String(reason));
+});
+
+// An uncaught exception leaves unknown state, so log it properly and let the
+// platform restart us rather than limping on.
+process.on("uncaughtException", (err) => {
+  logger.error("🔥 Uncaught exception:", err);
+  if (process.env.NODE_ENV !== "test") process.exit(1);
 });
 
 // Start Server (skipped under test — supertest binds its own ephemeral port)

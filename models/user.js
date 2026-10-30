@@ -1,7 +1,6 @@
-const { createHmac, randomBytes } = require("crypto");
 const mongoose = require("mongoose");
 const { createTokenForUser } = require("../services/authentication");
-const Blog = require("./blog");
+const { hashPassword, verifyPassword, isLegacyHash } = require("../services/password");
 
 const { Schema } = mongoose;
 
@@ -122,59 +121,45 @@ const userSchema = new Schema(
 );
 
 // ✅ Hash password before saving user
-userSchema.pre("save", function (next) {
+userSchema.pre("save", async function () {
   // Allow skipping hash (useful when moving from pendingUser which is already hashed)
-  if (this._skipHash) return next();
+  if (this._skipHash) return;
 
-  if (!this.isModified("password")) return next();
+  if (!this.isModified("password")) return;
 
-  const salt = randomBytes(16).toString("hex");
+  const { salt, hash } = await hashPassword(this.password);
   this.salt = salt;
-  this.password = createHmac("sha256", salt)
-    .update(this.password)
-    .digest("hex");
-
-  next();
+  this.password = hash;
 });
 
 // ✅ Function to validate password and generate token
 userSchema.statics.matchPasswordAndGenerateToken = async function (email, password) {
-  // console.log("🔍 Received email:", email);
-  // console.log("🔍 Received password:", password);
-
   // 🔐 Explicitly select password and salt because they are hidden by default
   const user = await this.findOne({ email }).select("+password +salt");
 
   if (!user) {
-    // console.log("❌ User not found");
     throw new Error("User not found");
   }
 
-  // console.log("🟢 User found:", user.email);
-
-  const salt = user.salt;
-  const hashedPassword = user.password;
-
-  // console.log("🔍 User's hashed password from DB:", hashedPassword);
-  // console.log("🔍 User's salt:", salt);
-
-  const userProvideHashed = createHmac("sha256", salt)
-    .update(password)
-    .digest("hex");
-
-  // console.log("🔍 Hashed password from user input:", userProvideHashed);
-
-  if (hashedPassword !== userProvideHashed) {
-    // console.log("❌ Passwords do not match");
+  // Constant-time comparison happens inside verifyPassword.
+  const ok = await verifyPassword(password, user.password, user.salt);
+  if (!ok) {
     throw new Error("Incorrect password");
   }
 
-  // console.log("🟢 Passwords match! Generating token...");
+  // 🔁 Transparent migration: an account still on the old single-round HMAC hash
+  // gets upgraded to scrypt now that we have the plaintext in hand. Done after
+  // the password is confirmed, and failures here must not block the login.
+  if (isLegacyHash(user.password)) {
+    try {
+      const { salt, hash } = await hashPassword(password);
+      await this.updateOne({ _id: user._id }, { $set: { password: hash, salt } });
+    } catch (_) {
+      // Keep the legacy hash; the next successful login will try again.
+    }
+  }
 
-  const token = createTokenForUser(user);
-  // console.log("🟢 Token generated:", token);
-
-  return token;
+  return createTokenForUser(user);
 };
 
 

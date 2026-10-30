@@ -255,7 +255,7 @@
                     </div>
 
                     <!-- Sanitizer -->
-                    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
+                    <script nonce="<%= cspNonce %>" src="/vendor/dompurify/purify.js"></script>
                     <script nonce="<%= cspNonce %>">
                         document.addEventListener("DOMContentLoaded", function () {
                             const rawContent = document.getElementById("raw-content").textContent; // Get escaped HTML source

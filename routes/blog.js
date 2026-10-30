@@ -23,6 +23,8 @@ const pageCache = require("../services/pageCache"); // micro-cache for anon publ
 const logger = require("../services/logger"); // Structured Logging
 const rateLimit = require("express-rate-limit");
 
+const { wantsJson } = require("../utils/http");
+
 const router = Router();
 
 // 💬 @mentions: notify people mentioned in a comment. Matches @name against the
@@ -278,6 +280,24 @@ router.get("/search", async (req, res) => {
     return res.render("search", { user: req.user, query: q, results: [], mode: null, moment });
   }
 });
+
+// 🗂️ Browse shortcuts → the canonical filtered feed on "/".
+//
+// These four used to render "home" directly with only { user, blogs }, which threw
+// because that template needs the taxonomy/featured/trending locals the "/" handler
+// builds — so /blog/category/:c and /blog/tag/:t returned 500. On top of that,
+// /featured and /trending were declared *after* "/:id" below, so the id route
+// matched first and answered "Invalid Blog ID" (400). Nothing in the UI links here
+// (it uses /?category= and /?tag= already), but redirecting keeps any external or
+// bookmarked links working instead of leaving them broken.
+//
+// They must stay ABOVE "/:id" or "/featured" and "/trending" get captured as ids.
+router.get("/featured", (req, res) => res.redirect(301, "/?category=featured"));
+router.get("/trending", (req, res) => res.redirect(301, "/?category=trending"));
+router.get("/category/:category", (req, res) =>
+  res.redirect(301, `/?category=${encodeURIComponent(req.params.category)}`));
+router.get("/tag/:tag", (req, res) =>
+  res.redirect(301, `/?tag=${encodeURIComponent(req.params.tag)}`));
 
 //  show blog
 router.get("/:id", async (req, res) => {
@@ -581,7 +601,7 @@ router.post("/comment/:blogId", commentLimiter, async (req, res) => {
   try {
     // 🔒 Require authentication before touching req.user
     if (!req.user) {
-      if (req.xhr || (req.headers.accept && req.headers.accept.includes("json"))) {
+      if (wantsJson(req)) {
         return res.status(401).json({ error: "Please sign in to comment." });
       }
       req.flash("error", "Please sign in to comment.");
@@ -591,7 +611,7 @@ router.post("/comment/:blogId", commentLimiter, async (req, res) => {
     // 🛡️ Moderation Check
     const moderation = await moderateContent(req.body.content, { userId: req.user._id, ip: req.ip });
     if (!moderation.safe) {
-      if (req.xhr || req.headers.accept.includes('json')) {
+      if (wantsJson(req)) {
         return res.status(400).json({ error: `Comment Rejected: ${moderation.reason}` });
       }
       // Standard Form Fallback
@@ -703,9 +723,13 @@ router.post("/comment/delete/:commentId", async (req, res) => {
       return res.redirect("back");
     }
 
-    // Check Authorization: User must be Comment Author OR Blog Owner
-    const isAuthor = comment.createdBy.toString() === req.user._id.toString();
-    const isBlogOwner = comment.blogId.createdBy.toString() === req.user._id.toString();
+    // Check Authorization: User must be Comment Author OR Blog Owner.
+    // blogId/createdBy can be missing if the parent blog or the author's account
+    // was deleted — dereferencing them unguarded threw a 500 here.
+    const me = req.user._id.toString();
+    const isAuthor = !!comment.createdBy && comment.createdBy.toString() === me;
+    const isBlogOwner = !!(comment.blogId && comment.blogId.createdBy)
+      && comment.blogId.createdBy.toString() === me;
 
     if (!isAuthor && !isBlogOwner && req.user.role !== "ADMIN") {
       req.flash("error", "Unauthorized to delete this comment.");
@@ -728,7 +752,9 @@ router.post("/comment/delete/:commentId", async (req, res) => {
       req.flash("success", "Comment deleted.");
     }
 
-    return res.redirect(`/blog/${comment.blogId._id}`);
+    return comment.blogId
+      ? res.redirect(`/blog/${comment.blogId._id}`)
+      : res.redirect("/");
 
   } catch (error) {
     logger.error("❌ Error deleting comment:", error);
@@ -810,7 +836,7 @@ router.post("/comment/:commentId/reply", async (req, res) => {
       }
 
       // 🟢 2. AJAX Response (The sender)
-      if (req.xhr || req.headers.accept.includes('json')) {
+      if (wantsJson(req)) {
         return res.json({ success: true, reply: populatedReply, html: html });
       }
 
@@ -823,7 +849,7 @@ router.post("/comment/:commentId/reply", async (req, res) => {
 
   } catch (error) {
     logger.error("❌ Error replying:", error);
-    if (req.xhr || req.headers.accept.includes('json')) {
+    if (wantsJson(req)) {
       return res.status(500).json({ success: false, error: "Server Error" });
     }
     res.status(500).send("Server Error");
@@ -839,6 +865,9 @@ router.post("/comment/:commentId/pin", async (req, res) => {
     if (!comment) return res.status(404).json({ success: false, message: "Comment not found" });
 
     // Auth: Only Blog Author can pin
+    if (!comment.blogId || !comment.blogId.createdBy) {
+      return res.status(404).json({ success: false, message: "Blog not found" });
+    }
     if (comment.blogId.createdBy.toString() !== req.user._id.toString()) {
       return res.status(403).json({ success: false, message: "Only author can pin" });
     }
@@ -1148,45 +1177,6 @@ router.post("/delete/:blogId", async (req, res) => {
   }
 });
 
-// Category for Blogs
-router.get("/category/:category", async (req, res) => {
-  try {
-    const category = req.params.category;
-    const blogs = await Blog.find({ category, status: "published" }).select("-body").populate("createdBy", "fullName profilePic").lean();
-    return res.render("home", { user: req.user, blogs });
-  } catch (err) {
-    logger.error("❌ Error fetching blogs by category:", err);
-    req.flash("error", "Failed to load blogs for this category.");
-    return res.redirect("/");
-  }
-});
-
-// Tag for Blogs
-router.get("/tag/:tag", async (req, res) => {
-  try {
-    const tag = req.params.tag;
-    const blogs = await Blog.find({ tags: tag, status: "published" }).select("-body").populate("createdBy", "fullName profilePic").lean();
-    return res.render("home", { user: req.user, blogs });
-  } catch (err) {
-    logger.error("❌ Error fetching blogs by tag:", err);
-    req.flash("error", "Failed to load blogs for this tag.");
-    return res.redirect("/");
-  }
-});
-
-// 🔥 Fetch Featured Blogs
-router.get("/featured", async (req, res) => {
-  const featuredBlogs = await Blog.find({ featured: true, status: "published" }).select("-body").populate("createdBy", "fullName profilePic").lean();
-
-  return res.render("home", { user: req.user, blogs: featuredBlogs });
-});
-
-// 🚀 Fetch Trending Blogs (Most Viewed)
-router.get("/trending", async (req, res) => {
-  const trendingBlogs = await Blog.find({ status: "published" }).sort({ views: -1 }).limit(3).select("-body").populate("createdBy", "fullName profilePic").lean();
-  return res.render("home", { user: req.user, blogs: trendingBlogs });
-});
-
 // 📝 Create a Blog
 router.post("/", blogLimiter, upload.single("coverImage"), async (req, res) => {
   const BLOG_COOLDOWN = 10 * 60 * 1000; // 10 minutes in milliseconds
@@ -1353,6 +1343,9 @@ router.post("/", blogLimiter, upload.single("coverImage"), async (req, res) => {
 // ⚡ Local API: Get Paginated Blogs (Infinite Scroll)
 const feedCache = new Map();
 const CACHE_TTL = 30 * 1000; // 30 Seconds
+// Bound the map. The key is page+category, so a crawler walking deep pages or
+// probing categories could otherwise grow it without limit for the process's life.
+const FEED_CACHE_MAX = 200;
 
 router.get("/api/feed", async (req, res) => {
   try {
@@ -1420,6 +1413,7 @@ router.get("/api/feed", async (req, res) => {
     };
 
     // 📝 Save to Cache
+    if (feedCache.size >= FEED_CACHE_MAX) feedCache.clear(); // simple bound; the TTL does the real work
     feedCache.set(cacheKey, {
       data: responseData,
       timestamp: Date.now()

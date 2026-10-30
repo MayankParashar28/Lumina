@@ -13,14 +13,24 @@ const logger = require("./logger");
 async function publishDueScheduled(io) {
   try {
     const now = new Date();
-    const due = await Blog.find({ status: "scheduled", publishAt: { $lte: now } });
+    const due = await Blog.find({ status: "scheduled", publishAt: { $lte: now } }).select("_id");
     if (due.length === 0) return 0;
 
-    for (const blog of due) {
-      blog.status = "published";
-      blog.createdAt = new Date(); // bump to top of the feed
-      blog.publishAt = undefined;
-      await blog.save();
+    let publishedCount = 0;
+    for (const candidate of due) {
+      // Claim the post with a conditional update rather than find-then-save. Up to
+      // three things can run this concurrently (the setInterval, the repeatable
+      // BullMQ job, and the /cron/publish-scheduled endpoint); read-then-write let
+      // two of them publish the same post and send every follower duplicate
+      // notifications. Only the caller that actually flips the status proceeds.
+      const blog = await Blog.findOneAndUpdate(
+        { _id: candidate._id, status: "scheduled" },
+        { $set: { status: "published", createdAt: new Date() }, $unset: { publishAt: "" } },
+        { new: true }
+      );
+      if (!blog) continue; // another runner got to it first
+
+      publishedCount += 1;
 
       try {
         const author = await User.findById(blog.createdBy).populate("followers", "fullName");
@@ -47,7 +57,7 @@ async function publishDueScheduled(io) {
 
       logger.info(`🗓️ Auto-published scheduled post: "${blog.title}"`);
     }
-    return due.length;
+    return publishedCount;
   } catch (err) {
     logger.error("❌ publishDueScheduled error:", err.message);
     return 0;

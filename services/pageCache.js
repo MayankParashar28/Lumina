@@ -7,7 +7,7 @@
 // its own cache. Busted on publish/edit/delete; also self-expires after the TTL.)
 const TTL = (Number(process.env.PAGE_CACHE_TTL_SECONDS) || 60) * 1000;
 const MAX_ENTRIES = 300;
-const store = new Map(); // path -> { body, type, exp }
+const store = new Map(); // path -> { body, type, nonce, exp }
 
 const enabled = () => process.env.PAGE_CACHE_DISABLED !== "true";
 
@@ -18,9 +18,13 @@ function get(path) {
   return null;
 }
 
-function set(path, body, type) {
+// `nonce` is the per-request CSP nonce that was baked into this HTML. It has to
+// be stored with the body: the cached markup carries that one nonce forever, so
+// whoever serves a cache hit must re-point the CSP header at it, or every inline
+// <script> in the page gets blocked. See the cache-hit branch in index.js.
+function set(path, body, type, nonce) {
   if (store.size >= MAX_ENTRIES) store.clear(); // simple bound; TTL does the real work
-  store.set(path, { body, type, exp: Date.now() + TTL });
+  store.set(path, { body, type, nonce, exp: Date.now() + TTL });
 }
 
 function bust(path) { store.delete(path); }

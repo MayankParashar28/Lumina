@@ -26,8 +26,11 @@ COPY --from=builder /app /app
 # Non-root user
 USER node
 
-EXPOSE 8000
+# Keep PORT and EXPOSE in agreement. The app falls back to 8000 when PORT is
+# unset; platforms that inject their own PORT (Render uses 10000) override this.
 ENV NODE_ENV=production
+ENV PORT=8000
+EXPOSE 8000
 
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 CMD ["node", "index.js"]

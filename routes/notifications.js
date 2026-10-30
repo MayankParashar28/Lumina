@@ -49,32 +49,15 @@ router.get("/", async (req, res) => {
   }
 });
 
-// 📌 Create a new notification
-router.post("/create", async (req, res) => {
-  try {
-    const { message, userId } = req.body;
-
-    if (!userId) {
-      logger.warn("❌ No userId provided in request body");
-      return res.status(400).json({ error: "User ID is required" });
-    }
-
-    const notification = new Notification({
-      message,
-      userId: new mongoose.Types.ObjectId(userId),
-      read: false,
-      createdAt: new Date()
-    });
-
-    await notification.save(); // ✅ Ensure notification is saved properly
-
-    res.status(201).json({ message: "Notification created!", notification });
-
-  } catch (error) {
-    logger.error("❌ Error creating notification:", error);
-    res.status(500).json({ error: "Error creating notification" });
-  }
-});
+// Removed: POST /create.
+//
+// It took a `userId` and a `message` straight from the request body with no
+// authentication, so anyone could have written an arbitrary notification into any
+// user's feed — a ready-made phishing channel. It never actually worked (it omitted
+// the schema-required `senderId` and `type`, so every call returned 500) and nothing
+// in the codebase or UI called it. Notifications are created by the actions that
+// cause them (likes, comments, follows, publishes) in routes/blog.js, routes/user.js
+// and services/jobs.js. Don't reintroduce a generic endpoint for this.
 
 // 📌 Mark a notification as read
 router.post("/mark-read/:id", async (req, res) => {
