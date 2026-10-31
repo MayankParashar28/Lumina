@@ -20,6 +20,14 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    /* The hero image is square (1024x1024) and takes its height from the column
+       WIDTH, not from the viewport. On a short screen (a laptop at ~660px of
+       usable height) that made this column ~793px tall, so the image and its
+       caption ran off the bottom of the page. Capping the column at the viewport
+       lets the image shrink to fit; on tall screens the cap never binds, so
+       nothing changes there. The caption is positioned against this element, so
+       it follows the image back on-screen. */
+    max-height: 100vh;
 }
 
 /* <picture> exists only to offer a WebP source. display:contents removes its own
@@ -34,6 +42,9 @@
     height: 100%;
     object-fit: cover;
     opacity: 0.95;
+    /* Pairs with the cap above: without this the square image keeps its
+       intrinsic height and overflows the capped column. */
+    max-height: 100%;
     border-radius: 24px;
     /* Premium rounded corners */
     box-shadow: 0 15px 35px rgba(0, 0, 0, 0.08);
