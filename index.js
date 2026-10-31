@@ -275,6 +275,12 @@ app.use((req, res, next) => {
   res.locals.socketUrl = process.env.SOCKET_URL || "";
   res.locals.realtimeEnabled = !!process.env.SOCKET_URL || process.env.VERCEL !== "1";
   res.locals.path = req.path;
+  // Auth pages are a form and nothing else, so they skip two libraries they can
+  // never use: Socket.io (its init in partials/nav requires a logged-in user, and
+  // these routes are only reachable while anonymous) and Lenis smooth-scroll (the
+  // form is a single viewport). That drops ~14KB of JS and two third-party
+  // connections from the sign-in path without changing a pixel.
+  res.locals.leanChrome = /^\/user\/(signin|signup|forgot-password|reset-password|reset-sent|verify-sent)/.test(req.path);
   res.locals.canonicalPath = req.path; // 🔍 SEO: Canonical URL for all pages
   // Hide the "Continue with Google" button when the strategy isn't configured.
   res.locals.googleAuthEnabled = require("./services/passport").googleEnabled;

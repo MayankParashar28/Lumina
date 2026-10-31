@@ -137,10 +137,15 @@
 
 
     <!-- Scripts -->
-    <% if (locals.realtimeEnabled) { %>
+    <% if (locals.realtimeEnabled && !locals.leanChrome) { %>
     <script nonce="<%= cspNonce %>" src="https://cdn.jsdelivr.net/npm/socket.io-client@4.8.1/dist/socket.io.min.js"></script>
     <% } %>
     <script nonce="<%= cspNonce %>">
+      <% if (locals.user) { %>
+      // The badge element is only rendered for a signed-in user, so for an
+      // anonymous visitor this fetch always returned {count:0}, found no badge
+      // and did nothing — then repeated every 10s for as long as the page stayed
+      // open. Skip it entirely when there is no user.
       // Notification Count
       async function updateNotificationCount() {
         try {
@@ -159,6 +164,7 @@
       }
       document.addEventListener("DOMContentLoaded", updateNotificationCount);
       setInterval(updateNotificationCount, 10000);
+      <% } %>
 
       // Search Toggle
       const searchToggle = document.getElementById('searchToggle');

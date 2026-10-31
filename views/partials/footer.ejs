@@ -51,7 +51,9 @@
 </script>
 
 <!-- 🌊 Lenis Smooth Scroll (High Performance Config) -->
+<% if (!locals.leanChrome) { %>
 <script src="https://unpkg.com/@studio-freight/lenis@1.0.42/dist/lenis.min.js"></script>
+<% } %>
 <script nonce="<%= cspNonce %>">
     // Optimized for ZERO jerkiness
     // Only disable on actual mobile viewports, not just touch devices (laptops can have touch)
