@@ -11,7 +11,7 @@
 
 **A full-stack blogging platform featuring AI-powered semantic search, real-time notifications, vector embeddings, and modern web architecture.**
 
-[Live Demo](https://lluminaa.vercel.app/) • [Docs](#-tech-stack) • [Report Bug](https://github.com/MayankParashar28/BlogiFy/issues) • [GitHub](https://github.com/MayankParashar28/BlogiFy)
+[Live Demo](https://llumina.online/) • [Docs](#-tech-stack) • [Report Bug](https://github.com/MayankParashar28/BlogiFy/issues) • [GitHub](https://github.com/MayankParashar28/BlogiFy)
 
 </div>
 

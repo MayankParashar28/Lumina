@@ -20,7 +20,10 @@
 <title><%= locals.title || 'Lumina - The Voice of the Bold' %></title>
 
 <!-- ✅ Canonical URL: Prevents duplicate page indexing -->
-<% const BASE_URL = process.env.BASE_URL || process.env.RENDER_EXTERNAL_URL || 'https://lluminaa.vercel.app'; %>
+<%# BASE_URL is set per environment. Trailing slashes are stripped because it is
+    concatenated with paths that already begin with "/", and a value entered as
+    "https://site.com/" would otherwise produce "https://site.com//page". %>
+<% const BASE_URL = (process.env.BASE_URL || process.env.RENDER_EXTERNAL_URL || locals.requestOrigin || '').replace(/\/+$/, ''); %>
 <% const canonicalPath = locals.canonicalPath || '/'; %>
 <link rel="canonical" href="<%= BASE_URL + canonicalPath %>">
 

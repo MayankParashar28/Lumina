@@ -18,4 +18,4 @@ Disallow: /notifications
 Disallow: /search
 Disallow: /ai/
 
-Sitemap: https://lluminaa.vercel.app/sitemap.xml
+Sitemap: https://llumina.online/sitemap.xml

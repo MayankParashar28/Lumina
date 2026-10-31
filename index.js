@@ -275,6 +275,11 @@ app.use((req, res, next) => {
   res.locals.socketUrl = process.env.SOCKET_URL || "";
   res.locals.realtimeEnabled = !!process.env.SOCKET_URL || process.env.VERCEL !== "1";
   res.locals.path = req.path;
+  // Last-resort origin for canonical/og tags when neither BASE_URL nor
+  // RENDER_EXTERNAL_URL is set: the host this request actually arrived on,
+  // which is never wrong, unlike a hardcoded domain. `trust proxy` is on, so
+  // req.protocol is the client-facing scheme behind Render's proxy.
+  res.locals.requestOrigin = `${req.protocol}://${req.get("host")}`;
   // Auth pages are a form and nothing else, so they skip two libraries they can
   // never use: Socket.io (its init in partials/nav requires a logged-in user, and
   // these routes are only reachable while anonymous) and Lenis smooth-scroll (the

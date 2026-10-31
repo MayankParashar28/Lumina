@@ -144,6 +144,10 @@ test("forgot-password answers identically for known and unknown addresses", asyn
     html
       .replace(/definitely-not-registered@example\.com|grace@example\.com/g, "EMAIL")
       .replace(/nonce="[^"]*"/g, 'nonce="N"')
+      // With no BASE_URL set, canonical/og tags fall back to the host the request
+      // arrived on, and supertest binds a fresh ephemeral port per request — so the
+      // port differs between these two calls for reasons unrelated to enumeration.
+      .replace(/https?:\/\/(?:127\.0\.0\.1|localhost|\[::1\]):\d+/g, "http://HOST")
       .replace(/(name="_csrf"[^>]*value=)"[^"]*"/g, '$1"T"');
 
   assert.equal(normalise(known.text), normalise(unknown.text), "response body must not differ");
