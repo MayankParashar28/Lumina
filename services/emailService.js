@@ -28,13 +28,73 @@ function withDeadline(promise, ms, label) {
   return Promise.race([promise, deadline]).finally(() => clearTimeout(timer));
 }
 
+// Render blocks outbound SMTP, so a Gmail connection from a deployed instance
+// just times out. Resend delivers over ordinary HTTPS, which is not blocked, so
+// it is preferred whenever RESEND_API_KEY is present; SMTP stays as the fallback
+// for local development and for hosts that do allow it.
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
+const useResend = () => !!process.env.RESEND_API_KEY;
+
+// Resend requires the sender to be on a domain verified in the account. Until
+// llumina.online is verified, onboarding@resend.dev is the only usable sender,
+// and it can only deliver to the address that owns the Resend account.
+const FROM = () => process.env.EMAIL_FROM || "Lumina <onboarding@resend.dev>";
+
 // Surface a missing mail configuration at boot rather than at the moment a
 // visitor presses "Start your journey" — matches how the Google and Redis
 // services announce themselves.
-if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+if (useResend()) {
+  logger.info("✉️ Mail via Resend (HTTPS API), from %s", FROM());
+} else if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
   logger.warn(
-    "⚠️ EMAIL_USER / EMAIL_PASS not set — signup verification and password reset mail cannot be sent."
+    "⚠️ No RESEND_API_KEY and no EMAIL_USER / EMAIL_PASS — signup verification and password reset mail cannot be sent."
   );
+} else {
+  logger.warn(
+    "⚠️ Mail via SMTP. On hosts that block outbound SMTP (Render among them) this will time out; set RESEND_API_KEY instead."
+  );
+}
+
+// One delivery path for both messages below. Returns nothing useful on purpose:
+// callers only care whether it threw.
+async function deliver({ to, subject, html, label }) {
+  if (useResend()) {
+    const res = await withDeadline(
+      fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${RESEND_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ from: FROM(), to: [to], subject, html }),
+      }),
+      SEND_DEADLINE_MS,
+      `${label} send`
+    );
+
+    // A non-2xx carries Resend's own explanation (unverified domain, sandbox
+    // recipient restriction, bad key). Surface it: the caller renders an error
+    // and this is the only place the real reason is visible.
+    if (!res.ok) {
+      const detail = await res.text().catch(() => "");
+      throw new Error(`Resend rejected the ${label.toLowerCase()} (HTTP ${res.status}): ${detail.slice(0, 300)}`);
+    }
+
+    const body = await res.json().catch(() => ({}));
+    logger.info("📨 %s sent via Resend: %s", label, body.id || "(no id)");
+    return;
+  }
+
+  const transporter = await createTransporter();
+  const info = await withDeadline(
+    transporter.sendMail({ from: FROM(), to, subject, html }),
+    SEND_DEADLINE_MS,
+    `${label} send`
+  );
+  logger.info("📨 %s sent via SMTP: %s", label, info.messageId);
+  if (nodemailer.getTestMessageUrl(info)) {
+    logger.info("🔎 Preview URL: %s", nodemailer.getTestMessageUrl(info));
+  }
 }
 
 const createTransporter = async () => {
@@ -81,14 +141,13 @@ const createTransporter = async () => {
 };
 
 const sendVerificationEmail = async (email, token) => {
-  const transporter = await createTransporter();
   const baseUrl = process.env.BASE_URL || process.env.RENDER_EXTERNAL_URL || "http://localhost:8000";
   const verificationLink = `${baseUrl}/user/verify/${token}`;
 
-  const sendPromise = transporter.sendMail({
-    from: '"Lumina" <noreply@lumina.com>',
+  await deliver({
     to: email,
     subject: "Verify your email address",
+    label: "Verification email",
     html: `
         <!DOCTYPE html>
         <html>
@@ -131,24 +190,13 @@ const sendVerificationEmail = async (email, token) => {
         </html>
     `,
   });
-
-  const info = await withDeadline(sendPromise, SEND_DEADLINE_MS, "Verification email send");
-
-  logger.info("📨 Email sent: %s", info.messageId);
-
-  // If using Ethereal, print the preview URL
-  if (nodemailer.getTestMessageUrl(info)) {
-    logger.info("🔎 Preview URL: %s", nodemailer.getTestMessageUrl(info));
-  }
 };
 
 const sendResetPasswordEmail = async (email, resetLink) => {
-  const transporter = await createTransporter();
-
-  const sendPromise = transporter.sendMail({
-    from: '"Lumina" <noreply@lumina.com>',
+  await deliver({
     to: email,
     subject: "Reset Your Password",
+    label: "Password reset email",
     html: `
         <!DOCTYPE html>
         <html>
@@ -192,14 +240,6 @@ const sendResetPasswordEmail = async (email, resetLink) => {
         </html>
     `,
   });
-
-  const info = await withDeadline(sendPromise, SEND_DEADLINE_MS, "Password reset email send");
-
-  logger.info("📨 Reset Email sent: %s", info.messageId);
-
-  if (nodemailer.getTestMessageUrl(info)) {
-    logger.info("🔎 Preview URL: %s", nodemailer.getTestMessageUrl(info));
-  }
 };
 
 module.exports = { sendVerificationEmail, sendResetPasswordEmail, createTransporter };

@@ -60,6 +60,20 @@ services:
         sync: false
       - key: GOOGLE_CLIENT_SECRET
         sync: false
+      # Render blocks outbound SMTP, so Gmail connections from here just time out
+      # (a signup spent 8.5s failing to connect). Resend delivers over HTTPS,
+      # which is not blocked. Set RESEND_API_KEY in the dashboard; it is a secret,
+      # so it stays out of the blueprint.
+      - key: RESEND_API_KEY
+        sync: false
+      # Resend only accepts a sender on a domain verified in the account. Until
+      # llumina.online is verified there, onboarding@resend.dev is the only valid
+      # sender and it can only deliver to the Resend account's own address. Once
+      # the domain is verified, change this to Lumina <noreply@llumina.online>.
+      - key: EMAIL_FROM
+        value: Lumina <onboarding@resend.dev>
+      # SMTP fallback, used only when RESEND_API_KEY is absent. Kept for local
+      # development and for hosts that permit outbound SMTP.
       - key: EMAIL_USER
         sync: false
       - key: EMAIL_PASS
