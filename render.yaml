@@ -18,8 +18,12 @@ services:
         generateValue: true
       - key: MONGODB_URL
         sync: false
+      # The public site URL. Not a secret, so it is kept in the blueprint rather
+      # than the dashboard: canonical/og tags and the sitemap all derive from it,
+      # and without it they fall back to the .onrender.com host, which tells search
+      # engines the custom domain is not the authoritative copy. No trailing slash.
       - key: BASE_URL
-        sync: false
+        value: https://llumina.online
       - key: REDIS_URL
         sync: false
       - key: GOOGLE_GEMINI_API_KEY
