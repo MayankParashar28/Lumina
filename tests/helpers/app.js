@@ -16,6 +16,14 @@ const ROOT = path.join(__dirname, "..", "..");
 process.env.NODE_ENV = "test";
 process.env.JWT_SECRET = "test-jwt-secret-that-is-long-enough";
 process.env.SESSION_SECRET = "test-session-secret-that-is-long-enough";
+// index.js calls dotenv.config() at require time, which would read the
+// developer's real .env and put back everything deleted below — so the suite
+// would pass in a clean checkout and fail on any machine that actually has a
+// .env, with confusing symptoms (Google sign-in "configured", REDIS_URL
+// pointing at the production instance). Neutralise it here, before index.js is
+// ever required: the tests must see only what this harness sets.
+require("dotenv").config = () => ({ parsed: {} });
+
 // Keep the app on its single-process fallbacks (memory cache, inline jobs).
 delete process.env.REDIS_URL;
 delete process.env.GOOGLE_CLIENT_ID;
