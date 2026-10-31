@@ -112,7 +112,18 @@
 </script>
 
 <!-- Global Flash Messages (Toasts) -->
-<% if (locals.success_msg && locals.success_msg.length> 0 || locals.error_msg && locals.error_msg.length > 0) { %>
+<%
+  // locals.error must be in this guard, not only in the branch below. Routes that
+  // re-render a form directly — res.render("signup", { error: "..." }) — set it
+  // without going through flash, so both *_msg arrays are empty and the whole
+  // container used to be skipped: the message existed but no page ever showed it.
+  // Every signup and signin failure was silent because of this.
+  const hasFlash =
+    (locals.success_msg && locals.success_msg.length > 0) ||
+    (locals.error_msg && locals.error_msg.length > 0) ||
+    (locals.error && locals.error.length > 0);
+%>
+<% if (hasFlash) { %>
   <div id="flash-toast-container">
     <% if (locals.success_msg && locals.success_msg.length> 0) { %>
       <div class="alert alert-success alert-dismissible fade show toast-animate" role="alert">

@@ -162,3 +162,50 @@ test("forgot-password answers identically for known and unknown addresses", asyn
   assert.ok(sentMail.some((m) => m.kind === "reset" && m.to === "grace@example.com"));
   assert.ok(!sentMail.some((m) => m.kind === "reset" && m.to.startsWith("definitely-not")));
 });
+
+// Regression: views/partials/nav.ejs renders the flash container, but its guard
+// once checked only success_msg/error_msg. Routes that re-render a form directly
+// — res.render("signup", { error }) — set neither, so the container was skipped
+// and every signup/signin failure was invisible. A user saw the form come back
+// with no explanation, which is indistinguishable from nothing happening.
+test("a rejected signup shows the reason on the page", async () => {
+  const { token, cookie } = await csrfFor(request, ctx.app);
+
+  const res = await request(ctx.app)
+    .post("/user/signup")
+    .set("Cookie", cookie)
+    .type("form")
+    .send({ _csrf: token, fullName: "Too Short", email: "shortpw@example.com", password: "short" });
+
+  assert.equal(res.status, 200);
+  assert.match(
+    res.text,
+    /Password must be at least 8 characters/i,
+    "the error passed to res.render must actually appear in the HTML"
+  );
+  assert.match(res.text, /alert-danger/, "it should render in the flash container");
+});
+
+test("a duplicate signup shows the reason on the page", async () => {
+  await ctx.User.create({
+    fullName: "Already There",
+    email: "taken@example.com",
+    password: "a-long-enough-password",
+  });
+
+  const { token, cookie } = await csrfFor(request, ctx.app);
+  const res = await request(ctx.app)
+    .post("/user/signup")
+    .set("Cookie", cookie)
+    .type("form")
+    .send({
+      _csrf: token,
+      fullName: "Again",
+      email: "taken@example.com",
+      password: "a-long-enough-password",
+    });
+
+  assert.equal(res.status, 200);
+  assert.match(res.text, /User already exists/i);
+  assert.match(res.text, /alert-danger/);
+});
