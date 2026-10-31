@@ -2,6 +2,41 @@
 const nodemailer = require("nodemailer");
 const logger = require("./logger"); // Structured Logging
 
+// Nodemailer's defaults are 2 min to connect, 30 s for the greeting and 10 min on
+// the socket. Many hosts (Render's free tier among them) block outbound SMTP, so
+// the connection never completes and the HTTP request that is awaiting it hangs
+// until the platform's proxy cuts it off — the user just sees a spinner forever.
+// Fail fast instead, so the caller's catch block actually runs.
+const SMTP_TIMEOUTS = {
+  connectionTimeout: 7000,
+  greetingTimeout: 5000,
+  socketTimeout: 10000,
+};
+
+// Belt and braces: even with the options above, a wedged socket or a slow DNS
+// lookup can outlive them. Nothing may block a request for longer than this.
+const SEND_DEADLINE_MS = Number(process.env.EMAIL_TIMEOUT_MS) || 12000;
+
+function withDeadline(promise, ms, label) {
+  let timer;
+  const deadline = new Promise((_, reject) => {
+    timer = setTimeout(
+      () => reject(new Error(`${label} timed out after ${ms}ms`)),
+      ms
+    );
+  });
+  return Promise.race([promise, deadline]).finally(() => clearTimeout(timer));
+}
+
+// Surface a missing mail configuration at boot rather than at the moment a
+// visitor presses "Start your journey" — matches how the Google and Redis
+// services announce themselves.
+if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+  logger.warn(
+    "⚠️ EMAIL_USER / EMAIL_PASS not set — signup verification and password reset mail cannot be sent."
+  );
+}
+
 const createTransporter = async () => {
   // Check if we have real credentials
   if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
@@ -11,12 +46,27 @@ const createTransporter = async () => {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
       },
+      ...SMTP_TIMEOUTS,
     });
+  }
+
+  // Ethereal is a DEVELOPMENT convenience and must never be reached in
+  // production: createTestAccount() is itself a network call, so with no
+  // credentials configured a live server would hang here rather than report the
+  // real problem — no mail credentials.
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "EMAIL_USER / EMAIL_PASS are not set, so no verification or reset mail can be sent."
+    );
   }
 
   // Fallback to Ethereal (Dev Mode)
   logger.warn("⚠️ No real email credentials found. Using Ethereal (Fake Email) for testing.");
-  const testAccount = await nodemailer.createTestAccount();
+  const testAccount = await withDeadline(
+    nodemailer.createTestAccount(),
+    SEND_DEADLINE_MS,
+    "Ethereal test account creation"
+  );
 
   return nodemailer.createTransport({
     host: "smtp.ethereal.email",
@@ -26,6 +76,7 @@ const createTransporter = async () => {
       user: testAccount.user,
       pass: testAccount.pass,
     },
+    ...SMTP_TIMEOUTS,
   });
 };
 
@@ -34,7 +85,7 @@ const sendVerificationEmail = async (email, token) => {
   const baseUrl = process.env.BASE_URL || process.env.RENDER_EXTERNAL_URL || "http://localhost:8000";
   const verificationLink = `${baseUrl}/user/verify/${token}`;
 
-  const info = await transporter.sendMail({
+  const sendPromise = transporter.sendMail({
     from: '"Lumina" <noreply@lumina.com>',
     to: email,
     subject: "Verify your email address",
@@ -81,6 +132,8 @@ const sendVerificationEmail = async (email, token) => {
     `,
   });
 
+  const info = await withDeadline(sendPromise, SEND_DEADLINE_MS, "Verification email send");
+
   logger.info("📨 Email sent: %s", info.messageId);
 
   // If using Ethereal, print the preview URL
@@ -92,7 +145,7 @@ const sendVerificationEmail = async (email, token) => {
 const sendResetPasswordEmail = async (email, resetLink) => {
   const transporter = await createTransporter();
 
-  const info = await transporter.sendMail({
+  const sendPromise = transporter.sendMail({
     from: '"Lumina" <noreply@lumina.com>',
     to: email,
     subject: "Reset Your Password",
@@ -139,6 +192,8 @@ const sendResetPasswordEmail = async (email, resetLink) => {
         </html>
     `,
   });
+
+  const info = await withDeadline(sendPromise, SEND_DEADLINE_MS, "Password reset email send");
 
   logger.info("📨 Reset Email sent: %s", info.messageId);
 

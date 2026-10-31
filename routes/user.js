@@ -13,6 +13,14 @@ const logger = require("../services/logger"); // Structured Logging
 // Shared rate-limit counters across instances (Redis when enabled, else memory).
 const { makeRateLimitStore } = require("../services/redis");
 
+// Express 4 does not catch a rejected promise returned by a route handler: the
+// rejection surfaces as an unhandled rejection and no response is ever written,
+// so the browser just spins until the platform's proxy gives up. Wrapping the
+// handler hands the error to the global error middleware instead, which renders
+// the error page.
+const asyncRoute = (handler) => (req, res, next) =>
+  Promise.resolve(handler(req, res, next)).catch(next);
+
 // Rate limit for authentication
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -889,7 +897,7 @@ const PendingUser = require("../models/pendingUser");
 
 // ... (existing imports)
 
-router.post("/signup", authLimiter, async (req, res) => {
+router.post("/signup", authLimiter, asyncRoute(async (req, res) => {
   let { fullName, email, password } = req.body;
 
   // Prevent NoSQL Injection
@@ -958,10 +966,10 @@ router.post("/signup", authLimiter, async (req, res) => {
     await sendVerificationEmail(email, verificationToken);
     return res.render("verify-sent", { email });
   } catch (error) {
-    console.error("Email Error:", error);
+    logger.error("Email Error:", error);
     return res.render("signup", { error: "Error sending verification email." });
   }
-});
+}));
 
 // Verify Email Route
 router.get("/verify/:token", verifyLimiter, async (req, res) => {
