@@ -1,5 +1,6 @@
 const { validateToken } = require("../services/authentication");
 const User = require("../models/user");
+const logger = require("../services/logger");
 
 function checkForAuthenticationCookie(cookieName) {
   return async (req, res, next) => {
@@ -15,7 +16,7 @@ function checkForAuthenticationCookie(cookieName) {
       const userPayload = validateToken(tokenCookieValue);
 
       if (!userPayload) {
-        console.log("❌ Invalid token.");
+        // Routine: an expired or tampered cookie. Treat as anonymous.
         res.locals.user = null;
         return next();
       }
@@ -29,6 +30,9 @@ function checkForAuthenticationCookie(cookieName) {
       req.user = user;
       res.locals.user = user; // ✅ Set user for EJS
     } catch (error) {
+      // Swallowing this silently hid real failures (a dropped Mongo connection
+      // looked identical to a signed-out visitor). Degrade to anonymous, but say so.
+      logger.error("Auth cookie check failed; treating request as anonymous:", error);
       res.locals.user = null;
     }
 

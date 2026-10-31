@@ -465,7 +465,6 @@ router.get("/edit", async (req, res) => {
   }
 });
 
-const multer = require("multer");
 const { storage, cloudinary, upload } = require("../config/cloudConfig");
 // upload is pre-configured with 5MB limit and MIME type validation
 

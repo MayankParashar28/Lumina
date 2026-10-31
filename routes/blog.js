@@ -1,5 +1,4 @@
 const { Router } = require("express");
-const multer = require("multer");
 const path = require("path");
 const moment = require("moment"); // Ensure moment is imported
 const User = require("../models/user");

@@ -26,6 +26,24 @@ services:
         value: https://llumina.online
       - key: REDIS_URL
         sync: false
+      # ⚠️ TEMPORARY — the Upstash free tier's request quota is exhausted
+      # (500,000/month), so every Redis call errors out. BullMQ polls its queues
+      # continuously, which is what consumed the quota in the first place, and it
+      # keeps consuming it even while every call fails.
+      #
+      # QUEUE_DISABLED runs each job inline instead of through BullMQ; the site
+      # behaves exactly as it did before the queue was introduced.
+      # REDIS_DISABLED stops the client being created at all — sessions go to
+      # Mongo, and rate limits and caches use the in-process fallbacks. On the
+      # free plan there is only ever one instance, so nothing needs to be shared
+      # between instances and nothing is lost by this.
+      #
+      # To re-enable once the quota resets, or after moving to a paid Upstash
+      # plan: set both of these to false (or delete them) and redeploy.
+      - key: QUEUE_DISABLED
+        value: "true"
+      - key: REDIS_DISABLED
+        value: "true"
       - key: GOOGLE_GEMINI_API_KEY
         sync: false
       - key: GOOGLE_GEMINI_KEY_LIGHT
