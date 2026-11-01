@@ -35,10 +35,11 @@ function withDeadline(promise, ms, label) {
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const useResend = () => !!process.env.RESEND_API_KEY;
 
-// Resend requires the sender to be on a domain verified in the account. Until
-// llumina.online is verified, onboarding@resend.dev is the only usable sender,
-// and it can only deliver to the address that owns the Resend account.
-const FROM = () => process.env.EMAIL_FROM || "Lumina <onboarding@resend.dev>";
+// Resend requires the sender to be on a domain verified in the account.
+// onboarding@resend.dev always works but only delivers to the address that owns
+// the Resend account, so it is a fallback rather than a default.
+const FROM = () => process.env.EMAIL_FROM || "Lumina <noreply@llumina.online>";
+const SANDBOX_FROM = "Lumina <onboarding@resend.dev>";
 
 // Surface a missing mail configuration at boot rather than at the moment a
 // visitor presses "Start your journey" — matches how the Google and Redis
@@ -57,27 +58,50 @@ if (useResend()) {
 
 // One delivery path for both messages below. Returns nothing useful on purpose:
 // callers only care whether it threw.
+async function postToResend(from, { to, subject, html, label }) {
+  const res = await withDeadline(
+    fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${RESEND_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ from, to: [to], subject, html }),
+    }),
+    SEND_DEADLINE_MS,
+    `${label} send`
+  );
+  const detail = res.ok ? null : await res.text().catch(() => "");
+  return { res, detail };
+}
+
 async function deliver({ to, subject, html, label }) {
   if (useResend()) {
-    const res = await withDeadline(
-      fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${RESEND_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ from: FROM(), to: [to], subject, html }),
-      }),
-      SEND_DEADLINE_MS,
-      `${label} send`
-    );
+    let { res, detail } = await postToResend(FROM(), { to, subject, html, label });
+
+    // Domain verification is a wait we do not control: the DNS records are in
+    // place and Resend is still checking them, which can take hours. Rather than
+    // leave sending broken until then — or need a config change at the exact
+    // moment it completes — fall back to the sandbox sender, which reaches the
+    // Resend account owner. Once the domain clears, the first attempt succeeds
+    // and this branch stops being taken, with no redeploy.
+    if (res.status === 403 && /not verified/i.test(detail || "") && FROM() !== SANDBOX_FROM) {
+      logger.warn(
+        "⚠️ %s: %s is not verified in Resend yet, falling back to %s (reaches only the Resend account owner).",
+        label,
+        FROM(),
+        SANDBOX_FROM
+      );
+      ({ res, detail } = await postToResend(SANDBOX_FROM, { to, subject, html, label }));
+    }
 
     // A non-2xx carries Resend's own explanation (unverified domain, sandbox
     // recipient restriction, bad key). Surface it: the caller renders an error
     // and this is the only place the real reason is visible.
     if (!res.ok) {
-      const detail = await res.text().catch(() => "");
-      throw new Error(`Resend rejected the ${label.toLowerCase()} (HTTP ${res.status}): ${detail.slice(0, 300)}`);
+      throw new Error(
+        `Resend rejected the ${label.toLowerCase()} (HTTP ${res.status}): ${(detail || "").slice(0, 300)}`
+      );
     }
 
     const body = await res.json().catch(() => ({}));
