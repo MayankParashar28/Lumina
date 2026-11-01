@@ -790,7 +790,7 @@ router.post("/signin", authLimiter, async (req, res) => {
 
       try {
         await sendVerificationEmail(email, verificationToken);
-        return res.render("verify-sent");
+        return res.render("verify-sent", { email, title: "Check Your Inbox - Lumina" });
       } catch (error) {
         logger.error("Email Error:", error);
         return res.render("signin", { error: "Please verify your email. (Could not resend email)" });
@@ -921,7 +921,7 @@ router.post("/signup", authLimiter, asyncRoute(async (req, res) => {
 
     try {
       await sendVerificationEmail(email, verificationToken);
-      return res.render("verify-sent", { email });
+      return res.render("verify-sent", { email, title: "Check Your Inbox - Lumina" });
     } catch (error) {
       logger.error("Email Error:", error);
       return res.render("signup", { error: "Error sending verification email." });
@@ -963,7 +963,7 @@ router.post("/signup", authLimiter, asyncRoute(async (req, res) => {
   // Send verification email
   try {
     await sendVerificationEmail(email, verificationToken);
-    return res.render("verify-sent", { email });
+    return res.render("verify-sent", { email, title: "Check Your Inbox - Lumina" });
   } catch (error) {
     logger.error("Email Error:", error);
     return res.render("signup", { error: "Error sending verification email." });
