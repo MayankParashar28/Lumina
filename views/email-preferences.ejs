@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <%- include('./partials/header') %>
+        <link rel="stylesheet" href="/css/auth.css?v=3">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+
+<body>
+    <%- include('./partials/nav', { searchQuery: '' }) %>
+
+        <div class="page-container">
+            <div class="settings-card">
+                <h2 class="settings-title">Email Notifications</h2>
+
+                <div class="pref-row">
+                    <div class="pref-copy">
+                        <label class="pref-label" for="emailOnNewPost">New posts from people you follow</label>
+                        <p class="pref-help">
+                            One email when someone you follow publishes. You'll still see it in
+                            your Lumina notifications either way.
+                        </p>
+                    </div>
+                    <label class="pref-switch">
+                        <input type="checkbox" id="emailOnNewPost" <%= emailOnNewPost ? 'checked' : '' %>>
+                        <span class="pref-slider"></span>
+                    </label>
+                </div>
+
+                <p class="pref-status" id="prefStatus" role="status" aria-live="polite"></p>
+
+                <div class="form-actions">
+                    <a href="/user/profile" class="btn-cancel text-decoration-none">Back to profile</a>
+                </div>
+            </div>
+        </div>
+
+        <%- include('./partials/footer') %>
+
+            <style>
+                .pref-row {
+                    display: flex;
+                    align-items: flex-start;
+                    justify-content: space-between;
+                    gap: 1.5rem;
+                    padding: 1.25rem 0;
+                }
+
+                .pref-copy {
+                    min-width: 0;
+                }
+
+                .pref-label {
+                    display: block;
+                    font-weight: 700;
+                    margin-bottom: 0.35rem;
+                    cursor: pointer;
+                }
+
+                .pref-help {
+                    margin: 0;
+                    color: #666;
+                    font-size: 0.92rem;
+                    line-height: 1.5;
+                }
+
+                /* The switch is the whole 44px target, not just the 24px knob. */
+                .pref-switch {
+                    position: relative;
+                    flex: 0 0 auto;
+                    display: inline-flex;
+                    align-items: center;
+                    width: 56px;
+                    height: 44px;
+                    cursor: pointer;
+                }
+
+                .pref-switch input {
+                    position: absolute;
+                    opacity: 0;
+                    width: 100%;
+                    height: 100%;
+                    margin: 0;
+                    cursor: pointer;
+                }
+
+                .pref-slider {
+                    pointer-events: none;
+                    width: 56px;
+                    height: 30px;
+                    border: 2px solid var(--border-color, #111);
+                    border-radius: 999px;
+                    background: #e9e9e9;
+                    transition: background 0.18s ease;
+                }
+
+                .pref-slider::after {
+                    content: "";
+                    position: absolute;
+                    top: 50%;
+                    left: 5px;
+                    width: 20px;
+                    height: 20px;
+                    margin-top: -10px;
+                    border-radius: 50%;
+                    background: #fff;
+                    border: 2px solid var(--border-color, #111);
+                    transition: transform 0.18s ease;
+                }
+
+                .pref-switch input:checked + .pref-slider {
+                    background: var(--accent-pink, #ff6b9d);
+                }
+
+                .pref-switch input:checked + .pref-slider::after {
+                    transform: translateX(22px);
+                }
+
+                .pref-switch input:focus-visible + .pref-slider {
+                    outline: 3px solid var(--accent-pink, #ff6b9d);
+                    outline-offset: 3px;
+                }
+
+                .pref-status {
+                    min-height: 1.4rem;
+                    margin: 0.25rem 0 0;
+                    font-size: 0.9rem;
+                    font-weight: 600;
+                    color: #2e7d32;
+                }
+
+                .pref-status.is-error {
+                    color: #c62828;
+                }
+
+                /* .form-actions is sized for a form with a Save button under it;
+                   with a single back link it leaves a hole. */
+                .settings-card .form-actions {
+                    margin-top: 1.5rem;
+                    padding-top: 1.5rem;
+                }
+
+                @media (prefers-reduced-motion: reduce) {
+
+                    .pref-slider,
+                    .pref-slider::after {
+                        transition: none;
+                    }
+                }
+            </style>
+
+            <script nonce="<%= cspNonce %>">
+                (function () {
+                    const box = document.getElementById('emailOnNewPost');
+                    const status = document.getElementById('prefStatus');
+                    let timer = null;
+
+                    box.addEventListener('change', async () => {
+                        const wanted = box.checked;
+                        box.disabled = true;
+                        status.classList.remove('is-error');
+                        status.textContent = 'Saving...';
+
+                        try {
+                            const res = await fetch('/user/email-preferences', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'x-csrf-token': '<%= csrfToken %>'
+                                },
+                                body: JSON.stringify({ emailOnNewPost: wanted })
+                            });
+                            if (!res.ok) throw new Error('Request failed');
+                            const data = await res.json();
+                            // Trust the server's value, not the click, so the
+                            // switch can never show a setting that wasn't saved.
+                            box.checked = data.emailOnNewPost !== false;
+                            status.textContent = box.checked ? 'Saved. Emails are on.' : 'Saved. Emails are off.';
+                        } catch (err) {
+                            box.checked = !wanted;
+                            status.classList.add('is-error');
+                            status.textContent = "Couldn't save that. Check your connection and try again.";
+                        } finally {
+                            box.disabled = false;
+                            clearTimeout(timer);
+                            timer = setTimeout(() => { status.textContent = ''; }, 4000);
+                        }
+                    });
+                })();
+            </script>
+</body>
+
+</html>

@@ -1113,6 +1113,113 @@ router.post("/reset-password/:token", verifyLimiter, async (req, res) => {
   }
 });
 
+// ⚙️ Email preferences, for someone who is logged in.
+//
+// A page of its own rather than a field on /user/edit, because that form sits
+// behind a 24-hour cooldown: a reader who happened to change their name this
+// morning would be told to come back tomorrow to stop getting email, which is
+// not an acceptable answer to "please stop emailing me".
+router.get("/email-preferences", asyncRoute(async (req, res) => {
+  if (!req.user || !req.user._id) return res.redirect("/user/signin");
+  const user = await User.findById(req.user._id).select("notificationPreferences").lean();
+  if (!user) return res.redirect("/user/signin");
+  return res.render("email-preferences", {
+    emailOnNewPost: user.notificationPreferences
+      ? user.notificationPreferences.emailOnNewPost !== false
+      : true,
+  });
+}));
+
+router.post("/email-preferences", asyncRoute(async (req, res) => {
+  if (!req.user || !req.user._id) return res.status(401).json({ error: "Unauthorized access!" });
+
+  // Checkboxes submit nothing when unticked and a browser can send "on", "true"
+  // or "1" when ticked, so read it as "anything but an explicit off".
+  const raw = req.body.emailOnNewPost;
+  const enabled = raw === true || raw === "true" || raw === "on" || raw === "1";
+
+  await User.updateOne(
+    { _id: req.user._id },
+    { $set: { "notificationPreferences.emailOnNewPost": enabled } }
+  );
+  return res.json({ ok: true, emailOnNewPost: enabled });
+}));
+
+// 📭 Unsubscribe from one kind of email.
+//
+// Reachable with no account session at all: whoever holds the link proves, by
+// the HMAC in it, that they are the owner of that address. That is the whole
+// point — the person who wants the mail to stop should never be asked to log in
+// first, and the readers most likely to click this are the ones least likely to
+// still remember a password.
+//
+// Two methods for one URL:
+//   POST — RFC 8058 one-click. Gmail and Yahoo require this of bulk senders and
+//          call it themselves from the "Unsubscribe" button in their own UI, so
+//          it must answer plainly and never redirect or render.
+//   GET  — the link in the footer, for a human. Acts immediately and offers an
+//          undo, rather than asking for a confirmation the reader did not come
+//          here to give.
+const unsubscribeLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  message: "Too many requests. Please try again later.",
+  standardHeaders: true,
+  legacyHeaders: false,
+  store: makeRateLimitStore("rl:unsub:"),
+});
+
+async function applyUnsubscribe(req, enabled) {
+  const { verify, KINDS } = require("../utils/unsubscribe");
+  const { kind, userId, token } = req.params;
+
+  const field = Object.prototype.hasOwnProperty.call(KINDS, kind) ? KINDS[kind] : null;
+  // 24 hex chars exactly: isValid() also accepts any 12-character string, which
+  // would turn a typo into a cast error instead of a clean rejection.
+  if (!field || !/^[a-f\d]{24}$/i.test(String(userId)) || !verify(userId, kind, token)) {
+    return { ok: false };
+  }
+
+  const result = await User.updateOne({ _id: userId }, { $set: { [field]: enabled } });
+  // An unsubscribe for an account that no longer exists is still a success from
+  // the reader's point of view: the mail has stopped.
+  return { ok: true, found: result.matchedCount > 0 };
+}
+
+router.post("/unsubscribe/:kind/:userId/:token", unsubscribeLimiter, asyncRoute(async (req, res) => {
+  const { ok } = await applyUnsubscribe(req, false);
+  // text/plain, no redirect: the caller is a mail provider's robot, which reads
+  // the status code and discards the body.
+  if (!ok) return res.status(400).type("text/plain").send("Invalid unsubscribe link.");
+  logger.info("📭 One-click unsubscribe: %s", req.params.kind);
+  return res.status(200).type("text/plain").send("You have been unsubscribed.");
+}));
+
+router.get("/unsubscribe/:kind/:userId/:token", unsubscribeLimiter, asyncRoute(async (req, res) => {
+  // ?resubscribe=1 is the undo on the page below. It reuses the same link and
+  // the same token, so the undo needs no second secret and no login either.
+  const resubscribe = req.query.resubscribe === "1";
+  const { ok } = await applyUnsubscribe(req, resubscribe);
+
+  if (!ok) {
+    return res.status(400).render("unsubscribed", {
+      ok: false,
+      resubscribed: false,
+      undoUrl: null,
+    });
+  }
+
+  logger.info("📭 Unsubscribe page: %s (resubscribe=%s)", req.params.kind, resubscribe);
+  const { kind, userId, token } = req.params;
+  return res.render("unsubscribed", {
+    ok: true,
+    resubscribed: resubscribe,
+    undoUrl: resubscribe
+      ? null
+      : `/user/unsubscribe/${encodeURIComponent(kind)}/${userId}/${token}?resubscribe=1`,
+  });
+}));
+
 router.get("/logout", (req, res, next) => {
   req.logout((err) => {
     if (err) {

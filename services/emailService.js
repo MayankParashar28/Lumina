@@ -58,7 +58,7 @@ if (useResend()) {
 
 // One delivery path for both messages below. Returns nothing useful on purpose:
 // callers only care whether it threw.
-async function postToResend(from, { to, subject, html, label }) {
+async function postToResend(from, { to, subject, html, label, headers }) {
   const res = await withDeadline(
     fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -66,7 +66,7 @@ async function postToResend(from, { to, subject, html, label }) {
         Authorization: `Bearer ${RESEND_API_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ from, to: [to], subject, html }),
+      body: JSON.stringify({ from, to: [to], subject, html, ...(headers ? { headers } : {}) }),
     }),
     SEND_DEADLINE_MS,
     `${label} send`
@@ -75,9 +75,9 @@ async function postToResend(from, { to, subject, html, label }) {
   return { res, detail };
 }
 
-async function deliver({ to, subject, html, label }) {
+async function deliver({ to, subject, html, label, headers }) {
   if (useResend()) {
-    let { res, detail } = await postToResend(FROM(), { to, subject, html, label });
+    let { res, detail } = await postToResend(FROM(), { to, subject, html, label, headers });
 
     // Domain verification is a wait we do not control: the DNS records are in
     // place and Resend is still checking them, which can take hours. Rather than
@@ -92,7 +92,7 @@ async function deliver({ to, subject, html, label }) {
         FROM(),
         SANDBOX_FROM
       );
-      ({ res, detail } = await postToResend(SANDBOX_FROM, { to, subject, html, label }));
+      ({ res, detail } = await postToResend(SANDBOX_FROM, { to, subject, html, label, headers }));
     }
 
     // A non-2xx carries Resend's own explanation (unverified domain, sandbox
@@ -111,7 +111,7 @@ async function deliver({ to, subject, html, label }) {
 
   const transporter = await createTransporter();
   const info = await withDeadline(
-    transporter.sendMail({ from: FROM(), to, subject, html }),
+    transporter.sendMail({ from: FROM(), to, subject, html, ...(headers ? { headers } : {}) }),
     SEND_DEADLINE_MS,
     `${label} send`
   );
@@ -266,4 +266,80 @@ const sendResetPasswordEmail = async (email, resetLink) => {
   });
 };
 
-module.exports = { sendVerificationEmail, sendResetPasswordEmail, createTransporter };
+// Sent to a follower when someone they follow publishes.
+//
+// This is the first mail here that is not transactional: a reader did not
+// trigger it by doing something, which is exactly the category inbox providers
+// are strict about. Hence the two headers below.
+//
+// List-Unsubscribe gives the mail client its own native "Unsubscribe" button,
+// and List-Unsubscribe-Post declares RFC 8058 one-click, which Gmail and Yahoo
+// require from bulk senders. Without them this mail is markedly more likely to
+// be filed as spam — and a reader who cannot find an unsubscribe button presses
+// "report spam" instead, which damages the sending domain for every message,
+// password resets included.
+const sendNewPostEmail = async (
+  email,
+  { authorName, title, excerpt, url, coverImageURL, unsubscribeUrl }
+) => {
+  const safe = (v) => String(v == null ? "" : v)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+
+  const baseUrl = process.env.BASE_URL || process.env.RENDER_EXTERNAL_URL || "http://localhost:8000";
+  const safeTitle = safe(title);
+  const safeAuthor = safe(authorName);
+
+  await deliver({
+    to: email,
+    subject: `${authorName} published: ${title}`,
+    label: "New post email",
+    headers: {
+      "List-Unsubscribe": `<${unsubscribeUrl}>`,
+      "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+    },
+    html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <style>
+            body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
+            .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 40px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+            .header { text-align: center; margin-bottom: 30px; }
+            .logo { font-size: 24px; font-weight: bold; color: #1a1a1a; text-decoration: none; }
+            .kicker { color: #888888; font-size: 14px; margin: 0 0 8px; }
+            .title { color: #1a1a1a; font-size: 24px; line-height: 1.3; margin: 0 0 14px; }
+            .excerpt { color: #444444; line-height: 1.6; font-size: 16px; margin: 0 0 24px; }
+            .cover { width: 100%; max-width: 520px; border-radius: 8px; display: block; margin: 0 0 24px; }
+            .button-container { text-align: center; margin: 30px 0; }
+            .button { background-color: #000000; color: #ffffff; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; }
+            .footer { margin-top: 30px; text-align: center; color: #888888; font-size: 12px; border-top: 1px solid #eeeeee; padding-top: 20px; }
+            .footer a { color: #888888; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <a href="${baseUrl}" class="logo">Lumina</a>
+            </div>
+            <p class="kicker">${safeAuthor} just published</p>
+            <h2 class="title">${safeTitle}</h2>
+            ${coverImageURL ? `<img src="${safe(coverImageURL)}" alt="" class="cover">` : ""}
+            ${excerpt ? `<p class="excerpt">${safe(excerpt)}</p>` : ""}
+            <div class="button-container">
+              <a href="${safe(url)}" class="button">Read it</a>
+            </div>
+            <div class="footer">
+              <p>You are getting this because you follow ${safeAuthor} on Lumina.<br>
+              <a href="${safe(unsubscribeUrl)}">Unsubscribe from new post emails</a></p>
+              <p>&copy; ${new Date().getFullYear()} Lumina. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+    `,
+  });
+};
+
+module.exports = { sendVerificationEmail, sendResetPasswordEmail, sendNewPostEmail, createTransporter };

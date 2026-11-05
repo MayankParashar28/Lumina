@@ -38,9 +38,14 @@ const userSchema = new Schema(
     },
 
     // 🔔 Notification Preferences
+    //
+    // emailOnComment / emailOnFollow are declared but nothing reads them yet.
+    // emailOnNewPost is honoured: services/jobs.js checks it before sending,
+    // and the unsubscribe link in every one of those emails clears it.
     notificationPreferences: {
       emailOnComment: { type: Boolean, default: true },
       emailOnFollow: { type: Boolean, default: true },
+      emailOnNewPost: { type: Boolean, default: true },
     },
 
 

@@ -1,6 +1,4 @@
 const Blog = require("../models/blog");
-const User = require("../models/user");
-const Notification = require("../models/Notification");
 const logger = require("./logger");
 
 /**
@@ -33,24 +31,15 @@ async function publishDueScheduled(io) {
       publishedCount += 1;
 
       try {
-        const author = await User.findById(blog.createdBy).populate("followers", "fullName");
-        if (author) {
-          await Notification.create({
-            userId: author._id, senderId: author._id, type: "blog_upload",
-            message: `Your scheduled post is now live: "${blog.title}"`,
-            blogId: blog._id, targetUrl: `/blog/${blog._id}`, read: false, createdAt: new Date(),
-          });
-
-          if (author.followers && author.followers.length > 0) {
-            const notifs = author.followers.map(f => ({
-              userId: f._id, senderId: author._id, type: "blog_upload",
-              message: `${author.fullName} published a new blog: "${blog.title}"`,
-              blogId: blog._id, targetUrl: `/blog/${blog._id}`, read: false, createdAt: new Date(),
-            }));
-            await Notification.insertMany(notifs);
-            if (io) notifs.forEach(n => io.to(`user:${n.userId}`).emit("new_notification", { message: n.message }));
-          }
-        }
+        // The shared fan-out, not a copy of it: a scheduled post reaches
+        // followers by exactly the same path — and with the same emails — as
+        // one published by hand. Required lazily because services/jobs.js
+        // requires this module back for its publishScheduled processor.
+        const { runFanout } = require("./jobs");
+        await runFanout(
+          { authorId: blog.createdBy, blogId: blog._id, title: blog.title, scheduled: true },
+          io
+        );
       } catch (e) {
         logger.error("⚠️ Scheduled-publish notify error:", e.message);
       }

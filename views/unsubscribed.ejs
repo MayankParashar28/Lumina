@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <%- include('./partials/header') %>
+        <link rel="stylesheet" href="/css/auth.css?v=3">
+        <meta name="robots" content="noindex, nofollow">
+</head>
+
+<body>
+    <%- include('./partials/nav', { searchQuery: '' }) %>
+
+        <div class="auth-split-wrapper">
+            <!-- Left Side: Image -->
+            <div class="auth-side-image-container">
+                <picture>
+                    <source type="image/webp" srcset="/images/auth-side.webp">
+                    <img loading="lazy" src="/images/auth-side.png" alt="Creative Space" class="auth-side-image">
+                </picture>
+                <div class="auth-image-overlay">
+                    <h2>Your inbox, your rules.</h2>
+                    <p>You can still read everything you follow right here on Lumina.</p>
+                </div>
+            </div>
+
+            <!-- Right Side: Content -->
+            <div class="auth-form-container">
+                <div class="auth-content-box text-center">
+                    <% if (!ok) { %>
+                        <div class="unsub-icon">&#128279;</div>
+                        <h1 class="auth-title mb-3">This link didn't work</h1>
+                        <p class="unsub-copy mb-4">
+                            It may have been broken by your email app, or it may have already
+                            expired. You can turn these emails off from your account settings
+                            instead.
+                        </p>
+                        <a href="/user/email-preferences" class="submit-btn d-inline-block text-decoration-none">
+                            Open settings
+                        </a>
+                        <% } else if (resubscribed) { %>
+                            <div class="unsub-icon">&#128236;</div>
+                            <h1 class="auth-title mb-3">You're back on the list</h1>
+                            <p class="unsub-copy mb-4">
+                                We'll email you again when someone you follow publishes
+                                something new.
+                            </p>
+                            <a href="/" class="submit-btn d-inline-block text-decoration-none">
+                                Back to Lumina
+                            </a>
+                            <% } else { %>
+                                <div class="unsub-icon">&#128237;</div>
+                                <h1 class="auth-title mb-3">You're unsubscribed</h1>
+                                <p class="unsub-copy mb-4">
+                                    We won't email you when the people you follow publish. Their
+                                    posts will still show up in your notifications on Lumina.
+                                </p>
+                                <a href="/" class="submit-btn d-inline-block text-decoration-none">
+                                    Back to Lumina
+                                </a>
+                                <div class="auth-footer mt-5">
+                                    Didn't mean to do that? <a href="<%= undoUrl %>">Undo</a>
+                                </div>
+                                <% } %>
+                </div>
+            </div>
+        </div>
+
+        <%- include('./partials/footer') %>
+
+            <style>
+                .unsub-icon {
+                    font-size: 4rem;
+                    margin-bottom: 2rem;
+                    animation: unsubIn 0.6s cubic-bezier(0.17, 0.67, 0.83, 0.67);
+                }
+
+                .unsub-copy {
+                    color: #666;
+                    font-size: 1.1rem;
+                    line-height: 1.6;
+                }
+
+                @keyframes unsubIn {
+                    0% { transform: scale(0.3); opacity: 0; }
+                    50% { transform: scale(1.05); opacity: 1; }
+                    70% { transform: scale(0.9); }
+                    100% { transform: scale(1); }
+                }
+
+                @media (prefers-reduced-motion: reduce) {
+                    .unsub-icon { animation: none; }
+                }
+            </style>
+</body>
+
+</html>

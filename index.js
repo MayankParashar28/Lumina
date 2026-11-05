@@ -424,9 +424,19 @@ const { generateToken, csrfSynchronisedProtection } = csrfSync({
 });
 const csrfProtection = csrfSynchronisedProtection;
 
+// RFC 8058 one-click unsubscribe: the mail provider POSTs this URL itself, from
+// its own servers, with no cookie and no page to have read a CSRF token from.
+// Exempting it is not a hole — the authorisation is the HMAC in the path, which
+// cannot be forged or guessed, and the request carries no session for a CSRF
+// attack to ride on in the first place.
+const ONE_CLICK_UNSUBSCRIBE_RE = /^\/user\/unsubscribe\/[a-z-]+\/[a-f\d]{24}\/[a-f\d]{32}$/i;
+
 app.use((req, res, next) => {
   // Skip CSRF for public-cacheable requests (no session) and the AI exemption.
   if (req.publicCache || req.path === "/ai/generate-comment-suggestions") {
+    return next();
+  }
+  if (req.method === "POST" && ONE_CLICK_UNSUBSCRIBE_RE.test(req.path)) {
     return next();
   }
   csrfProtection(req, res, next);

@@ -1142,47 +1142,11 @@ router.post("/edit/:id", upload.single("coverImage"), async (req, res) => {
         // A draft going live is a publish like any other, so it gets the same
         // share prompt as POST / does.
         wentLive = true;
-
-        // 🔔 Send "New Blog" Notifications (copy of POST / logic)
-        // Self Notification
-        const selfNotification = new Notification({
-          userId: req.user._id,
-          senderId: req.user._id,
-          type: "blog_upload",
-          message: `You published your draft: "${title}"`,
-          blogId: blog._id,
-          targetUrl: `/blog/${blog._id}`,
-          read: false,
-          createdAt: new Date(),
-        });
-        await selfNotification.save();
-
-        // Follower Notifications
-        const user = await User.findById(req.user._id).populate("followers", "fullName profilePic");
-        if (user && user.fullName && user.followers.length > 0) {
-          const followerNotifications = user.followers.map((follower) => ({
-            userId: follower._id,
-            senderId: req.user._id,
-            type: "blog_upload",
-            message: `${user.fullName} published a new blog: "${title}"`,
-            blogId: blog._id,
-            targetUrl: `/blog/${blog._id}`,
-            read: false,
-            createdAt: new Date(),
-          }));
-
-          await Notification.insertMany(followerNotifications);
-
-          // Real-time Notify
-          const io = req.app.get("io");
-          if (io) {
-            followerNotifications.forEach(n => {
-              io.to(`user:${n.userId}`).emit("new_notification", {
-                message: n.message
-              });
-            });
-          }
-        }
+        // The fan-out itself is enqueued after the save below, not here: this
+        // used to notify every follower before blog.save() had run, so a save
+        // that failed left them with a notification pointing at a post that
+        // never went live. It also did the insertMany on the request path,
+        // which is the exact thing the fanout job exists to keep off it.
       } else {
         // Just ensure it's published (if it was already published, no change)
         blog.status = "published";
@@ -1207,6 +1171,14 @@ router.post("/edit/:id", upload.single("coverImage"), async (req, res) => {
     pageCache.bustBlog(blog._id.toString(), blog.slug);
 
     if (wentLive) {
+      // Only now that the post is actually saved and live. Same job, and so the
+      // same follower emails, as a post published from the editor in one go.
+      enqueue("fanout", {
+        authorId: req.user._id.toString(),
+        blogId: blog._id.toString(),
+        title,
+        fromDraft: true,
+      });
       return res.redirect(`/blog/${blog.slug || blog._id}?published=1`);
     }
 

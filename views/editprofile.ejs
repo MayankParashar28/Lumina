@@ -3,7 +3,7 @@
 
 <head>
     <%- include('./partials/header') %>
-        <link rel="stylesheet" href="/css/auth.css?v=2">
+        <link rel="stylesheet" href="/css/auth.css?v=3">
         <!-- Font Awesome for Icons -->
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -94,10 +94,27 @@
                         <button type="submit" class="submit-btn" id="saveBtn">Save Changes</button>
                     </div>
                 </form>
+
+                <div class="divider"></div>
+
+                <h3 class="section-heading">Email Notifications</h3>
+                <p class="prefs-link-copy">
+                    Choose whether we email you when someone you follow publishes.
+                    <a href="/user/email-preferences">Manage email notifications</a>
+                </p>
             </div>
         </div>
 
         <%- include('./partials/footer') %>
+
+            <style>
+                .prefs-link-copy {
+                    margin: 0;
+                    color: #666;
+                    font-size: 0.95rem;
+                    line-height: 1.6;
+                }
+            </style>
 
             <script nonce="<%= cspNonce %>">
                 // Avatar Preview

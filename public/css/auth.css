@@ -802,3 +802,23 @@
         /* Adjust for nav */
     }
 }
+
+/* ---------------------------------------------------------------------------
+   Settings pages (profile, email preferences)
+   ---------------------------------------------------------------------------
+   .page-container was used by editprofile.ejs but never defined anywhere, so
+   the card sat at the top of the body and the first heading was hidden behind
+   the fixed floating nav (which ends ~86px down). Give it the clearance the nav
+   needs. Only the settings pages carry this class, so nothing else moves.
+*/
+.page-container {
+    padding: 100px 1rem 3rem;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+@media (max-width: 767.98px) {
+    .page-container {
+        padding-top: 88px;
+    }
+}
