@@ -199,16 +199,17 @@ body {
         width: fit-content;
         height: max-content;
         margin: 0 auto;
-        padding: 0.8rem 0.3rem;
-        /* Thin padding */
-        border: none;
-        background: rgba(255, 255, 255, 0.9);
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
+        padding: 0.7rem 0.35rem;
+        /* The pill was `rgba(255,255,255,0.9)` with `border: none` and a shadow
+           at 0.08 -- on a white page that is simply not there, so the icons
+           read as four loose glyphs floating in the margin instead of as one
+           control. Solid surface, a real border and a shadow with some weight
+           in it give it an edge to be seen by. */
+        border: 1px solid var(--border-color, #e5e7eb);
+        background: var(--card-bg, #fff);
         border-radius: 50px;
         /* Pill shape */
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-        /* Soft floating shadow */
+        box-shadow: 0 4px 18px rgba(0, 0, 0, 0.1);
         z-index: 100;
     }
 }
@@ -1840,8 +1841,8 @@ body {
        image above it: the post, the author and the comments are one column. */
     width: 100%;
     max-width: 1000px;
-    margin: 3rem auto 0;
-    padding: 1.75rem;
+    margin: 2.25rem auto 0;
+    padding: 1.1rem 1.4rem;
     border: 1px solid var(--border-color, #e5e5e5);
     border-radius: 14px;
     background: var(--card-bg, #fff);
@@ -1854,9 +1855,9 @@ body {
 }
 
 .author-card-avatar {
-    width: 64px;
-    height: 64px;
-    flex: 0 0 64px;
+    width: 48px;
+    height: 48px;
+    flex: 0 0 48px;
     border-radius: 50%;
     object-fit: cover;
     background: #f0f0f0;
@@ -1878,9 +1879,9 @@ body {
 }
 
 .author-card-name {
-    margin: 0.15rem 0;
-    font-size: 1.25rem;
-    line-height: 1.25;
+    margin: 0.1rem 0;
+    font-size: 1.1rem;
+    line-height: 1.2;
 }
 
 .author-card-name a {
@@ -1931,19 +1932,19 @@ body {
 }
 
 .author-card-bio {
-    margin: 1.1rem 0 0;
+    margin: 0.7rem 0 0;
     color: #555;
-    line-height: 1.6;
+    line-height: 1.5;
 }
 
 .author-card-more {
-    margin-top: 1.5rem;
-    padding-top: 1.25rem;
+    margin-top: 0.9rem;
+    padding-top: 0.8rem;
     border-top: 1px solid var(--border-color, #eee);
 }
 
 .author-card-more-label {
-    margin: 0 0 0.6rem;
+    margin: 0 0 0.35rem;
     font-size: 0.75rem;
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -1965,6 +1966,15 @@ body {
     padding: 0.35rem 0;
     color: inherit;
     text-decoration: none;
+}
+
+/* 44px per row is a finger-sized tap target and stays that way on touch. With
+   a mouse it is just height, so the rows close up. */
+@media (hover: hover) and (pointer: fine) {
+    .author-card-list a {
+        min-height: 0;
+        padding: 0.25rem 0;
+    }
 }
 
 .author-card-list a:hover .author-card-list-title {
