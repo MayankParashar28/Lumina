@@ -194,12 +194,12 @@ body {
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 1rem;
+        gap: 0.25rem;
         /* Spacing between actions */
         width: fit-content;
         height: max-content;
         margin: 0 auto;
-        padding: 0.7rem 0.35rem;
+        padding: 0.4rem 0.3rem;
         /* The pill was `rgba(255,255,255,0.9)` with `border: none` and a shadow
            at 0.08 -- on a white page that is simply not there, so the icons
            read as four loose glyphs floating in the margin instead of as one
@@ -234,39 +234,88 @@ body {
         margin: 0 auto 0 0;
     }
 }
-}
-}
-}
 
+/* Every button in the rail is the same square, so the glyphs sit on one optical
+   centre line and the pill reads as one control. They used to be sized by their
+   own contents -- 44, 32, 28 and 30px wide -- which is what made the rail look
+   like loose icons rather than a set. */
 .action-icon-btn {
     background: transparent;
     border: none;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.2rem;
-    color: #666;
-    font-size: 1.15rem;
+    justify-content: center;
+    gap: 0.15rem;
+    width: 40px;
+    min-height: 40px;
+    padding: 0.25rem 0;
+    color: #6b7280;
+    /* 16px: the size icon fonts are drawn for. At 1.15rem the hairlines in the
+       outline glyphs fall between pixels and come out furry. */
+    font-size: 1rem;
+    line-height: 1;
     cursor: pointer;
-    transition: all 0.2s ease;
-    padding: 0.3rem;
-    /* Compact touch target */
-    border-radius: 50%;
+    transition: color 0.15s ease, background-color 0.15s ease;
+    border-radius: 12px;
+}
+
+.action-icon-btn i {
+    display: block;
+    font-size: 1rem;
+    line-height: 1;
+    width: 1em;
+    text-align: center;
 }
 
 .action-icon-btn:hover {
-    color: var(--text-color);
-    background: rgba(0, 0, 0, 0.04);
+    color: #111827;
+    background: rgba(0, 0, 0, 0.055);
+}
+
+.action-icon-btn:active {
+    transform: scale(0.94);
+}
+
+.action-icon-btn:focus-visible {
+    outline: 2px solid #6366f1;
+    outline-offset: 2px;
 }
 
 .action-label {
-    font-size: 0.7rem;
-    font-weight: 700;
+    /* Tabular figures so the pill does not twitch when 9 likes becomes 10. */
+    font-size: 0.68rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: #9ca3af;
+    line-height: 1;
+}
+
+.action-icon-btn:hover .action-label {
+    color: #6b7280;
+}
+
+/* 40px is comfortable for a cursor; a finger needs the WCAG 44px floor. */
+@media (pointer: coarse) {
+    .action-icon-btn {
+        width: 44px;
+        min-height: 44px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .action-icon-btn {
+        transition: none;
+    }
+
+    .action-icon-btn:active {
+        transform: none;
+    }
 }
 
 .article-actions-bar-vertical .edit-item {
-    margin-top: 0.5rem;
-    padding-top: 0.5rem;
+    margin-top: 0.3rem;
+    padding-top: 0.3rem;
     border-top: 1px solid var(--border-color);
     width: 100%;
     display: flex;
