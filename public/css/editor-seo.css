@@ -5,7 +5,7 @@
  * preview fell back to the first ~150 characters of the body, which is almost
  * never the sentence that earns a click.
  *
- * Themed off the variables in theme-toggle.css so it follows the site toggle.
+ * Themed off the variables on :root in global.css so it follows the site theme.
  */
 
 .seo-section {

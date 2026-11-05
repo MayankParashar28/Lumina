@@ -393,38 +393,67 @@
                             });
                         };
 
-                        // Timeout Promise
-                        const timeout = new Promise((resolve) => {
-                            setTimeout(() => resolve({ suggestions: defaultSuggestions }), 3000); // 3s Timeout
-                        });
+                        // Ask for suggestions only once the reader reaches the
+                        // discussion.
+                        //
+                        // This ran on DOMContentLoaded, so opening any post as a
+                        // signed-in reader fired a Gemini generation -- on every
+                        // view, for every post, whether or not anyone scrolled
+                        // this far or ever meant to comment. It is why this call
+                        // spends its day returning 429. Most readers never reach
+                        // the comment box; those who do get the chips before they
+                        // have finished clicking into it.
+                        let suggestionsRequested = false;
 
-                        // Fetch Request
-                        const fetchRequest = fetch('/ai/generate-comment-suggestions', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'x-csrf-token': '<%= csrfToken %>'
-                            },
-                            body: JSON.stringify({ blogId }),
-                            credentials: 'include'
-                        }).then(res => {
-                            if (!res.ok) throw new Error("HTTP " + res.status);
-                            return res.json();
-                        });
+                        const loadSuggestions = () => {
+                            if (suggestionsRequested) return;
+                            suggestionsRequested = true;
 
-                        // Race: AI vs Timeout
-                        Promise.race([fetchRequest, timeout])
-                            .then(data => {
-                                if (data.suggestions && data.suggestions.length > 0) {
-                                    renderChips(data.suggestions);
-                                } else {
-                                    renderChips(defaultSuggestions);
-                                }
-                            })
-                            .catch(err => {
-                                console.error("AI Error, using defaults", err);
-                                renderChips(defaultSuggestions);
+                            // Timeout Promise
+                            const timeout = new Promise((resolve) => {
+                                setTimeout(() => resolve({ suggestions: defaultSuggestions }), 3000); // 3s Timeout
                             });
+
+                            // Fetch Request
+                            const fetchRequest = fetch('/ai/generate-comment-suggestions', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'x-csrf-token': '<%= csrfToken %>'
+                                },
+                                body: JSON.stringify({ blogId }),
+                                credentials: 'include'
+                            }).then(res => {
+                                if (!res.ok) throw new Error("HTTP " + res.status);
+                                return res.json();
+                            });
+
+                            // Race: AI vs Timeout
+                            Promise.race([fetchRequest, timeout])
+                                .then(data => {
+                                    if (data.suggestions && data.suggestions.length > 0) {
+                                        renderChips(data.suggestions);
+                                    } else {
+                                        renderChips(defaultSuggestions);
+                                    }
+                                })
+                                .catch(err => {
+                                    console.error("AI Error, using defaults", err);
+                                    renderChips(defaultSuggestions);
+                                });
+                        };
+
+                        if ("IntersectionObserver" in window) {
+                            const io = new IntersectionObserver((entries) => {
+                                if (entries.some(e => e.isIntersecting)) {
+                                    io.disconnect();
+                                    loadSuggestions();
+                                }
+                            }, { rootMargin: "200px" });
+                            io.observe(suggestionsContainer);
+                        } else {
+                            loadSuggestions();
+                        }
                     });
                 </script>
 

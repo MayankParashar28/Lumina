@@ -274,10 +274,6 @@
     }
 }
 
-/* Remove old theme toggle */
-.theme-toggle {
-    display: none !important;
-}
 /* Load older notifications */
 .notif-loadmore {
     display: flex;

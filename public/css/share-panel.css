@@ -4,9 +4,9 @@
  * moment an author is most likely to share their work is the moment it goes
  * live, and nothing asked them to. This is that prompt.
  *
- * Themed off the variables in theme-toggle.css (--card-bg, --text-color,
- * --border-color, --accent-color) so it follows the site's light/dark toggle
- * instead of hard-coding one palette.
+ * Themed off the variables on :root in global.css (--card-bg, --text-color,
+ * --border-color, --accent-color) so it follows the site's theme instead of
+ * hard-coding one palette.
  */
 
 .share-panel-overlay {

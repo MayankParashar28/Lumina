@@ -172,8 +172,44 @@
           console.error("Failed to load notification count", err);
         }
       }
-      document.addEventListener("DOMContentLoaded", updateNotificationCount);
-      setInterval(updateNotificationCount, 10000);
+      // Poll only while someone is actually looking.
+      //
+      // This was a flat `setInterval(..., 10000)`: every signed-in tab asked the
+      // server for a number 360 times an hour, forever, including the dozen
+      // tabs sitting in the background that nobody has looked at since Tuesday.
+      // Each one costs an auth lookup plus a notification query.
+      //
+      // Now: every 60s while the tab is visible, nothing at all while it is
+      // hidden, and an immediate refresh the moment it comes back -- so the
+      // badge is in fact more current when it matters, at a sixth of the
+      // requests when it does not.
+      const NOTIF_POLL_MS = 60000;
+      let notifTimer = null;
+
+      function startNotifPolling() {
+        if (notifTimer) return;
+        notifTimer = setInterval(updateNotificationCount, NOTIF_POLL_MS);
+      }
+
+      function stopNotifPolling() {
+        if (!notifTimer) return;
+        clearInterval(notifTimer);
+        notifTimer = null;
+      }
+
+      document.addEventListener("DOMContentLoaded", () => {
+        updateNotificationCount();
+        if (document.visibilityState === "visible") startNotifPolling();
+      });
+
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") {
+          updateNotificationCount();
+          startNotifPolling();
+        } else {
+          stopNotifPolling();
+        }
+      });
       <% } %>
 
       // Search Toggle
