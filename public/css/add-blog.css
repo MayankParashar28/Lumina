@@ -480,6 +480,16 @@ body {
 }
 
 /* AI Spacing Boost & Headings */
+/* The typing surface needs room of its own.
+   `.editor-box` qualifies the selector because quill.snow.css loads after this
+   file: a bare `.ql-editor { padding }` here is overruled by Quill's own
+   12px/15px. The narrow-screen rule below used to zero it outright, which left
+   text against the box border on anything under 1116px -- most laptops, not
+   just phones. */
+.editor-box .ql-editor {
+    padding: 16px 18px;
+}
+
 .ql-editor h1 {
     margin-top: 60px !important;
     margin-bottom: 30px !important;
@@ -1142,8 +1152,11 @@ body {
     .ql-editor {
         font-size: 1.05rem;
         /* Slightly smaller text */
-        padding: 0 !important;
-        /* Removes default Quill padding if any */
+    }
+
+    .editor-box .ql-editor {
+        padding: 12px 14px;
+        /* Tighter than desktop, but never flush against the border. */
     }
 
     .ql-editor h1 {
@@ -1347,3 +1360,4 @@ body {
     outline: 2px solid #3b82f6;
     outline-offset: 2px;
 }
+
