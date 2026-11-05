@@ -238,6 +238,7 @@ test("saving one switch does not clobber the others", async () => {
     emailOnNewPost: false,
     emailOnComment: false,
     emailOnFollow: true,
+    emailOnWeeklyDigest: true,
   });
 
   const fresh = await ctx.User.findById(u._id).lean();

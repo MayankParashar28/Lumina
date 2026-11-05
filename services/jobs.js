@@ -151,10 +151,17 @@ async function publishScheduledJob() {
   return publishDueScheduled(io);
 }
 
+// --- Weekly digest to authors (each author due a week after their own last) ---
+async function weeklyDigestJob() {
+  const { sendDueDigests } = require("./digest");
+  return sendDueDigests();
+}
+
 const PROCESSORS = {
   embed: embedJob,
   fanout: fanoutJob,
   publishScheduled: publishScheduledJob,
+  weeklyDigest: weeklyDigestJob,
 };
 
 async function runJob(name, data) {

@@ -448,8 +448,114 @@ const sendFollowEmail = async (email, { followerName, followerBio, url, unsubscr
     unsubscribeText: "Unsubscribe from new follower emails",
   });
 
+// 📊 The weekly digest: what happened to an author's posts since the last one.
+//
+// The point of it is that 2,500 reads had happened on this site and not one
+// author had ever been told. Writers keep writing when they can see that
+// someone is reading; a number nobody shows them motivates nobody.
+//
+// Only sent when there is something to report — see services/digest.js. An
+// email that says "0 views this week" is worse than no email.
+const sendWeeklyDigestEmail = async (
+  email,
+  { authorName, since, views, comments, followers, posts, url, unsubscribeUrl }
+) => {
+  const safe = escapeHtml;
+  const baseUrl = process.env.BASE_URL || process.env.RENDER_EXTERNAL_URL || "http://localhost:8000";
+
+  const stat = (n, oneLabel, manyLabel) => `
+    <td class="stat">
+      <span class="stat-n">${n}</span>
+      <span class="stat-l">${n === 1 ? oneLabel : manyLabel}</span>
+    </td>`;
+
+  const rows = (posts || [])
+    .map(
+      (p) => `
+        <tr>
+          <td class="row-title"><a href="${safe(p.url)}">${safe(p.title)}</a></td>
+          <td class="row-n">${p.views}</td>
+        </tr>`
+    )
+    .join("");
+
+  await deliver({
+    to: email,
+    subject: `Your week on Lumina: ${views} read${views === 1 ? "" : "s"}`,
+    label: "Weekly digest",
+    headers: {
+      "List-Unsubscribe": `<${unsubscribeUrl}>`,
+      "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+    },
+    html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <style>
+            body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
+            .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 40px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+            .header { text-align: center; margin-bottom: 30px; }
+            .logo { font-size: 24px; font-weight: bold; color: #1a1a1a; text-decoration: none; }
+            .heading { color: #1a1a1a; font-size: 20px; line-height: 1.4; margin: 0 0 6px; }
+            .sub { color: #888888; font-size: 14px; margin: 0 0 26px; }
+            .stats { width: 100%; border-collapse: collapse; margin: 0 0 28px; }
+            .stat { text-align: center; padding: 16px 8px; background: #fafafa; border-radius: 8px; }
+            .stat-n { display: block; font-size: 28px; font-weight: bold; color: #1a1a1a; line-height: 1.1; }
+            .stat-l { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #888888; margin-top: 4px; }
+            .posts { width: 100%; border-collapse: collapse; margin: 0 0 10px; }
+            .posts th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #888888; padding: 0 0 8px; border-bottom: 1px solid #eeeeee; }
+            .row-title { padding: 10px 8px 10px 0; font-size: 15px; }
+            .row-title a { color: #1a1a1a; text-decoration: none; font-weight: 600; }
+            .row-n { padding: 10px 0; text-align: right; color: #666666; font-size: 15px; white-space: nowrap; }
+            .button-container { text-align: center; margin: 30px 0 0; }
+            .button { background-color: #000000; color: #ffffff; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; }
+            .footer { margin-top: 30px; text-align: center; color: #888888; font-size: 12px; border-top: 1px solid #eeeeee; padding-top: 20px; }
+            .footer a { color: #888888; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <a href="${baseUrl}" class="logo">Lumina</a>
+            </div>
+            <h2 class="heading">People are reading you, ${safe(authorName)}</h2>
+            <p class="sub">Since ${safe(since)}</p>
+
+            <table class="stats" role="presentation">
+              <tr>
+                ${stat(views, "read", "reads")}
+                <td style="width:12px"></td>
+                ${stat(comments, "comment", "comments")}
+                <td style="width:12px"></td>
+                ${stat(followers, "new follower", "new followers")}
+              </tr>
+            </table>
+
+            ${rows ? `<table class="posts" role="presentation">
+              <tr><th>Your posts</th><th style="text-align:right">Reads</th></tr>
+              ${rows}
+            </table>` : ""}
+
+            <div class="button-container">
+              <a href="${safe(url)}" class="button">See your stats</a>
+            </div>
+
+            <div class="footer">
+              <p>You are getting this because you write on Lumina.<br>
+              <a href="${safe(unsubscribeUrl)}">Unsubscribe from the weekly digest</a></p>
+              <p>&copy; ${new Date().getFullYear()} Lumina. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+    `,
+  });
+};
+
 module.exports = {
   sendVerificationEmail,
+  sendWeeklyDigestEmail,
   sendResetPasswordEmail,
   sendNewPostEmail,
   sendCommentEmail,

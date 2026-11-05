@@ -912,6 +912,15 @@ app.get("/cron/publish-scheduled", async (req, res) => {
 // handles scheduled publishing instead (see services/queue.js), so skip the timer.
 if (process.env.NODE_ENV !== "test" && !require("./services/queue").queuesEnabled) {
   setInterval(() => publishDueScheduled(app.get("io")), 60 * 1000).unref?.();
+
+  // 📊 Weekly digests. Checked hourly rather than fired on a schedule: each
+  // author is due a week after their own last one, and the watermark is claimed
+  // before anything is sent, so running this often is harmless and a missed run
+  // simply reports a longer week.
+  const { sendDueDigests } = require("./services/digest");
+  const digestSweep = () =>
+    sendDueDigests().catch((err) => logger.error("⚠️ Digest sweep failed:", err.message));
+  setInterval(digestSweep, 60 * 60 * 1000).unref?.();
 }
 
 // 🏃 Keep-Alive Ping — prevents Render free-tier from spinning down after 15 min of inactivity.

@@ -52,6 +52,7 @@ const KINDS = {
   // governed by the one preference rather than splitting hairs in settings.
   "comment": "notificationPreferences.emailOnComment",
   "follow": "notificationPreferences.emailOnFollow",
+  "digest": "notificationPreferences.emailOnWeeklyDigest",
 };
 
 module.exports = { tokenFor, verify, linkFor, KINDS };

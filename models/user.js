@@ -39,13 +39,21 @@ const userSchema = new Schema(
 
     // 🔔 Notification Preferences
     //
-    // emailOnComment / emailOnFollow are declared but nothing reads them yet.
-    // emailOnNewPost is honoured: services/jobs.js checks it before sending,
-    // and the unsubscribe link in every one of those emails clears it.
+    // Every one of these is honoured before sending, and the unsubscribe link
+    // in each email clears the matching one. utils/unsubscribe.js maps the kind
+    // in a link to the field here.
     notificationPreferences: {
       emailOnComment: { type: Boolean, default: true },
       emailOnFollow: { type: Boolean, default: true },
       emailOnNewPost: { type: Boolean, default: true },
+      emailOnWeeklyDigest: { type: Boolean, default: true },
+    },
+
+    // When this author was last sent a weekly digest. Also the watermark the
+    // next one measures from, so a late or skipped run reports the whole gap
+    // rather than silently losing a week.
+    lastDigestAt: {
+      type: Date,
     },
 
 

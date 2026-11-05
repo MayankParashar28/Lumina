@@ -43,6 +43,13 @@ const blogSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    // The view total as of this post's last weekly digest. The digest reports
+    // the difference, so "views this week" is a real number rather than the
+    // all-time count relabelled.
+    viewsAtLastDigest: {
+      type: Number,
+      default: 0,
+    },
     category: {
       type: String,
       required: false,

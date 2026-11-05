@@ -1227,6 +1227,12 @@ const EMAIL_PREFS = [
     label: "New followers",
     help: "When someone starts following you.",
   },
+  {
+    key: "emailOnWeeklyDigest",
+    kind: "digest",
+    label: "Your weekly summary",
+    help: "Once a week, how many people read your posts. Only sent when there is something to report.",
+  },
 ];
 
 const prefsOf = (user) =>
