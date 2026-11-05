@@ -116,7 +116,26 @@
 @media (max-width: 560px) {
   /* A 260px field plus two buttons does not fit beside a phone's text column. */
   .lumina-bubble__input { width: 150px; }
-  .lumina-bubble__btn { min-width: 28px; height: 28px; padding: 0 5px; }
+  .lumina-bubble__btn { min-width: 26px; padding: 0 4px; }
+}
+
+/* On a finger these are the buttons sitting directly on top of the text being
+   formatted, so a mis-tap applies the wrong format to a live selection. 44px is
+   the WCAG AA floor; the glyph stays its size and the tap area grows around it.
+   Gated on the pointer rather than the width — what decides the size needed is
+   what is pointing at it. */
+@media (pointer: coarse) {
+  .lumina-bubble__btn {
+    min-width: 44px;
+    height: 44px;
+  }
+
+  .lumina-bubble__input { height: 44px; }
+
+  /* Nine 44px buttons do not fit across a phone, so let the row wrap rather
+     than push half the controls off the edge. */
+  .lumina-bubble { max-width: calc(100vw - 24px); }
+  .lumina-bubble__row { flex-wrap: wrap; justify-content: center; }
 }
 
 /* A selection toolbar that slides is distracting when the author has asked for

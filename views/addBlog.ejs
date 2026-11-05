@@ -3,7 +3,7 @@
 
 <head>
   <%- include('./partials/header') %>
-    <link rel="stylesheet" href="/css/add-blog.css?v=20">
+    <link rel="stylesheet" href="/css/add-blog.css?v=25">
     <!-- Font Awesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <!-- Quill Rich Text Editor Theme -->
@@ -11,7 +11,7 @@
     <!-- Same code-block styling the published article uses, so what the writer
          sees while typing matches what readers get. -->
     <link rel="stylesheet" href="/css/code.css?v=2">
-    <link rel="stylesheet" href="/css/editor-bubble.css?v=1">
+    <link rel="stylesheet" href="/css/editor-bubble.css?v=2">
     <link rel="stylesheet" href="/css/editor-seo.css?v=1">
 </head>
 
@@ -599,7 +599,19 @@
 
           // Initialize empty resize (Title only)
           window.addEventListener('load', () => {
-            autoResize(document.getElementById('title'));
+            const el = document.getElementById('title');
+            autoResize(el);
+            // Re-measure once the webfont has actually loaded.
+            //
+            // The title is set at 3.5rem in Inter. autoResize measures scrollHeight
+            // against whatever font is active when it runs, and at 'load' that is
+            // often still the fallback, which is shorter. It wrote that height to
+            // the element, Inter swapped in a moment later, and nothing re-ran — so
+            // the box stayed 37px tall around a 65px line, and overflow:hidden kept
+            // the title visibly cut off on every single page load.
+            if (document.fonts && document.fonts.ready) {
+              document.fonts.ready.then(() => autoResize(el));
+            }
           });
 
           let isAiBusy = false; // Global lock

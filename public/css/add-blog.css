@@ -1172,3 +1172,178 @@ body {
         right: 0;
     }
 }
+/* ==========================================================================
+   Responsive corrections
+   ==========================================================================
+
+   The editor was unusable on a phone, and not in a way a scrollbar revealed.
+
+   global.css makes html and body `display: flex`, which makes .editor-container
+   a flex item. A flex item defaults to `min-width: auto`, so it refuses to
+   shrink below its content's intrinsic width — 427px here, driven by the title
+   <textarea>, whose intrinsic width comes from the default `cols` (20
+   characters) measured at 3.5rem. body also sets `overflow-x: hidden`, so on a
+   375px screen the surplus 52px was not scrollable: it was silently clipped.
+   The "AI Generate Title" button, all three cover-image buttons, the helper
+   text and the right-hand end of the Quill toolbar were simply unreachable.
+
+   The @media (max-width: 768px) block above was written for exactly this case
+   and was working — stacking the cover buttons and so on — but it could never
+   help, because the container it lived in was wider than the screen whatever
+   the rules inside it said.
+
+   min-width: 0 is what allows a flex item to shrink to its container. */
+.editor-container {
+    min-width: 0;
+    width: 100%;
+}
+
+/* Same reason, one level down: the textarea is already width:100%, but its
+   intrinsic size still feeds the flex sizing above. */
+.input-title {
+    min-width: 0;
+}
+
+@media (max-width: 767.98px) {
+    /* The tags row is a flex row holding the input and the preview button. It
+       did not wrap, so the preview button sat 36px off the right edge. */
+    .meta-section {
+        flex-wrap: wrap;
+    }
+
+    .tag-input-wrapper {
+        flex: 1 1 100%;
+        min-width: 0;
+    }
+
+    /* "AI FIND TAGS" wrapped onto two lines once the 44px floor applied, which
+       made it tall and wide enough to crowd the input it sits beside. It is a
+       three-word label on one line or it does not belong inline. */
+    .btn-mini-ai {
+        white-space: nowrap;
+        flex: 0 0 auto;
+    }
+
+    .tag-input-wrapper input {
+        min-width: 0;
+    }
+
+    /* The preview button now has a row of its own (the wrap above). Pushing it
+       to the right edge reads as the secondary action it is, rather than as a
+       stray icon floating under the field. */
+    .btn-mini-preview {
+        margin-left: auto;
+    }
+}
+
+/* ==========================================================================
+   Touch targets
+   ==========================================================================
+
+   Gated on `pointer: coarse` rather than on width, because the thing that
+   decides how big a control must be is what is pointing at it, not how wide the
+   window is. A 1280px touchscreen laptop needs the large targets; a 375px
+   desktop window does not, and inflating a dense toolbar for it would cost
+   density for nothing.
+
+   44px is the WCAG AA floor. Several of these controls were at 24-28px, which
+   on a finger means mis-taps on a toolbar where the neighbouring button applies
+   a different format. */
+@media (pointer: coarse) {
+
+    /* Quill ships 28x24 toolbar buttons. Raising the box, not the glyph: the
+       icon stays the size it was, the tappable area around it grows.
+       
+       Led with .editor-box because quill.snow.css is loaded from the CDN after
+       this file, and its own `.ql-snow.ql-toolbar button { height: 24px }` has
+       the same specificity as a bare `.ql-toolbar.ql-snow button` — so at equal
+       weight the later sheet wins and the height silently does not apply. The
+       extra ancestor outranks it. */
+    .editor-box .ql-toolbar.ql-snow button,
+    .editor-box .ql-toolbar.ql-snow .ql-picker-label {
+        min-width: 44px;
+        height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .editor-box .ql-toolbar.ql-snow .ql-picker-label {
+        padding: 0 8px;
+    }
+
+    /* With 44px buttons the toolbar has to wrap, and Quill's own 15px gap
+       between each .ql-formats group then scatters them: ragged rows with a
+       hole in the middle and the colour pickers stranded on the right. Lay the
+       groups out as one wrapping flex row with an even gap instead. */
+    .editor-box .ql-toolbar.ql-snow {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 2px;
+        padding: 6px;
+    }
+
+    .editor-box .ql-toolbar.ql-snow .ql-formats {
+        display: flex;
+        align-items: center;
+        margin-right: 0;
+    }
+
+    /* A hairline between groups keeps bold/italic visually separate from
+       lists and links now that the uniform gap no longer does it. */
+    .editor-box .ql-toolbar.ql-snow .ql-formats + .ql-formats {
+        border-left: 1px solid #e9e9e9;
+        padding-left: 4px;
+        margin-left: 2px;
+    }
+
+    /* The editor's own controls. min-height rather than height so a button
+       whose label wraps to two lines still grows instead of clipping it. */
+    .btn-ai-premium,
+    .btn-cover-action,
+    .btn-toolbar-ai,
+    .btn-mini-ai,
+    .btn-mini-preview,
+    .schedule-pill,
+    .btn-secondary,
+    .btn-publish,
+    /* Edit page only: sits over the cover image. */
+    .btn-remove-cover {
+        min-height: 44px;
+    }
+
+    .btn-mini-preview,
+    .btn-remove-cover {
+        min-width: 44px;
+    }
+
+    /* Category chips are tapped one-handed down a long list. */
+    .category-chip,
+    .category-grid label {
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+    }
+}
+
+/* ==========================================================================
+   Keyboard focus
+   ==========================================================================
+
+   Several editor controls set `outline: none` for looks, which leaves someone
+   tabbing through the form with no idea where they are. :focus-visible shows
+   the ring only for keyboard focus, so this costs the mouse user nothing. */
+.btn-ai-premium:focus-visible,
+.btn-cover-action:focus-visible,
+.btn-toolbar-ai:focus-visible,
+.btn-mini-ai:focus-visible,
+.btn-mini-preview:focus-visible,
+.schedule-pill:focus-visible,
+.btn-secondary:focus-visible,
+.btn-publish:focus-visible,
+.input-title:focus-visible,
+.tag-input-wrapper input:focus-visible {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+}
