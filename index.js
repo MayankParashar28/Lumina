@@ -197,6 +197,21 @@ app.use(helmet({
 }));
 app.use(cookieParser());
 
+// 🚀 Static assets, served BEFORE anything that touches the database.
+//
+// This used to sit below checkForAuthenticationCookie, which does a
+// `User.findById` on every request that carries an auth cookie -- so for a
+// signed-in reader every stylesheet, script and image on the page cost one
+// round trip to Atlas as well. A post page pulls ~19 assets, so one page view
+// was ~19 redundant user lookups. None of them needs to know who is asking.
+//
+// It is also above the session, CSRF, flash and passport layers for the same
+// reason: a file on disk needs none of them.
+app.use(express.static(path.resolve("./public"), {
+  maxAge: '1y',
+  etag: false
+}));
+
 app.use(checkForAuthenticationCookie("token"));
 
 // 🧱 Phase-3 scaling: anonymous GETs to public pages (landing + a published blog)
@@ -214,6 +229,23 @@ app.use(checkForAuthenticationCookie("token"));
 // preview). Without the suffix requirement this pattern would match /blog/drafts
 // and cache an anonymous visitor's redirect-to-login as if it were a post.
 const PUBLIC_BLOG_RE = /^\/blog\/(?:[a-f\d]{24}|[a-z\d]+(?:-[a-z\d]+)*-[a-f\d]{6})$/i;
+
+// The other pages that are the same HTML for every anonymous visitor.
+//
+// These render no user data at all, yet each one was costing a full EJS render
+// on every hit -- measured at 516-806ms from production for /mission, a page
+// with no database query in it. The feeds do query Mongo, which is more reason
+// to cache them, not less.
+// Deliberately not /rss.xml or /sitemap.xml. They do query Mongo, but the page
+// cache has no way to know a post was just published, so a new post would stay
+// out of the feed for a minute -- and nothing here is on a reader's critical
+// path anyway, since those two URLs are fetched by crawlers, not people.
+const PUBLIC_STATIC_PATHS = new Set([
+  "/about",
+  "/mission",
+  "/privacy",
+  "/terms",
+]);
 app.use((req, res, next) => {
   // No query string, deliberately.
   //
@@ -230,9 +262,23 @@ app.use((req, res, next) => {
   const hasQuery = req.originalUrl.indexOf("?") !== -1;
 
   if (req.method === "GET" && !req.user && !hasQuery &&
-      (req.path === "/" || PUBLIC_BLOG_RE.test(req.path))) {
+      (req.path === "/" || PUBLIC_BLOG_RE.test(req.path) || PUBLIC_STATIC_PATHS.has(req.path))) {
     req.publicCache = true;
     res.set("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300");
+  } else if (req.method === "GET" && req.user) {
+    // Say out loud that a signed-in response is nobody else's.
+    //
+    // It used to send no Cache-Control at all, which is only safe for as long
+    // as every cache in front of the app guesses conservatively. A CDN told to
+    // "cache everything" would happily store one reader's page -- their name in
+    // the nav, their like state, their CSRF token -- and hand it to the next
+    // person. This is what makes an edge cache rule safe to turn on.
+    // `private` is the directive that matters: it bars every shared cache,
+    // which is the whole point. Not `no-store` -- that also bars the browser's
+    // back/forward cache, so returning to a page you just left would re-fetch
+    // it, making the signed-in experience slower in the name of safety it did
+    // not need. `no-cache` keeps the entry and revalidates before reuse.
+    res.set("Cache-Control", "private, no-cache");
   }
   next();
 });
@@ -315,12 +361,6 @@ const BODY_LIMIT = process.env.BODY_LIMIT || "3mb";
 app.use(express.urlencoded({ extended: true, limit: BODY_LIMIT }));
 app.use(express.json({ limit: BODY_LIMIT }));
 
-// 🚀 Static Asset Caching (1 Year)
-app.use(express.static(path.resolve("./public"), {
-  maxAge: '1y',
-  etag: false
-}));
-// Removing redundant express.static("public") call
 app.use((req, res, next) => {
   res.locals.user = req.user || null;
   // Real-time (Socket.io) config. `socketUrl` points the client at a persistent
@@ -528,6 +568,33 @@ async function getTaxonomy() {
   return data;
 }
 
+// ⚡ The "featured" and "trending" rails are identical for every reader, and the
+// home route was re-querying both on every signed-in page view. Same treatment
+// as the taxonomy above: one minute in the shared cache. A post becoming
+// featured or overtaking another on views is not something anyone is watching
+// the clock for.
+const RAILS_TTL_SECONDS = 60;
+async function getHomeRails() {
+  const cached = await redisSvc.cache.get("home-rails");
+  if (cached) return cached;
+  const [featuredBlogs, trendingBlogs] = await Promise.all([
+    Blog.find({ featured: true, status: "published" })
+      .limit(5)
+      .select("-body")
+      .populate("createdBy", "fullName profilePic")
+      .lean(),
+    Blog.find({ status: "published" })
+      .sort({ views: -1 })
+      .limit(3)
+      .select("-body")
+      .populate("createdBy", "fullName profilePic")
+      .lean(),
+  ]);
+  const data = { featuredBlogs, trendingBlogs };
+  await redisSvc.cache.set("home-rails", data, RAILS_TTL_SECONDS);
+  return data;
+}
+
 // Smart Root Route
 app.get("/", async (req, res) => {
   try {
@@ -536,29 +603,34 @@ app.get("/", async (req, res) => {
       // 🧱 Phase-2 scaling: anonymous reads are the bulk of traffic and never need
       // read-your-writes, so route them to replica secondaries and cap the list
       // (the client loads more via /blog/api/feed) instead of fetching every post.
-      const blogs = await Blog.find({ status: "published" })
-        .sort({ createdAt: -1 })
-        .limit(30)
-        .select("-body")
-        .populate("createdBy", "fullName profilePic") // Added profilePic for consistency if needed
-        .read("secondaryPreferred")
-        .lean();
+      // Three independent reads, so they go out together. Awaited one by one
+      // this was three serial round trips, and it is the path a cold cache --
+      // or a cache purge -- makes every visitor wait through.
+      const [blogs, featuredBlogs, trendingBlogs] = await Promise.all([
+        Blog.find({ status: "published" })
+          .sort({ createdAt: -1 })
+          .limit(30)
+          .select("-body")
+          .populate("createdBy", "fullName profilePic") // Added profilePic for consistency if needed
+          .read("secondaryPreferred")
+          .lean(),
 
-      const featuredBlogs = await Blog.find({ featured: true, status: "published" })
-        .sort({ createdAt: -1 })
-        .limit(12)
-        .select("-body")
-        .populate("createdBy", "fullName profilePic")
-        .read("secondaryPreferred")
-        .lean();
+        Blog.find({ featured: true, status: "published" })
+          .sort({ createdAt: -1 })
+          .limit(12)
+          .select("-body")
+          .populate("createdBy", "fullName profilePic")
+          .read("secondaryPreferred")
+          .lean(),
 
-      const trendingBlogs = await Blog.find({ status: "published" })
-        .sort({ views: -1 })
-        .limit(3)
-        .select("-body")
-        .populate("createdBy", "fullName profilePic")
-        .read("secondaryPreferred")
-        .lean();
+        Blog.find({ status: "published" })
+          .sort({ views: -1 })
+          .limit(3)
+          .select("-body")
+          .populate("createdBy", "fullName profilePic")
+          .read("secondaryPreferred")
+          .lean(),
+      ]);
 
       return res.render("main", {
         blogs,
@@ -697,38 +769,35 @@ app.get("/", async (req, res) => {
       res.locals.pagination = null;
     }
 
-    const { categories, tags, trendingTagsList } = await getTaxonomy(); // ⚡ cached (5 min)
+    // Taxonomy, the two shared rails and "continue reading" need nothing from
+    // each other, and were being awaited one after another -- four serial round
+    // trips to Atlas to build one page. Issued together they cost one.
+    const distinctIds = (req.user.readingHistory && req.user.readingHistory.length > 0)
+      ? [...new Set(
+          [...req.user.readingHistory]
+            .sort((a, b) => new Date(b.viewedAt) - new Date(a.viewedAt))
+            .map(h => h.blogId.toString())
+        )].slice(0, 4)
+      : [];
 
-    // Fetch featured and trending blogs
-    const featuredBlogs = await Blog.find({ featured: true, status: "published" })
-      .limit(5)
-      .select("-body")
-      .populate("createdBy", "fullName profilePic")
-      .lean();
+    const [taxonomy, rails, recentlyReadDocs] = await Promise.all([
+      getTaxonomy(),   // ⚡ cached (5 min)
+      getHomeRails(),  // ⚡ cached (1 min)
+      distinctIds.length
+        ? Blog.find({ _id: { $in: distinctIds }, status: "published" })
+            .select("-body")
+            .populate("createdBy", "fullName profilePic")
+            .lean()
+        : [],
+    ]);
 
-    const trendingBlogs = await Blog.find({ status: "published" })
-      .sort({ views: -1 })
-      .limit(3)
-      .select("-body")
-      .populate("createdBy", "fullName profilePic")
-      .lean();
+    const { categories, tags, trendingTagsList } = taxonomy;
+    const { featuredBlogs, trendingBlogs } = rails;
 
     // 🕘 "Continue reading": the user's last few distinct read blogs (newest first).
-    let recentlyRead = [];
-    if (req.user.readingHistory && req.user.readingHistory.length > 0) {
-      const distinctIds = [...new Set(
-        [...req.user.readingHistory]
-          .sort((a, b) => new Date(b.viewedAt) - new Date(a.viewedAt))
-          .map(h => h.blogId.toString())
-      )].slice(0, 4);
-      const found = await Blog.find({ _id: { $in: distinctIds }, status: "published" })
-        .select("-body")
-        .populate("createdBy", "fullName profilePic")
-        .lean();
-      recentlyRead = distinctIds
-        .map(id => found.find(b => b._id.toString() === id))
-        .filter(Boolean);
-    }
+    const recentlyRead = distinctIds
+      .map(id => recentlyReadDocs.find(b => b._id.toString() === id))
+      .filter(Boolean);
 
     // Render the home page
     res.render("home", {

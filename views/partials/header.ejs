@@ -57,9 +57,14 @@
 <meta name="twitter:image" content="<%= locals.ogImage ? locals.ogImage : BASE_URL + '/images/default-cover.png' %>">
 
 <!-- Favicon Setup (Cache-Busting & Cross-Browser Compatibility) -->
-<link rel="icon" type="image/x-icon" href="/favicon.ico?v=2">
-<link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=2">
-<link rel="apple-touch-icon" href="/favicon.ico?v=2">
+<!-- favicon.ico was a 1024x1024 PNG weighing 718KB, served to every first-time
+     visitor so a browser could draw it at 16 pixels. It is now a 32px icon at
+     2.7KB, and the home-screen icon is a separate 180px file, which is the only
+     place the larger size was ever wanted. The 1024 original lives on at
+     /images/logo-1024.png. -->
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon.ico?v=3">
+<link rel="shortcut icon" type="image/png" href="/favicon.ico?v=3">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=3">
 
 <!-- Preconnect for Performance -->
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
