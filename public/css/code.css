@@ -1,0 +1,157 @@
+/*
+ * Code blocks — shared by the published article and the editor.
+ *
+ * Quill emits a bare <pre class="ql-syntax">. Left alone that renders as grey
+ * text on grey, which for a developer audience reads as "this platform is not
+ * for me". The target here is the familiar dark editor surface: one calm block,
+ * a language badge, and a copy button that does not move the code.
+ *
+ * Colours are defined locally rather than pulled from a highlight.js theme
+ * stylesheet, so there is one fewer render-blocking request and the palette
+ * matches the rest of the site in both themes.
+ */
+
+:root {
+  --code-bg: #1e1e2e;
+  --code-fg: #e4e4ef;
+  --code-muted: #8b8ba7;
+  --code-border: rgba(255, 255, 255, 0.08);
+  --code-keyword: #c792ea;
+  --code-string: #c3e88d;
+  --code-number: #f78c6c;
+  --code-fn: #82aaff;
+  --code-type: #ffcb6b;
+  --code-tag: #f07178;
+}
+
+/* ---------- the block itself ---------- */
+
+.ql-snow .ql-editor pre.ql-syntax,
+.ql-editor pre,
+.ql-syntax,
+.blog-body pre,
+article pre {
+  position: relative;
+  background: var(--code-bg);
+  color: var(--code-fg);
+  border: 1px solid var(--code-border);
+  border-radius: 10px;
+  padding: 2.25rem 1.1rem 1.1rem;
+  margin: 1.6rem 0;
+  overflow-x: auto;
+  font-family: "SFMono-Regular", "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 0.875rem;
+  line-height: 1.65;
+  white-space: pre;
+  -webkit-overflow-scrolling: touch;  /* momentum scroll for long lines on iOS */
+  tab-size: 2;
+}
+
+.ql-snow .ql-editor pre.ql-syntax code,
+.ql-editor pre code,
+.blog-body pre code,
+article pre code {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  white-space: inherit;
+}
+
+/* Language badge, written by code-blocks.js only when detection is confident. */
+.ql-snow .ql-editor pre.ql-syntax[data-lang]::before,
+.blog-body pre[data-lang]::before,
+article pre[data-lang]::before {
+  content: attr(data-lang);
+  position: absolute;
+  top: 0.5rem;
+  left: 0.9rem;
+  font-family: inherit;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--code-muted);
+  pointer-events: none;
+}
+
+/* ---------- copy button (markup comes from app.js) ---------- */
+
+.ql-snow .ql-editor pre.ql-syntax .code-copy-btn,
+.blog-body pre .code-copy-btn,
+article pre .code-copy-btn,
+.ql-editor pre .code-copy-btn {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.5rem;
+  padding: 0.3rem 0.55rem;
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--code-muted);
+  border: 1px solid var(--code-border);
+  border-radius: 6px;
+  font-size: 0.75rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.blog-body pre:hover .code-copy-btn,
+article pre:hover .code-copy-btn,
+.blog-body pre .code-copy-btn:focus-visible,
+article pre .code-copy-btn:focus-visible {
+  opacity: 1;
+}
+
+.blog-body pre .code-copy-btn:hover,
+article pre .code-copy-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--code-fg);
+}
+
+/* Touch devices get no hover, so the button has to be visible from the start. */
+@media (hover: none) {
+  .blog-body pre .code-copy-btn,
+  article pre .code-copy-btn {
+    opacity: 1;
+  }
+}
+
+/* ---------- inline code ---------- */
+
+.blog-body :not(pre) > code,
+article :not(pre) > code,
+.ql-editor :not(pre) > code {
+  background: rgba(127, 127, 160, 0.16);
+  border: 1px solid var(--code-border);
+  border-radius: 5px;
+  padding: 0.12em 0.4em;
+  font-family: "SFMono-Regular", "JetBrains Mono", Menlo, Consolas, monospace;
+  font-size: 0.89em;
+  white-space: nowrap;
+}
+
+/* ---------- highlight.js tokens ---------- */
+
+.hljs-keyword, .hljs-selector-tag, .hljs-literal, .hljs-section { color: var(--code-keyword); }
+.hljs-string, .hljs-attr, .hljs-regexp, .hljs-addition { color: var(--code-string); }
+.hljs-number, .hljs-meta, .hljs-link { color: var(--code-number); }
+.hljs-title, .hljs-title.function_, .hljs-built_in { color: var(--code-fn); }
+.hljs-type, .hljs-class .hljs-title, .hljs-params { color: var(--code-type); }
+.hljs-tag, .hljs-name, .hljs-deletion, .hljs-variable { color: var(--code-tag); }
+.hljs-comment, .hljs-quote { color: var(--code-muted); font-style: italic; }
+.hljs-emphasis { font-style: italic; }
+.hljs-strong { font-weight: 600; }
+
+/* ---------- mobile ---------- */
+
+@media (max-width: 640px) {
+  .ql-snow .ql-editor pre.ql-syntax,
+  .blog-body pre,
+  article pre,
+  .ql-editor pre {
+    font-size: 0.8rem;
+    padding: 2rem 0.85rem 0.9rem;
+    border-radius: 8px;
+  }
+}

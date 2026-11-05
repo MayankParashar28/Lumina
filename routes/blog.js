@@ -1181,6 +1181,43 @@ router.post("/delete/:blogId", async (req, res) => {
   }
 });
 
+// 🖼️ Inline editor images.
+//
+// Without this, Quill falls back to its default behaviour and embeds a pasted or
+// inserted image as a base64 data URI inside the post HTML, which is then stored
+// in the `body` string. A handful of screenshots can push a document towards
+// MongoDB's 16MB ceiling, and every reader re-downloads the whole payload on each
+// view because it cannot be cached separately. The cover image already goes to
+// Cloudinary; this gives body images the same treatment.
+//
+// The CSRF token arrives in the x-csrf-token header rather than the form body:
+// this is multipart, and the global CSRF check runs before multer has parsed it.
+// multer reports a rejected file (wrong type, over 5MB) by calling next(err),
+// which lands in the global error middleware and renders an HTML error page.
+// This endpoint is called by fetch and its caller parses JSON, so an HTML 500
+// reaches the writer as a generic failure with no reason. Convert to JSON here.
+const acceptEditorImage = (req, res, next) =>
+  upload.single("image")(req, res, (err) => {
+    if (!err) return next();
+    const message =
+      err.code === "LIMIT_FILE_SIZE"
+        ? "That image is larger than the 5MB limit."
+        : err.message || "That file could not be accepted.";
+    return res.status(400).json({ error: message });
+  });
+
+router.post("/editor-image", acceptEditorImage, async (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: "Please sign in to upload images." });
+  }
+  if (!req.file) {
+    return res.status(400).json({ error: "No image was received." });
+  }
+  // The storage engine returns Cloudinary's secure URL as `path`, already
+  // resized to 1200px wide and format/quality-optimised by the upload preset.
+  return res.json({ url: req.file.path });
+});
+
 // 📝 Create a Blog
 router.post("/", blogLimiter, upload.single("coverImage"), async (req, res) => {
   const BLOG_COOLDOWN = 10 * 60 * 1000; // 10 minutes in milliseconds

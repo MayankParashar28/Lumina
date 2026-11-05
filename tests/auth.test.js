@@ -148,7 +148,11 @@ test("forgot-password answers identically for known and unknown addresses", asyn
       // arrived on, and supertest binds a fresh ephemeral port per request — so the
       // port differs between these two calls for reasons unrelated to enumeration.
       .replace(/https?:\/\/(?:127\.0\.0\.1|localhost|\[::1\]):\d+/g, "http://HOST")
-      .replace(/(name="_csrf"[^>]*value=)"[^"]*"/g, '$1"T"');
+      .replace(/(name="_csrf"[^>]*value=)"[^"]*"/g, '$1"T"')
+      // The same token is also exposed as a meta tag for scripts that POST via
+      // fetch (the editor's image uploader), and differs per session like the
+      // form field above.
+      .replace(/(name="csrf-token"[^>]*content=)"[^"]*"/g, '$1"T"');
 
   assert.equal(normalise(known.text), normalise(unknown.text), "response body must not differ");
 

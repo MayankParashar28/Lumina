@@ -18,6 +18,10 @@
 
 <!-- ✅ Title: Set by each page via locals.title -->
 <title><%= locals.title || 'Lumina - The Voice of the Bold' %></title>
+<%# Lets shared scripts (e.g. the editor's image uploader) send x-csrf-token
+    without each page inlining the value. Empty on public-cacheable pages,
+    which have no session and post nothing. %>
+<meta name="csrf-token" content="<%= locals.csrfToken || '' %>">
 
 <!-- ✅ Canonical URL: Prevents duplicate page indexing -->
 <%# BASE_URL is set per environment. Trailing slashes are stripped because it is

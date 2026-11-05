@@ -7,6 +7,16 @@
 <link rel="stylesheet" href="/css/blog.css?v=10033">
 <!-- Quill Theme for matching styles -->
 <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+<!-- Code blocks: loaded after blog.css so it wins on the shared `pre` rules. -->
+<link rel="stylesheet" href="/css/code.css?v=2">
+<!--
+  Highlighting runs in the browser rather than being stored in the post, so it
+  applies to everything already published. Both scripts are deferred: they are
+  irrelevant to first paint, and defer guarantees hljs is ready before the
+  DOMContentLoaded handler below injects the body and calls the enhancer.
+-->
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script defer src="/javascript/code-blocks.js?v=1"></script>
 <style>
     .tldr-container { max-width: 1000px; margin: 0 auto 2.5rem; padding: 0 1rem; }
     .tldr-btn {
@@ -265,8 +275,11 @@
                             const cleanHTML = DOMPurify.sanitize(rawContent);
                             blogBody.innerHTML = cleanHTML;
 
-                            // Content was injected after load — add code-copy buttons now.
+                            // Content was injected after load — add code-copy buttons
+                            // and highlight, in that order so the button survives
+                            // the enhancer rewriting the block's contents.
                             if (window.addCodeCopyButtons) window.addCodeCopyButtons(blogBody);
+                            if (window.enhanceCodeBlocks) window.enhanceCodeBlocks(blogBody);
                         });
                     </script>
 
