@@ -48,6 +48,10 @@ function linkFor(userId, kind, baseUrl) {
 // reader it worked.
 const KINDS = {
   "new-post": "notificationPreferences.emailOnNewPost",
+  // A reply is a comment as far as the reader is concerned, so both are
+  // governed by the one preference rather than splitting hairs in settings.
+  "comment": "notificationPreferences.emailOnComment",
+  "follow": "notificationPreferences.emailOnFollow",
 };
 
 module.exports = { tokenFor, verify, linkFor, KINDS };

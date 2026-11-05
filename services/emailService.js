@@ -342,4 +342,117 @@ const sendNewPostEmail = async (
   });
 };
 
-module.exports = { sendVerificationEmail, sendResetPasswordEmail, sendNewPostEmail, createTransporter };
+// Shared shell for the engagement mail below (a comment, a reply, a new
+// follower). These differ only in a line of text, a quote and a button, so they
+// share one template rather than three near-identical copies that drift.
+//
+// Like the new-post mail, every one of them is something a reader did not ask
+// for individually, so every one carries the RFC 8058 one-click headers and a
+// visible unsubscribe link. A reader who cannot find the unsubscribe presses
+// "report spam" instead, and that hurts the password-reset mail too.
+const escapeHtml = (v) => String(v == null ? "" : v)
+  .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+  .replace(/"/g, "&quot;");
+
+async function sendEngagementEmail(
+  email,
+  { subject, label, heading, quote, buttonText, url, reason, unsubscribeUrl, unsubscribeText }
+) {
+  const safe = escapeHtml;
+  const baseUrl = process.env.BASE_URL || process.env.RENDER_EXTERNAL_URL || "http://localhost:8000";
+
+  await deliver({
+    to: email,
+    subject,
+    label,
+    headers: {
+      "List-Unsubscribe": `<${unsubscribeUrl}>`,
+      "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+    },
+    html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <style>
+            body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
+            .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 40px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+            .header { text-align: center; margin-bottom: 30px; }
+            .logo { font-size: 24px; font-weight: bold; color: #1a1a1a; text-decoration: none; }
+            .heading { color: #1a1a1a; font-size: 20px; line-height: 1.4; margin: 0 0 20px; }
+            .quote { border-left: 3px solid #e0e0e0; margin: 0 0 24px; padding: 4px 0 4px 16px; color: #444444; font-size: 16px; line-height: 1.6; white-space: pre-wrap; }
+            .button-container { text-align: center; margin: 30px 0; }
+            .button { background-color: #000000; color: #ffffff; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; }
+            .footer { margin-top: 30px; text-align: center; color: #888888; font-size: 12px; border-top: 1px solid #eeeeee; padding-top: 20px; }
+            .footer a { color: #888888; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <a href="${baseUrl}" class="logo">Lumina</a>
+            </div>
+            <h2 class="heading">${safe(heading)}</h2>
+            ${quote ? `<p class="quote">${safe(quote)}</p>` : ""}
+            <div class="button-container">
+              <a href="${safe(url)}" class="button">${safe(buttonText)}</a>
+            </div>
+            <div class="footer">
+              <p>${safe(reason)}<br>
+              <a href="${safe(unsubscribeUrl)}">${safe(unsubscribeText)}</a></p>
+              <p>&copy; ${new Date().getFullYear()} Lumina. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+    `,
+  });
+}
+
+// A comment on your post, or a reply to your comment. One function because the
+// two differ only in wording, and a reader thinks of both as "someone replied".
+const sendCommentEmail = async (
+  email,
+  { kind, senderName, postTitle, comment, url, unsubscribeUrl }
+) => {
+  const isReply = kind === "reply";
+  // The comment is quoted in the body; a long one would make the subject line
+  // useless in a crowded inbox, so the subject carries only who and where.
+  return sendEngagementEmail(email, {
+    subject: isReply
+      ? `${senderName} replied to your comment`
+      : `${senderName} commented on "${postTitle}"`,
+    label: isReply ? "Reply email" : "Comment email",
+    heading: isReply
+      ? `${senderName} replied to your comment on "${postTitle}"`
+      : `${senderName} commented on your post "${postTitle}"`,
+    quote: comment,
+    buttonText: isReply ? "Read the reply" : "Read the comment",
+    url,
+    reason: "You are getting this because it is a response to something you wrote on Lumina.",
+    unsubscribeUrl,
+    unsubscribeText: "Unsubscribe from comment emails",
+  });
+};
+
+const sendFollowEmail = async (email, { followerName, followerBio, url, unsubscribeUrl }) =>
+  sendEngagementEmail(email, {
+    subject: `${followerName} started following you`,
+    label: "New follower email",
+    heading: `${followerName} started following you on Lumina`,
+    quote: followerBio,
+    buttonText: "See their profile",
+    url,
+    reason: "You are getting this because someone followed you on Lumina.",
+    unsubscribeUrl,
+    unsubscribeText: "Unsubscribe from new follower emails",
+  });
+
+module.exports = {
+  sendVerificationEmail,
+  sendResetPasswordEmail,
+  sendNewPostEmail,
+  sendCommentEmail,
+  sendFollowEmail,
+  createTransporter,
+};

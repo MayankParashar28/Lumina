@@ -270,7 +270,7 @@ test("the preferences page is reachable and its toggle saves", async () => {
 
   const page = await request(ctx.app).get("/user/email-preferences").set("Cookie", auth);
   assert.equal(page.status, 200);
-  assert.match(page.text, /id="emailOnNewPost" checked/);
+  assert.match(page.text, /id="emailOnNewPost" data-pref="emailOnNewPost"\s+checked/);
 
   const { token, cookie } = await csrfFor(request, ctx.app);
   const save = await request(ctx.app)
@@ -280,13 +280,13 @@ test("the preferences page is reachable and its toggle saves", async () => {
     .send({ emailOnNewPost: false });
 
   assert.equal(save.status, 200);
-  assert.equal(save.body.emailOnNewPost, false);
+  assert.equal(save.body.prefs.emailOnNewPost, false);
   const fresh = await ctx.User.findById(u._id).lean();
   assert.equal(fresh.notificationPreferences.emailOnNewPost, false);
 
   // And it is reflected when the page is loaded again.
   const again = await request(ctx.app).get("/user/email-preferences").set("Cookie", auth);
-  assert.doesNotMatch(again.text, /id="emailOnNewPost" checked/);
+  assert.doesNotMatch(again.text, /id="emailOnNewPost" data-pref="emailOnNewPost"\s+checked/);
 });
 
 test("the preferences page requires signing in", async () => {

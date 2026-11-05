@@ -18,6 +18,8 @@ const axios = require("axios"); // Import Axios for GIPHY Proxy
 const { generateEmbedding, cosineSimilarity } = require("../services/ai"); // Import AI Service
 const { vectorSearchBlogs } = require("../services/vectorSearch"); // Phase-2: Atlas kNN (falls back to cosine)
 const { enqueue } = require("../services/queue"); // Phase-4: background jobs (falls back to inline)
+const { sendCommentEmail } = require("../services/emailService");
+const { notifyByEmail, baseUrl: emailBaseUrl } = require("../services/notifyEmail");
 const pageCache = require("../services/pageCache"); // micro-cache for anon public pages
 const logger = require("../services/logger"); // Structured Logging
 const rateLimit = require("express-rate-limit");
@@ -724,6 +726,24 @@ router.post("/comment/:blogId", commentLimiter, async (req, res) => {
           });
         }
         }).catch(err => logger.error("⚠️ Notification Error:", err));
+
+      // ...and by email, so the author hears about it without having to come
+      // back and look. Not awaited, for the same reason the notification above
+      // is not: the commenter is waiting on a redirect.
+      notifyByEmail({
+        kind: "comment",
+        recipientId: blog.createdBy,
+        senderId: userId,
+        build: (unsubscribeUrl) => ({
+          kind: "comment",
+          senderName: req.user.fullName,
+          postTitle: blog.title,
+          comment: comment.content,
+          url: `${emailBaseUrl()}/blog/${blog.slug || blog._id}#comment-${comment._id}`,
+          unsubscribeUrl,
+        }),
+        send: sendCommentEmail,
+      });
     }
 
     // 🔴 Real-time Update: Emit new root comment
@@ -860,6 +880,21 @@ router.post("/comment/:commentId/reply", async (req, res) => {
           message: `${req.user.fullName} replied: "${req.body.content}"`
         });
       }
+
+      notifyByEmail({
+        kind: "comment",
+        recipientId: parentComment.createdBy,
+        senderId: req.user._id,
+        build: (unsubscribeUrl) => ({
+          kind: "reply",
+          senderName: req.user.fullName,
+          postTitle: parentComment.blogId.title,
+          comment: reply.content,
+          url: `${emailBaseUrl()}/blog/${parentComment.blogId.slug || parentComment.blogId._id}#comment-${reply._id}`,
+          unsubscribeUrl,
+        }),
+        send: sendCommentEmail,
+      });
     }
 
     // 🚀 UNIFIED RENDER: Generate HTML for both Socket & AJAX

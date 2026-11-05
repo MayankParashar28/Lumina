@@ -14,19 +14,24 @@
             <div class="settings-card">
                 <h2 class="settings-title">Email Notifications</h2>
 
-                <div class="pref-row">
-                    <div class="pref-copy">
-                        <label class="pref-label" for="emailOnNewPost">New posts from people you follow</label>
-                        <p class="pref-help">
-                            One email when someone you follow publishes. You'll still see it in
-                            your Lumina notifications either way.
-                        </p>
+                <p class="pref-intro">
+                    Whatever you switch off here still reaches you in your Lumina
+                    notifications — only the email stops.
+                </p>
+
+                <% prefs.forEach(function (pref) { %>
+                    <div class="pref-row">
+                        <div class="pref-copy">
+                            <label class="pref-label" for="<%= pref.key %>"><%= pref.label %></label>
+                            <p class="pref-help"><%= pref.help %></p>
+                        </div>
+                        <label class="pref-switch">
+                            <input type="checkbox" id="<%= pref.key %>" data-pref="<%= pref.key %>"
+                                <%= pref.enabled ? 'checked' : '' %>>
+                            <span class="pref-slider"></span>
+                        </label>
                     </div>
-                    <label class="pref-switch">
-                        <input type="checkbox" id="emailOnNewPost" <%= emailOnNewPost ? 'checked' : '' %>>
-                        <span class="pref-slider"></span>
-                    </label>
-                </div>
+                    <% }); %>
 
                 <p class="pref-status" id="prefStatus" role="status" aria-live="polite"></p>
 
@@ -39,6 +44,17 @@
         <%- include('./partials/footer') %>
 
             <style>
+                .pref-intro {
+                    margin: 0 0 0.5rem;
+                    color: #666;
+                    font-size: 0.95rem;
+                    line-height: 1.6;
+                }
+
+                .pref-row + .pref-row {
+                    border-top: 1px solid #eee;
+                }
+
                 .pref-row {
                     display: flex;
                     align-items: flex-start;
@@ -152,40 +168,47 @@
 
             <script nonce="<%= cspNonce %>">
                 (function () {
-                    const box = document.getElementById('emailOnNewPost');
                     const status = document.getElementById('prefStatus');
                     let timer = null;
 
-                    box.addEventListener('change', async () => {
-                        const wanted = box.checked;
-                        box.disabled = true;
-                        status.classList.remove('is-error');
-                        status.textContent = 'Saving...';
+                    document.querySelectorAll('input[data-pref]').forEach((box) => {
+                        box.addEventListener('change', async () => {
+                            const key = box.dataset.pref;
+                            const wanted = box.checked;
+                            box.disabled = true;
+                            status.classList.remove('is-error');
+                            status.textContent = 'Saving...';
 
-                        try {
-                            const res = await fetch('/user/email-preferences', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'x-csrf-token': '<%= csrfToken %>'
-                                },
-                                body: JSON.stringify({ emailOnNewPost: wanted })
-                            });
-                            if (!res.ok) throw new Error('Request failed');
-                            const data = await res.json();
-                            // Trust the server's value, not the click, so the
-                            // switch can never show a setting that wasn't saved.
-                            box.checked = data.emailOnNewPost !== false;
-                            status.textContent = box.checked ? 'Saved. Emails are on.' : 'Saved. Emails are off.';
-                        } catch (err) {
-                            box.checked = !wanted;
-                            status.classList.add('is-error');
-                            status.textContent = "Couldn't save that. Check your connection and try again.";
-                        } finally {
-                            box.disabled = false;
-                            clearTimeout(timer);
-                            timer = setTimeout(() => { status.textContent = ''; }, 4000);
-                        }
+                            try {
+                                const res = await fetch('/user/email-preferences', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'x-csrf-token': '<%= csrfToken %>'
+                                    },
+                                    body: JSON.stringify({ [key]: wanted })
+                                });
+                                if (!res.ok) throw new Error('Request failed');
+                                const data = await res.json();
+
+                                // Reconcile every switch against what the server
+                                // actually holds, not just the one clicked, so the
+                                // page can never show a setting that wasn't saved.
+                                document.querySelectorAll('input[data-pref]').forEach((other) => {
+                                    const value = data.prefs && data.prefs[other.dataset.pref];
+                                    if (typeof value === 'boolean') other.checked = value;
+                                });
+                                status.textContent = box.checked ? 'Saved. Emails are on.' : 'Saved. Emails are off.';
+                            } catch (err) {
+                                box.checked = !wanted;
+                                status.classList.add('is-error');
+                                status.textContent = "Couldn't save that. Check your connection and try again.";
+                            } finally {
+                                box.disabled = false;
+                                clearTimeout(timer);
+                                timer = setTimeout(() => { status.textContent = ''; }, 4000);
+                            }
+                        });
                     });
                 })();
             </script>

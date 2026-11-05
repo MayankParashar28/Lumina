@@ -5,7 +5,8 @@ const router = Router();
 const jwt = require("jsonwebtoken");
 const rateLimit = require("express-rate-limit");
 const crypto = require("crypto");
-const { sendVerificationEmail } = require("../services/emailService");
+const { sendVerificationEmail, sendFollowEmail } = require("../services/emailService");
+const { notifyByEmail, baseUrl: emailBaseUrl } = require("../services/notifyEmail");
 const { hashPassword } = require("../services/password");
 const passport = require("passport");
 const { googleEnabled } = require("../services/passport");
@@ -724,6 +725,21 @@ router.post("/follow/:userId", async (req, res) => {
 
       await notification.save();
 
+      // ...and by email. Not awaited: the follower is waiting on a redirect,
+      // and notifyByEmail never rejects.
+      notifyByEmail({
+        kind: "follow",
+        recipientId: userToFollow._id,
+        senderId: user._id,
+        build: (unsubscribeUrl) => ({
+          followerName: user.fullName,
+          followerBio: user.bio,
+          url: `${emailBaseUrl()}/user/profile/${user._id}`,
+          unsubscribeUrl,
+        }),
+        send: sendFollowEmail,
+      });
+
       // 📢 Emit real-time notification
       const io = req.app.get("io");
       if (io) {
@@ -1119,15 +1135,43 @@ router.post("/reset-password/:token", verifyLimiter, async (req, res) => {
 // behind a 24-hour cooldown: a reader who happened to change their name this
 // morning would be told to come back tomorrow to stop getting email, which is
 // not an acceptable answer to "please stop emailing me".
+// The switches on that page, and the copy for each. One list so the page, the
+// save handler and the unsubscribe confirmation cannot disagree about which
+// kinds of mail exist.
+const EMAIL_PREFS = [
+  {
+    key: "emailOnNewPost",
+    kind: "new-post",
+    label: "New posts from people you follow",
+    help: "One email when someone you follow publishes.",
+  },
+  {
+    key: "emailOnComment",
+    kind: "comment",
+    label: "Comments and replies",
+    help: "When someone comments on your post or replies to you.",
+  },
+  {
+    key: "emailOnFollow",
+    kind: "follow",
+    label: "New followers",
+    help: "When someone starts following you.",
+  },
+];
+
+const prefsOf = (user) =>
+  EMAIL_PREFS.map((p) => ({
+    ...p,
+    // Absent means on: the defaults in the schema only apply to documents
+    // written since the field existed.
+    enabled: !(user.notificationPreferences && user.notificationPreferences[p.key] === false),
+  }));
+
 router.get("/email-preferences", asyncRoute(async (req, res) => {
   if (!req.user || !req.user._id) return res.redirect("/user/signin");
   const user = await User.findById(req.user._id).select("notificationPreferences").lean();
   if (!user) return res.redirect("/user/signin");
-  return res.render("email-preferences", {
-    emailOnNewPost: user.notificationPreferences
-      ? user.notificationPreferences.emailOnNewPost !== false
-      : true,
-  });
+  return res.render("email-preferences", { prefs: prefsOf(user) });
 }));
 
 router.post("/email-preferences", asyncRoute(async (req, res) => {
@@ -1135,14 +1179,28 @@ router.post("/email-preferences", asyncRoute(async (req, res) => {
 
   // Checkboxes submit nothing when unticked and a browser can send "on", "true"
   // or "1" when ticked, so read it as "anything but an explicit off".
-  const raw = req.body.emailOnNewPost;
-  const enabled = raw === true || raw === "true" || raw === "on" || raw === "1";
+  const isOn = (raw) => raw === true || raw === "true" || raw === "on" || raw === "1";
 
-  await User.updateOne(
-    { _id: req.user._id },
-    { $set: { "notificationPreferences.emailOnNewPost": enabled } }
-  );
-  return res.json({ ok: true, emailOnNewPost: enabled });
+  const update = {};
+  for (const p of EMAIL_PREFS) {
+    if (Object.prototype.hasOwnProperty.call(req.body, p.key)) {
+      update[`notificationPreferences.${p.key}`] = isOn(req.body[p.key]);
+    }
+  }
+  // An empty body would otherwise be an updateOne with no $set, which throws.
+  if (Object.keys(update).length === 0) {
+    return res.status(400).json({ error: "No known preference was given." });
+  }
+
+  await User.updateOne({ _id: req.user._id }, { $set: update });
+
+  const fresh = await User.findById(req.user._id).select("notificationPreferences").lean();
+  return res.json({
+    ok: true,
+    // Keyed by field so the page can reconcile every switch, not just the one
+    // that was clicked.
+    prefs: Object.fromEntries(prefsOf(fresh).map((p) => [p.key, p.enabled])),
+  });
 }));
 
 // 📭 Unsubscribe from one kind of email.
@@ -1201,11 +1259,17 @@ router.get("/unsubscribe/:kind/:userId/:token", unsubscribeLimiter, asyncRoute(a
   const resubscribe = req.query.resubscribe === "1";
   const { ok } = await applyUnsubscribe(req, resubscribe);
 
+  // What this link actually switched off, in the reader's words. Falls back to
+  // something true but vague rather than naming the wrong kind of mail.
+  const pref = EMAIL_PREFS.find((p) => p.kind === req.params.kind);
+  const what = pref ? pref.label.toLowerCase() : "these emails";
+
   if (!ok) {
     return res.status(400).render("unsubscribed", {
       ok: false,
       resubscribed: false,
       undoUrl: null,
+      what,
     });
   }
 
@@ -1214,6 +1278,7 @@ router.get("/unsubscribe/:kind/:userId/:token", unsubscribeLimiter, asyncRoute(a
   return res.render("unsubscribed", {
     ok: true,
     resubscribed: resubscribe,
+    what,
     undoUrl: resubscribe
       ? null
       : `/user/unsubscribe/${encodeURIComponent(kind)}/${userId}/${token}?resubscribe=1`,
