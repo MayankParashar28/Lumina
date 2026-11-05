@@ -213,6 +213,29 @@ body {
     }
 }
 
+/* The rail follows the reader for the whole page, not just the article.
+ *
+ * `position: sticky` only travels inside its own grid area, so the bar stuck
+ * while the post scrolled and then scrolled away for good at the author card and
+ * the comments -- exactly where someone decides to like or comment. Fixed to the
+ * viewport it stays reachable the whole way down.
+ *
+ * Only from 1200px up: it is parked in the gutter beside the 1000px reading
+ * column, and `(100vw - 1000px) / 2` is the width of that gutter. Below 1200 the
+ * gutter is thinner than the bar, so there the sticky rule above still applies
+ * and the bar rides the article as before.
+ */
+@media (min-width: 1200px) {
+    .article-actions-bar-vertical {
+        position: fixed;
+        top: 50%;
+        /* 56px: the bar's own width plus a little air off the text. */
+        right: calc((100vw - 1000px) / 2 - 56px);
+        transform: translateY(-50%);
+        margin: 0;
+    }
+}
+
 .action-icon-btn {
     background: transparent;
     border: none;
@@ -734,8 +757,11 @@ body {
 
 /* --- Enhanced Comment Section --- */
 .comments-section {
-    max-width: 1650px !important;
-    width: 95% !important;
+    /* Was 1650px/95%, which ran 350px wider than the article above it, so the
+       page stepped out at the comments. Aligned with the 1000px reading column
+       and the author card. */
+    max-width: 1000px !important;
+    width: 100% !important;
     margin: 2.5rem auto !important;
     padding: 2rem 1.5rem 0;
     border-top: 1px solid var(--border-color);
@@ -1804,7 +1830,15 @@ body {
    that is the point of it.
 */
 .author-card {
-    max-width: 760px;
+    /* `width: 100%` is doing real work. <body> is a flex column, and a flex item
+       with an auto inline margin shrinks to its content instead of filling the
+       line -- so this card sat at ~630px on a 1440px screen and the max-width
+       below was never reached. (Same bug as .profile-container.)
+
+       760 -> 1000 so the card lines up with the article column and the hero
+       image above it: the post, the author and the comments are one column. */
+    width: 100%;
+    max-width: 1000px;
     margin: 3rem auto 0;
     padding: 1.75rem;
     border: 1px solid var(--border-color, #e5e5e5);

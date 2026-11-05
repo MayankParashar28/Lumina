@@ -22,7 +22,9 @@ body {
        the line -- so this container sat at ~470px on a 1440px screen and the
        max-width below was never reached. */
     width: 100%;
-    max-width: 1100px;
+    /* 1200px to match .floating-nav and .footer-content-minimal, so the page's
+       content lines up with the chrome above and below it. */
+    max-width: 1200px;
     margin: 6rem auto 4rem;
     padding: 0 1.5rem;
 }

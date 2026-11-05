@@ -4,7 +4,7 @@
 <head>
     <%- include('./partials/header') %>
 </head>
-<link rel="stylesheet" href="/css/blog.css?v=10036">
+<link rel="stylesheet" href="/css/blog.css?v=10037">
 <!-- Quill Theme for matching styles -->
 <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
 <!-- Code blocks: loaded after blog.css so it wins on the shared `pre` rules. -->
@@ -26,57 +26,69 @@
 <script defer src="/javascript/share-panel.js?v=1"></script>
 <% } %>
 <style>
-    .tldr-container { max-width: 1000px; margin: 0 auto 2.5rem; padding: 0 1rem; }
-    .tldr-btn {
-        display: inline-flex; align-items: center; gap: 0.5rem;
-        background: linear-gradient(135deg, #6366f1, #06b6d4); color: #fff;
-        border: none; padding: 0.6rem 1.3rem; border-radius: 999px;
-        font-weight: 600; font-size: 0.9rem; cursor: pointer;
-        box-shadow: 0 4px 14px rgba(99,102,241,0.25); transition: transform 0.2s, box-shadow 0.2s;
-    }
-    .tldr-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(99,102,241,0.35); }
-    .tldr-btn:disabled { opacity: 0.7; cursor: default; transform: none; }
-    .tldr-panel {
-        margin-top: 1.2rem; background: var(--card-bg, #fff); border: 1px solid var(--border-color, #e5e7eb);
-        border-left: 4px solid #6366f1; border-radius: 12px; padding: 1.4rem 1.6rem;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.04); animation: tldrIn 0.35s ease;
-    }
-    .tldr-panel.hidden { display: none; }
-    .tldr-panel h4 { margin: 0 0 0.6rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; color: #6366f1; }
-    .tldr-panel .tldr-summary { font-size: 1.05rem; line-height: 1.7; color: var(--text-color, #222); margin-bottom: 1rem; }
-    .tldr-panel ul { margin: 0; padding-left: 1.2rem; }
-    .tldr-panel li { margin-bottom: 0.5rem; line-height: 1.5; }
     .mention { color: #6366f1; font-weight: 600; background: rgba(99,102,241,0.08); padding: 0 3px; border-radius: 4px; }
-    .ai-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; }
-    .tldr-btn.cp { background: linear-gradient(135deg, #f59e0b, #ef4444); box-shadow: 0 4px 14px rgba(239,68,68,0.22); }
-    .tldr-btn.cp:hover { box-shadow: 0 6px 20px rgba(239,68,68,0.32); }
-    .tldr-panel.cp { border-left-color: #ef4444; }
-    .tldr-panel.cp h4 { color: #ef4444; }
-    .tldr-panel p + p { margin-top: 0.8rem; }
-    .level-toggle { display: inline-flex; align-items: center; gap: 0.4rem; margin-left: auto; background: #f3f4f6; border-radius: 999px; padding: 0.25rem; }
-    .level-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: #888; padding: 0 0.5rem; font-weight: 600; }
-    .level-btn { border: none; background: transparent; padding: 0.35rem 0.8rem; border-radius: 999px; font-size: 0.82rem; font-weight: 600; color: #555; cursor: pointer; transition: all 0.15s; }
-    .level-btn.active { background: #fff; color: #6366f1; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
-    .level-btn:disabled { opacity: 0.5; cursor: default; }
-    @media (max-width: 600px) { .level-toggle { margin-left: 0; width: 100%; justify-content: center; } }
-    /* 👀 Live co-reading presence + floating reactions */
-    .live-presence { position: fixed; bottom: 22px; left: 22px; z-index: 1200; display: none; flex-direction: column; gap: 0.5rem;
-        background: rgba(255,255,255,0.95); backdrop-filter: blur(8px); border: 1px solid rgba(0,0,0,0.08);
-        border-radius: 16px; padding: 0.7rem 0.9rem; box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
+    /* 👀 Live co-reading presence + floating reactions.
+     *
+     * One horizontal pill, not a stacked card: it lives in the corner of a page
+     * someone is reading, so its job is to be glanceable and small. The count
+     * and the reactions read as one control because they are one thought --
+     * who else is here, and what you want to say to them.
+     *
+     * Colours come from the theme variables. This used to be hard-coded white
+     * with near-black text, which turned into a white slab on the dark theme. */
+    .live-presence {
+        position: fixed; bottom: 22px; left: 22px; z-index: 1200;
+        display: none; align-items: center; gap: 0.55rem;
+        background: var(--card-bg, #fff);
+        color: var(--text-color, #111);
+        border: 1px solid var(--border-color, rgba(0,0,0,0.08));
+        border-radius: 999px; padding: 0.4rem 0.75rem;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+        /* Opacity, not display: a pill that pops in at full strength in the
+           corner of the eye reads as an alert. */
+        opacity: 0; transform: translateY(6px);
+        transition: opacity 0.25s ease, transform 0.25s ease;
+    }
     .live-presence.show { display: flex; }
-    .lp-count { font-size: 0.82rem; font-weight: 700; color: #111; display: flex; align-items: center; gap: 0.4rem; }
-    .lp-count i { color: #6366f1; }
-    .lp-dot { width: 7px; height: 7px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 0 0 rgba(34,197,94,0.6); animation: lpPulse 1.8s infinite; }
+    .live-presence.is-in { opacity: 1; transform: none; }
+    .lp-count { font-size: 0.8rem; font-weight: 700; display: flex; align-items: center; gap: 0.45rem; white-space: nowrap; }
+    .lp-num { font-variant-numeric: tabular-nums; }
+    /* A new reader arriving is the one thing worth noticing here. */
+    .lp-num.bump { animation: lpBump 0.4s ease; display: inline-block; }
+    @keyframes lpBump { 0%{transform:none;} 35%{transform:scale(1.35); color:#22c55e;} 100%{transform:none;} }
+    .lp-dot { width: 7px; height: 7px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 0 0 rgba(34,197,94,0.6); animation: lpPulse 1.8s infinite; flex: none; }
     @keyframes lpPulse { 0%{box-shadow:0 0 0 0 rgba(34,197,94,0.5);} 70%{box-shadow:0 0 0 7px rgba(34,197,94,0);} 100%{box-shadow:0 0 0 0 rgba(34,197,94,0);} }
-    .lp-reactions { display: flex; gap: 0.2rem; }
-    .lp-emoji { border: none; background: transparent; font-size: 1.15rem; cursor: pointer; padding: 0.2rem 0.3rem; border-radius: 8px; transition: transform 0.12s, background 0.12s; }
-    .lp-emoji:hover { transform: scale(1.3); background: rgba(0,0,0,0.05); }
+    .lp-divider { width: 1px; align-self: stretch; margin: 0.1rem 0; background: var(--border-color, rgba(0,0,0,0.1)); flex: none; }
+    .lp-reactions { display: flex; gap: 0.1rem; }
+    .lp-emoji {
+        border: none; background: transparent; font-size: 1.05rem; line-height: 1;
+        cursor: pointer; padding: 0.3rem; border-radius: 50%;
+        transition: transform 0.12s, background 0.12s;
+    }
+    .lp-emoji:hover { transform: scale(1.3); background: rgba(99,102,241,0.12); }
     .lp-emoji:active { transform: scale(0.9); }
+    .lp-emoji:focus-visible { outline: 2px solid #6366f1; outline-offset: 1px; }
     .float-layer { position: fixed; inset: 0; pointer-events: none; z-index: 1300; overflow: hidden; }
     .float-emoji { position: absolute; bottom: 70px; will-change: transform, opacity; animation: floatUp 2.6s ease-out forwards; }
     @keyframes floatUp { 0%{opacity:0; transform: translateY(0) scale(0.6);} 15%{opacity:1;} 100%{opacity:0; transform: translateY(-62vh) scale(1.2);} }
-    @media (max-width: 600px) { .live-presence { bottom: 14px; left: 14px; } }
-    @keyframes tldrIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    /* Six emoji at a thumb-sized tap target do not fit beside the count on a
+       phone, and the mobile action bar already owns the bottom of the screen --
+       so on small screens the pill is the count alone. */
+    @media (max-width: 600px) {
+        .live-presence { bottom: 14px; left: 14px; padding: 0.35rem 0.65rem; }
+        .lp-divider, .lp-reactions { display: none; }
+    }
+    @media (pointer: coarse) and (min-width: 601px) {
+        .lp-emoji { min-width: 44px; min-height: 44px; }
+    }
+    /* A pulsing dot and emoji flying up the page are exactly what someone who
+       asked for less motion does not want; the count still updates. */
+    @media (prefers-reduced-motion: reduce) {
+        .live-presence { transition: none; transform: none; }
+        .lp-dot { animation: none; }
+        .lp-num.bump { animation: none; }
+        .float-emoji { animation-duration: 0.01s; }
+    }
 </style>
 
 <body>
@@ -197,20 +209,6 @@
                         class="blog-hero-image" data-fallback="/images/default-cover.png">
                 </div>
                 <% } %>
-
-                    <!-- ✨ AI reading tools -->
-                    <% if (!locals.isPreview && String(blog._id) !== 'preview-id') { %>
-                        <div class="tldr-container">
-                            <div class="ai-tools">
-                                <div class="level-toggle" role="group" aria-label="Reading level">
-                                    <span class="level-label">Reading level</span>
-                                    <button type="button" class="level-btn active" data-level="standard">Standard</button>
-                                    <button type="button" class="level-btn" data-level="eli5">ELI5</button>
-                                    <button type="button" class="level-btn" data-level="expert">Expert</button>
-                                </div>
-                            </div>
-                        </div>
-                    <% } %>
 
                     <div class="content-wrapper">
 
@@ -811,48 +809,14 @@
             }
         </script>
 
-        <!-- 🎚️ Reading levels -->
-        <script nonce="<%= cspNonce %>">
-            (() => {
-                const blogId = "<%= blog._id %>";
-                const esc = (s) => String(s).replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
-                const toParas = (text) => String(text).split(/\n\n+/).map(p => p.trim()).filter(Boolean);
-
-                // --- 🎚️ Adaptive reading levels ---
-                (function () {
-                    const content = document.getElementById("blog-content");
-                    const btns = [...document.querySelectorAll(".level-btn")];
-                    if (!content || !btns.length) return;
-                    const cache = {};
-                    const setActive = (lvl) => { btns.forEach(x => x.classList.toggle("active", x.dataset.level === lvl)); };
-                    btns.forEach(b => b.addEventListener("click", async () => {
-                        const level = b.dataset.level;
-                        if (b.classList.contains("active")) return;
-                        if (cache.standard == null) cache.standard = content.innerHTML; // capture original once
-                        if (level === "standard") { content.innerHTML = cache.standard; setActive("standard"); return; }
-                        if (cache[level]) { content.innerHTML = cache[level]; setActive(level); return; }
-
-                        const prev = content.innerHTML;
-                        btns.forEach(x => x.disabled = true); content.style.opacity = "0.4";
-                        try {
-                            const res = await fetch(`/blog/api/${blogId}/rewrite?level=${level}`);
-                            if (!res.ok) throw new Error("HTTP " + res.status);
-                            const data = await res.json();
-                            cache[level] = toParas(data.content || "").map(p => `<p>${esc(p)}</p>`).join("") || prev;
-                            content.innerHTML = cache[level]; setActive(level);
-                        } catch (err) {
-                            console.error("Rewrite failed", err);
-                            alert("Could not rewrite this post right now.");
-                            content.innerHTML = prev; setActive("standard");
-                        } finally { btns.forEach(x => x.disabled = false); content.style.opacity = "1"; }
-                    }));
-                })();
-            })();
-        </script>
 
         <!-- 👀 Live co-reading presence + floating reactions -->
         <div id="live-presence" class="live-presence" aria-live="polite">
-            <span class="lp-count"><span class="lp-dot"></span><span id="reader-count">1</span>&nbsp;reading now</span>
+            <span class="lp-count">
+                <span class="lp-dot" aria-hidden="true"></span>
+                <span id="reader-label">Just you right now</span>
+            </span>
+            <span class="lp-divider" aria-hidden="true"></span>
             <div class="lp-reactions">
                 <button type="button" class="lp-emoji" data-emoji="❤️" aria-label="React with heart">❤️</button>
                 <button type="button" class="lp-emoji" data-emoji="🔥" aria-label="React with fire">🔥</button>
@@ -890,13 +854,31 @@
 
                     // 👀 Live co-reading presence + floating reactions
                     const presence = document.getElementById("live-presence");
-                    const countEl = document.getElementById("reader-count");
+                    const labelEl = document.getElementById("reader-label");
                     const floatLayer = document.getElementById("float-layer");
 
+                    // The pill says what the number means rather than printing it
+                    // bare: "1 reading now" is a confusing thing to read when the
+                    // 1 is you. The count only bumps when it actually changes, so
+                    // a reader arriving is visible and a re-broadcast is not.
+                    let lastCount = 0;
                     socket.on("reader_count", (n) => {
                         const count = Math.max(1, Number(n) || 1);
-                        if (countEl) countEl.textContent = count;
-                        if (presence) presence.classList.add("show");
+                        if (labelEl) {
+                            labelEl.innerHTML = count < 2
+                                ? "Just you right now"
+                                : '<span class="lp-num">' + count + '</span> reading now';
+                            const num = labelEl.querySelector(".lp-num");
+                            if (num && lastCount && count !== lastCount) {
+                                num.classList.add("bump");
+                                setTimeout(() => num.classList.remove("bump"), 420);
+                            }
+                        }
+                        lastCount = count;
+                        if (presence) {
+                            presence.classList.add("show");
+                            requestAnimationFrame(() => presence.classList.add("is-in"));
+                        }
                     });
 
                     const spawnFloat = (emoji) => {
