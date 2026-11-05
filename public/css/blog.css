@@ -155,14 +155,23 @@ body {
     left: 0 !important;
 }
 
-/* Increased max-width for wider layout */
 /* Content Layout */
 .content-wrapper {
-    /* Increased max-width for wider layout */
     max-width: 1800px;
     margin: 0 auto;
     display: grid;
-    grid-template-columns: 1fr 1200px 1fr;
+    /* The centre track is the reading column, and it is deliberately narrow.
+     *
+     * It was 1200px, which at this font size runs past 120 characters a line.
+     * The eye loses its place on the return sweep well before that, which is why
+     * every publication that cares about being read — print or web — sets prose
+     * somewhere around 50-75 characters. 750px here lands near 70.
+     *
+     * Only this track changes: .blog-body is grid-column 2 and the sticky action
+     * bar is grid-column 3, so both keep their positions. Below 1025px the
+     * override near the end of this file replaces the grid entirely and the body
+     * goes full-width, which is correct on a phone and unaffected by this value. */
+    grid-template-columns: 1fr 750px 1fr;
     gap: 2rem;
     position: relative;
     padding: 0 1rem;

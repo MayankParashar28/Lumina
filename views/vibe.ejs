@@ -154,7 +154,7 @@
                 <h2 class="vibe-section-title"><i class="fas fa-bolt" style="color:#ec4899;"></i> Posts tuned to your taste <span class="count"><%= posts.length %></span></h2>
                 <div class="vibe-post-grid">
                     <% posts.forEach(p => { %>
-                        <a href="/blog/<%= p._id %>" class="vibe-post">
+                        <a href="/blog/<%= p.slug || p._id %>" class="vibe-post">
                             <div class="vibe-post-cover">
                                 <img loading="lazy" class="vibe-post-img" alt=""
                                      src="<%= typeof optimizeImage === 'function' ? optimizeImage(p.coverImageURL || '/images/default-cover.png', { width: 400, crop: 'fill' }) : (p.coverImageURL || '/images/default-cover.png') %>"

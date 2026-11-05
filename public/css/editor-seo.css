@@ -1,0 +1,148 @@
+/* "Search appearance" block in the post editor.
+ *
+ * Two fields that used to not exist: the permalink (derived from the title) and
+ * the meta description. Without the latter, a search engine and every link
+ * preview fell back to the first ~150 characters of the body, which is almost
+ * never the sentence that earns a click.
+ *
+ * Themed off the variables in theme-toggle.css so it follows the site toggle.
+ */
+
+.seo-section {
+  margin-top: 34px;
+  padding-top: 26px;
+  border-top: 1px solid var(--border-color, #e5e5e5);
+}
+
+/* A real search result, so the author can see what they are writing for. */
+.seo-preview {
+  margin: 16px 0 20px;
+  padding: 14px 16px;
+  border: 1px solid var(--border-color, #e5e5e5);
+  border-radius: 10px;
+  background: var(--bg-color, #fafafa);
+  /* Google renders a result in a narrow column; matching it is the whole point
+   * of the preview, so it must not stretch to the width of the editor. */
+  max-width: 600px;
+  overflow: hidden;
+}
+
+.seo-preview__url {
+  font-size: 0.78rem;
+  color: #3c7f3c;
+  margin-bottom: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+[data-theme="dark"] .seo-preview__url { color: #7cc47c; }
+
+/* The six-character uniqueness suffix is only known once the post has an id, so
+ * before the first save it is shown dimmed as a placeholder rather than faked. */
+.seo-preview__suffix { opacity: 0.45; }
+
+.seo-preview__title {
+  font-size: 1.05rem;
+  line-height: 1.3;
+  color: #1a0dab;
+  margin-bottom: 3px;
+  /* Google truncates a result title near 60 characters; two lines here is the
+   * honest ceiling. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+[data-theme="dark"] .seo-preview__title { color: #8ab4f8; }
+
+.seo-preview__desc {
+  font-size: 0.82rem;
+  line-height: 1.5;
+  opacity: 0.75;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.seo-preview__desc.is-placeholder { font-style: italic; opacity: 0.5; }
+
+/* ---- the field itself ---- */
+
+.seo-field { max-width: 600px; }
+
+.seo-field__label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+  opacity: 0.8;
+}
+
+.seo-counter {
+  font-size: 0.75rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.6;
+}
+
+/* Past ~150 the snippet is at risk of being cut mid-sentence in a result. */
+.seo-counter.is-near { color: #d97706; opacity: 1; }
+.seo-counter.is-full { color: #dc2626; opacity: 1; }
+
+.seo-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color, #e5e5e5);
+  border-radius: 8px;
+  background: var(--card-bg, #fff);
+  color: var(--text-color, #1a1a1a);
+  font-family: inherit;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  resize: vertical;
+  transition: border-color 0.15s ease;
+}
+
+.seo-textarea:focus {
+  outline: none;
+  border-color: var(--accent-color, #2563eb);
+}
+
+/* ---- edit mode: the permalink is fixed ---- */
+
+.seo-locked {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 600px;
+  margin: 16px 0 20px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color, #e5e5e5);
+  border-radius: 8px;
+  background: var(--bg-color, #fafafa);
+  font-size: 0.8rem;
+}
+
+.seo-locked code {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  overflow-wrap: anywhere;
+  background: none;
+  padding: 0;
+}
+
+.seo-locked__note { flex: 0 0 auto; opacity: 0.55; }
+
+@media (max-width: 560px) {
+  .seo-locked { flex-wrap: wrap; }
+  .seo-locked__note { width: 100%; }
+}

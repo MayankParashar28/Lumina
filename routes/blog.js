@@ -24,6 +24,7 @@ const rateLimit = require("express-rate-limit");
 
 const { wantsJson } = require("../utils/http");
 const { sanitizePostBody } = require("../utils/sanitize");
+const { isObjectIdParam, isSlugParam } = require("../utils/slug");
 
 const router = Router();
 
@@ -246,7 +247,7 @@ router.get("/search", async (req, res) => {
           status: "published",
           embedding: { $exists: true, $ne: [] }
         })
-          .select("title coverImageURL category createdBy readTime views createdAt +embedding")
+          .select("title slug coverImageURL category createdBy readTime views createdAt +embedding")
           .populate("createdBy", "fullName profilePic")
           .lean();
 
@@ -269,7 +270,7 @@ router.get("/search", async (req, res) => {
         { $text: { $search: q }, status: "published" },
         { score: { $meta: "textScore" } }
       )
-        .select("title coverImageURL category createdBy readTime views createdAt")
+        .select("title slug coverImageURL category createdBy readTime views createdAt")
         .populate("createdBy", "fullName profilePic")
         .sort({ score: { $meta: "textScore" } })
         .limit(12)
@@ -302,17 +303,40 @@ router.get("/tag/:tag", (req, res) =>
   res.redirect(301, `/?tag=${encodeURIComponent(req.params.tag)}`));
 
 //  show blog
-router.get("/:id", async (req, res) => {
-  const mongoose = require("mongoose");
-  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-    return res.status(400).render("error", { message: "Invalid Blog ID." });
+// A post is addressed by its slug ("my-post-title-a1b2c3"). Every ObjectId URL
+// ever shared still resolves, via a 301 to the canonical slug below.
+router.get("/:idOrSlug", async (req, res) => {
+  const param = req.params.idOrSlug;
+  const byId = isObjectIdParam(param);
+
+  // Neither an ObjectId nor a well-formed slug: nothing can match, so answer 404
+  // without touching the database. (This used to be a 400 "Invalid Blog ID",
+  // which described an id the visitor never typed.)
+  if (!byId && !isSlugParam(param)) {
+    return res.status(404).render("404");
   }
+
   try {
+    // Legacy ObjectId permalink: send it to the canonical URL before doing any
+    // of the real work, so the view counter is incremented once (at the
+    // destination) rather than once per hop.
+    //
+    // `status` is selected because a private post must not redirect: the slug
+    // contains the title, so a 301 would disclose it in the Location header to
+    // exactly the visitors the access check below is meant to hide it from.
+    // Those fall through and are handled at the ObjectId URL as before.
+    if (byId) {
+      const existing = await Blog.findById(param).select("slug status").lean();
+      if (existing && existing.slug && existing.status !== "private") {
+        return res.redirect(301, `/blog/${existing.slug}`);
+      }
+    }
+
     // 🔥 Atomic Update: Increment view count without locking document
-    // We use findByIdAndUpdate to get the document AND update it in one go.
+    // We use findOneAndUpdate to get the document AND update it in one go.
     // { new: true } return the updated doc, { upsert: false } ensures we don't create one.
-    const blog = await Blog.findByIdAndUpdate(
-      req.params.id,
+    const blog = await Blog.findOneAndUpdate(
+      byId ? { _id: param } : { slug: param },
       { $inc: { views: 1 } },
       { new: true }
     ).populate("createdBy", "fullName profilePic");
@@ -320,6 +344,10 @@ router.get("/:id", async (req, res) => {
     if (!blog) {
       return res.status(404).render("error", { message: "Blog not found." });
     }
+
+    // Everything downstream was written against req.params.id, which is now
+    // usually a slug. Resolve it once.
+    const blogId = blog._id.toString();
 
     // 🔒 Private Blog Access Control
     if (blog.status === "private") {
@@ -339,7 +367,7 @@ router.get("/:id", async (req, res) => {
     // await blog.save();
 
     // Fetch comments (All comments for this blog)
-    const allComments = await Comment.find({ blogId: req.params.id })
+    const allComments = await Comment.find({ blogId: blogId })
       .populate("createdBy", "fullName profilePic")
       .lean();
 
@@ -402,17 +430,17 @@ router.get("/:id", async (req, res) => {
       const user = await User.findById(req.user._id);
       if (user) {
         const bookmarkIds = user.bookmarks.map(id => id.toString());
-        if (bookmarkIds.includes(req.params.id)) {
+        if (bookmarkIds.includes(blogId)) {
           isBookmarked = true;
         }
 
         // 🕵️‍♂️ Track Reading History
         try {
           // Remove existing entry for this blog to avoid duplicates
-          user.readingHistory = user.readingHistory.filter(h => h.blogId.toString() !== req.params.id);
+          user.readingHistory = user.readingHistory.filter(h => h.blogId.toString() !== blogId);
           // Add new entry at end
           user.readingHistory.push({
-            blogId: req.params.id,
+            blogId: blogId,
             viewedAt: new Date()
           });
           // Limit history size
@@ -426,13 +454,35 @@ router.get("/:id", async (req, res) => {
       }
     }
 
-    // SEO: Generate Meta Description
+    // SEO: the author's own meta description wins; fall back to the opening of
+    // the body, which is what every post got before the field existed.
     const plainText = blog.body.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
-    const metaDescription = plainText.length > 150 ? plainText.substring(0, 150) + "..." : plainText;
+    const metaDescription = blog.metaDescription
+      || (plainText.length > 150 ? plainText.substring(0, 150) + "..." : plainText);
+
+    // The canonical URL is the slug form. index.js defaults canonicalPath to
+    // req.path, which is already this value; setting it explicitly is what keeps
+    // it right if the post is ever reached by some other path.
+    const canonicalPath = `/blog/${blog.slug || blogId}`;
+
+    // An absolute URL for the share panel, which exists to be copied and pasted
+    // somewhere else — a relative path is useless there. Computed here rather
+    // than in the view because BASE_URL is a const scoped inside
+    // partials/header.ejs: EJS compiles an include as its own function, so that
+    // name is not visible to views/blog.ejs.
+    const shareOrigin = (
+      process.env.BASE_URL ||
+      process.env.RENDER_EXTERNAL_URL ||
+      `${req.protocol}://${req.get("host")}`
+    ).replace(/\/+$/, "");
 
     return res.render("blog", {
       title: blog.title,
       metaDescription: metaDescription,
+      canonicalPath,
+      // Set by the publish redirect; views/blog.ejs shows the share panel once.
+      justPublished: req.query.published === "1",
+      shareUrl: `${shareOrigin}${canonicalPath}`,
       ogImage: blog.coverImageURL,
       user: req.user || null,
       blog,
@@ -466,7 +516,7 @@ router.get("/recommendations/:id", async (req, res) => {
     // Fallback if no embedding
     if (!currentBlog || !currentBlog.embedding || currentBlog.embedding.length === 0) {
       const fallback = await Blog.find({ _id: { $ne: req.params.id }, status: "published" })
-        .select("title coverImageURL category createdBy readTime views createdAt")
+        .select("title slug coverImageURL category createdBy readTime views createdAt")
         .populate("createdBy", "fullName profilePic")
         .limit(3)
         .lean();
@@ -488,7 +538,7 @@ router.get("/recommendations/:id", async (req, res) => {
       status: "published",
       embedding: { $exists: true, $ne: [] }
     })
-      .select("title coverImageURL category createdBy readTime +embedding createdAt")
+      .select("title slug coverImageURL category createdBy readTime +embedding createdAt")
       .populate("createdBy", "fullName profilePic")
       .lean();
 
@@ -681,8 +731,8 @@ router.post("/comment/:blogId", commentLimiter, async (req, res) => {
     if (io) {
       const populatedComment = await Comment.findById(comment._id).populate("createdBy", "fullName profilePic");
 
-      // A new comment changes the blog page — drop its cached copy.
-      pageCache.bustBlog(req.params.blogId);
+      // A new comment changes the blog page — drop its cached copy (both paths).
+      pageCache.bustBlog(req.params.blogId, blog.slug);
 
       // Render the partial to a string
       res.render("partials/comment-thread", {
@@ -989,6 +1039,9 @@ router.get("/edit/:id", async (req, res) => {
 
 // ✏️ Edit Blog Action (POST)
 router.post("/edit/:id", upload.single("coverImage"), async (req, res) => {
+  // Set when this edit takes a draft live, so the author lands on the share
+  // screen rather than silently back on the post.
+  let wentLive = false;
   try {
     if (!req.user) return res.status(401).send("Unauthorized");
 
@@ -1032,6 +1085,11 @@ router.post("/edit/:id", upload.single("coverImage"), async (req, res) => {
     blog.title = title;
     blog.body = cleanBody;
     blog.category = category;
+    // Editing the title deliberately does NOT re-slug the post: the old URL is
+    // the one people have already shared. Only the description is rewritable.
+    if (typeof req.body.metaDescription === "string") {
+      blog.metaDescription = req.body.metaDescription;
+    }
 
     if (tags) {
       blog.tags = tags.split(",").map(tag => tag.trim());
@@ -1081,6 +1139,9 @@ router.post("/edit/:id", upload.single("coverImage"), async (req, res) => {
       if (blog.status === "draft") {
         blog.status = "published";
         blog.createdAt = new Date(); // Bump to top of feed
+        // A draft going live is a publish like any other, so it gets the same
+        // share prompt as POST / does.
+        wentLive = true;
 
         // 🔔 Send "New Blog" Notifications (copy of POST / logic)
         // Self Notification
@@ -1143,10 +1204,14 @@ router.post("/edit/:id", upload.single("coverImage"), async (req, res) => {
     await blog.save();
 
     // Edited content is cached under its page (and may show on the landing) — drop both.
-    pageCache.bustBlog(blog._id.toString());
+    pageCache.bustBlog(blog._id.toString(), blog.slug);
+
+    if (wentLive) {
+      return res.redirect(`/blog/${blog.slug || blog._id}?published=1`);
+    }
 
     req.flash("success", "Blog updated successfully!");
-    return res.redirect(`/blog/${blog._id}`);
+    return res.redirect(`/blog/${blog.slug || blog._id}`);
 
   } catch (error) {
     logger.error("❌ Error updating blog:", error);
@@ -1173,7 +1238,7 @@ router.post("/delete/:blogId", async (req, res) => {
     }
 
     await blog.deleteOne();
-    pageCache.bustBlog(req.params.blogId);
+    pageCache.bustBlog(req.params.blogId, blog.slug);
     return res.redirect("/");
   } catch (error) {
     logger.error("❌ Error deleting blog:", error);
@@ -1227,7 +1292,7 @@ router.post("/", blogLimiter, upload.single("coverImage"), async (req, res) => {
       return res.status(401).send("Unauthorized: Please log in first.");
     }
 
-    const { title, body, category, tags, useAI, aiCoverURL } = req.body;
+    const { title, body, category, tags, useAI, aiCoverURL, metaDescription } = req.body;
 
     // 🛡️ Moderation Check (after auth to prevent free AI abuse)
     // We combine Title + Body + Tags to check the full context
@@ -1351,10 +1416,12 @@ router.post("/", blogLimiter, upload.single("coverImage"), async (req, res) => {
       embedding: [], // Will be populated in background
       status: blogStatus,
       publishAt: scheduledAt,
+      metaDescription: metaDescription || "",
     });
 
     // A new post changes the landing feed — drop the cached landing page.
-    pageCache.bustBlog(blog._id.toString());
+    // Both keys: the post is reachable at its slug and at its ObjectId.
+    pageCache.bustBlog(blog._id.toString(), blog.slug);
 
     // ⚡ Phase-4: embedding generation runs as a background job (off the request
     // path, retried, rate-limit-friendly) instead of a fire-and-forget promise.
@@ -1373,8 +1440,10 @@ router.post("/", blogLimiter, upload.single("coverImage"), async (req, res) => {
       return res.redirect("/blog/drafts");
     }
 
-    req.flash("success", "Blog posted successfully!");
-    return res.redirect(`/blog/${blog._id}`);
+    // ?published=1 makes views/blog.ejs open the share panel once. Publishing
+    // used to drop the author on their post with a toast and no prompt to share
+    // it, which is the single moment they are most likely to.
+    return res.redirect(`/blog/${blog.slug || blog._id}?published=1`);
 
   } catch (error) {
     logger.error("❌ Error creating blog:", error);
@@ -1430,7 +1499,7 @@ router.get("/api/feed", async (req, res) => {
       .sort(sort)
       .skip(skip)
       .limit(limit)
-      .select("title coverImageURL category views createdAt createdBy tags featured readTime")
+      .select("title slug coverImageURL category views createdAt createdBy tags featured readTime")
       .populate("createdBy", "fullName profilePic");
 
     const { optimizeImage } = require('../services/imageHelper');

@@ -51,7 +51,7 @@
                 </div>
                 <div class="cr-row">
                     <% recentlyRead.forEach(blog => { %>
-                        <a href="/blog/<%= blog._id %>" class="cr-card">
+                        <a href="/blog/<%= blog.slug || blog._id %>" class="cr-card">
                             <img loading="lazy"
                                  src="<%= typeof optimizeImage === 'function' ? optimizeImage(blog.coverImageURL || '/images/default-cover.png', { width: 300, crop: 'fill' }) : (blog.coverImageURL || '/images/default-cover.png') %>"
                                  alt="" class="cr-img" data-fallback="/images/default-cover.png">
@@ -115,7 +115,7 @@
                         <article class="bento-item <%= bentoClass %>" data-categories='<%= JSON.stringify(dataCats) %>'
                             style="view-transition-name: item-<%= blog._id %>;">
                             <div class="bento-glow"></div>
-                            <a href="/blog/<%= blog._id %>" class="blog-card-link">
+                            <a href="/blog/<%= blog.slug || blog._id %>" class="blog-card-link">
                                 <div class="blog-card-inner">
                                     <div class="card-image-wrapper">
                                         <% if (blog.coverImageURL) { %>
@@ -286,7 +286,7 @@
 
                     article.innerHTML = DOMPurify.sanitize(`
                             <div class="bento-glow"></div>
-                                <a href="/blog/${blog._id}" class="blog-card-link">
+                                <a href="/blog/${blog.slug || blog._id}" class="blog-card-link">
                                     <div class="blog-card-inner">
                                         <div class="card-image-wrapper">
                                             ${blog.coverImageURL ? `<img src="${blog.coverImageURL}" alt="${blog.title}" loading="lazy" data-fallback="/images/default-cover.png">` : '<div class="placeholder-img"></div>'}

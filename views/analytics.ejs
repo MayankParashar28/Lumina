@@ -49,7 +49,7 @@
             <h3>Top Posts</h3>
             <% if (topPosts && topPosts.length > 0) { %>
                 <% topPosts.forEach((p, i) => { %>
-                    <a href="/blog/<%= p._id %>" class="top-row">
+                    <a href="/blog/<%= p.slug || p._id %>" class="top-row">
                         <span class="top-rank">#<%= i + 1 %></span>
                         <span class="top-name"><%= p.title %></span>
                         <span class="top-stat"><%= p.views || 0 %> views · <%= p.likes || 0 %> likes</span>

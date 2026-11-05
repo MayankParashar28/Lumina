@@ -204,9 +204,33 @@ app.use(checkForAuthenticationCookie("token"));
 // flash/passport layers below are skipped (no Set-Cookie), and tag the response
 // cacheable. Logged-in or interactive requests are untouched (and carry a cookie,
 // so a CDN rule bypasses cache for them). See docs/SCALING.md.
-const PUBLIC_BLOG_RE = /^\/blog\/[a-f\d]{24}$/i;
+// Post pages eligible for the anonymous page cache. Two shapes: the canonical
+// slug ("my-post-a1b2c3") and the legacy ObjectId permalink, which is still
+// served (as a 301) and so is still worth caching.
+//
+// This has to be decided from the path alone, before any database lookup, which
+// is why slugs carry a six-hex suffix: it is what separates a post from its
+// sibling routes under /blog (drafts, add-new, search, featured, trending,
+// preview). Without the suffix requirement this pattern would match /blog/drafts
+// and cache an anonymous visitor's redirect-to-login as if it were a post.
+const PUBLIC_BLOG_RE = /^\/blog\/(?:[a-f\d]{24}|[a-z\d]+(?:-[a-z\d]+)*-[a-f\d]{6})$/i;
 app.use((req, res, next) => {
-  if (req.method === "GET" && !req.user && (req.path === "/" || PUBLIC_BLOG_RE.test(req.path))) {
+  // No query string, deliberately.
+  //
+  // The cache key below is the path with the query stripped, so /?category=tech
+  // and / share one entry although they render different HTML — whichever was
+  // requested first would be served to both for the rest of the TTL. The same
+  // applies to /blog/<slug>?published=1, which renders the author's share panel
+  // and must never be stored as the page every reader gets.
+  //
+  // Keying on the full URL instead would cache a page per query string, which
+  // hands anyone with a URL bar an easy way to fill a bounded in-memory map.
+  // Caching only the bare path keeps the hot path — the landing page and a post
+  // read straight from a link — and simply does not cache the rest.
+  const hasQuery = req.originalUrl.indexOf("?") !== -1;
+
+  if (req.method === "GET" && !req.user && !hasQuery &&
+      (req.path === "/" || PUBLIC_BLOG_RE.test(req.path))) {
     req.publicCache = true;
     res.set("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300");
   }

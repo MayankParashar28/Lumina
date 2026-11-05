@@ -45,7 +45,7 @@ test("a cached page's CSP nonce matches the nonce in its HTML", async () => {
   // but a fresh nonce is minted per request and written into the CSP header, so
   // on a cache hit the two disagreed and the browser blocked every inline
   // <script> in the page.
-  const url = `/blog/${blog._id}`;
+  const url = `/blog/${blog.slug}`;
 
   const miss = await request(ctx.app).get(url);
   assert.equal(miss.headers["x-cache"], "MISS");
@@ -65,10 +65,36 @@ test("a cached page's CSP nonce matches the nonce in its HTML", async () => {
   );
 });
 
+// The cache key is the path with the query stripped, so a request carrying a
+// query string must not be cached under the bare path — it would be served to
+// everyone who asks for the page without one. Two ways that bites: /?category=x
+// renders a filtered feed, and /blog/<slug>?published=1 renders the author's
+// share panel.
+test("a request with a query string is never cached under the bare path", async () => {
+  const slug = blog.slug;
+
+  const filtered = await request(ctx.app).get("/?category=trending");
+  assert.notEqual(filtered.headers["x-cache"], "HIT", "a filtered feed must not be a cache hit");
+  const bare = await request(ctx.app).get("/");
+  assert.ok(
+    !bare.text.includes('id="publish-share"'),
+    "the landing page must not come back carrying another request's content"
+  );
+
+  const shared = await request(ctx.app).get(`/blog/${slug}?published=1`);
+  assert.ok(shared.text.includes('id="publish-share"'), "the share panel should render when asked");
+
+  const plain = await request(ctx.app).get(`/blog/${slug}`);
+  assert.ok(
+    !plain.text.includes('id="publish-share"'),
+    "and must not then be served to every reader of the post"
+  );
+});
+
 test("the cached blog page still contains the script that renders the body", async () => {
   // The article body is injected by a nonce'd inline script, so a nonce mismatch
   // on this page means the post renders completely empty.
-  const res = await request(ctx.app).get(`/blog/${blog._id}`);
+  const res = await request(ctx.app).get(`/blog/${blog.slug}`);
   assert.ok(res.text.includes("DOMPurify.sanitize(rawContent)"));
   assert.ok(
     res.text.includes('src="/vendor/dompurify/purify.js"'),
@@ -105,15 +131,41 @@ test("browse shortcuts escape the values they pass through", async () => {
   assert.equal(res.headers.location, "/?tag=a%20b%26c");
 });
 
-test("a real blog id is still served, not caught by the shortcuts", async () => {
+// Posts are addressed by slug now. An ObjectId URL is every permalink shared
+// before that was true, so it has to keep resolving — as a 301 to the canonical
+// slug, which also hands the accumulated search ranking to the new URL.
+test("a legacy blog id permalink redirects to the canonical slug", async () => {
   const res = await request(ctx.app).get(`/blog/${blog._id}`);
+  assert.equal(res.status, 301);
+  assert.ok(blog.slug, "the post should have been given a slug on creation");
+  assert.equal(res.headers.location, `/blog/${blog.slug}`);
+});
+
+test("a blog is served at its slug", async () => {
+  const res = await request(ctx.app).get(`/blog/${blog.slug}`);
   assert.equal(res.status, 200);
   assert.ok(res.text.includes("On Analytical Engines"));
 });
 
-test("a malformed blog id is rejected cleanly", async () => {
+// The slug is built from the title, so it has to survive the round trip as
+// something readable rather than an escaped blob.
+test("the slug is derived from the title and ends in an id suffix", async () => {
+  assert.match(blog.slug, /^on-analytical-engines-[a-f\d]{6}$/);
+  assert.equal(blog.slug.slice(-6), blog._id.toString().slice(-6));
+});
+
+test("a nonexistent slug is rejected cleanly", async () => {
   const res = await request(ctx.app).get("/blog/not-an-object-id");
-  assert.equal(res.status, 400);
+  assert.equal(res.status, 404);
+});
+
+// Editing the title must not move the post: the old URL is the one that has
+// already been shared, and re-slugging would 404 every copy of it.
+test("editing the title does not change the slug", async () => {
+  const before = blog.slug;
+  blog.title = "A Completely Different Title";
+  await blog.save();
+  assert.equal(blog.slug, before);
 });
 
 test("health checks report status", async () => {
@@ -133,7 +185,14 @@ test("the sitemap uses the configured origin, not a hardcoded host", async () =>
     const res = await request(ctx.app).get("/sitemap.xml");
     assert.equal(res.status, 200);
     assert.ok(res.text.includes("<loc>https://lumina.test/</loc>"));
-    assert.ok(res.text.includes(`<loc>https://lumina.test/blog/${blog._id}</loc>`));
+    assert.ok(
+      res.text.includes(`<loc>https://lumina.test/blog/${blog.slug}</loc>`),
+      "the sitemap must list the canonical slug URL, not one that 301s"
+    );
+    assert.ok(
+      !res.text.includes(`/blog/${blog._id}<`),
+      "the ObjectId form must not appear in the sitemap"
+    );
     assert.ok(!res.text.includes("lluminaa.vercel.app"), "stale hardcoded domain");
   } finally {
     delete process.env.BASE_URL;

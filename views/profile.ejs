@@ -103,7 +103,7 @@
                 <% if (blogs && blogs.length> 0) { %>
                     <div class="story-grid">
                         <% blogs.forEach(blog=> { %>
-                            <a href="/blog/<%= blog._id %>" class="story-card">
+                            <a href="/blog/<%= blog.slug || blog._id %>" class="story-card">
                                 <div class="story-image-wrapper">
                                     <img loading="lazy" src="<%= typeof optimizeImage === 'function' ? optimizeImage(blog.coverImageURL, { width: 600, crop: 'fill' }) : blog.coverImageURL %>"
                                         alt="<%= blog.title %>" loading="lazy" data-fallback="/images/default-cover.png">
@@ -144,7 +144,7 @@
                     <h3 class="section-title">Reading List</h3>
                     <div class="story-grid">
                         <% bookmarks.forEach(blog=> { %>
-                            <a href="/blog/<%= blog._id %>" class="story-card">
+                            <a href="/blog/<%= blog.slug || blog._id %>" class="story-card">
                                 <div class="story-image-wrapper">
                                     <img loading="lazy" src="<%= typeof optimizeImage === 'function' ? optimizeImage(blog.coverImageURL, { width: 600, crop: 'fill' }) : blog.coverImageURL %>"
                                         alt="<%= blog.title %>" loading="lazy" data-fallback="/images/default-cover.png">

@@ -17,6 +17,14 @@
 -->
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 <script defer src="/javascript/code-blocks.js?v=1"></script>
+<% if (locals.justPublished) { %>
+<!--
+  Post-publish share panel. Both assets load only on the one render that follows
+  a publish (?published=1), so an ordinary reader never downloads them.
+-->
+<link rel="stylesheet" href="/css/share-panel.css?v=1">
+<script defer src="/javascript/share-panel.js?v=1"></script>
+<% } %>
 <style>
     .tldr-container { max-width: 1000px; margin: 0 auto 2.5rem; padding: 0 1rem; }
     .tldr-btn {
@@ -72,6 +80,16 @@
 </style>
 
 <body>
+<% if (locals.justPublished) { %>
+  <!--
+    The share panel builds itself from these two attributes. shareUrl is absolute
+    and comes from the route: the URL exists to be pasted somewhere else, where a
+    relative path is useless, and BASE_URL is scoped to partials/header.ejs.
+  -->
+  <div id="publish-share"
+       data-url="<%= locals.shareUrl %>"
+       data-title="<%= blog.title %>"></div>
+<% } %>
     <%- include('./partials/nav', { searchQuery: searchQuery || '' }) %>
 
         <div id="progress-container">
@@ -417,7 +435,7 @@
 
                     if (data.blogs && data.blogs.length > 0) {
                         grid.innerHTML = DOMPurify.sanitize(data.blogs.map(blog => `
-                            <a href="/blog/${blog._id}" class="recommendation-card">
+                            <a href="/blog/${blog.slug || blog._id}" class="recommendation-card">
                                 <div class="recommendation-image-wrapper">
                                     <img loading="lazy" src="${blog.coverImageURL || '/images/default-cover.jpg'}" class="recommendation-image" alt="${blog.title}">
                                 </div>

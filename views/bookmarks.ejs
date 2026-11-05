@@ -122,7 +122,7 @@
                     <div class="bookmark-grid">
                         <% bookmarks.forEach(blog=> { %>
                             <div class="position-relative">
-                                <a href="/blog/<%= blog._id %>" class="bookmark-card">
+                                <a href="/blog/<%= blog.slug || blog._id %>" class="bookmark-card">
                                     <% if(blog.coverImageURL) { %>
                                         <img loading="lazy" src="<%= blog.coverImageURL %>" alt="" class="bookmark-img">
                                         <% } %>

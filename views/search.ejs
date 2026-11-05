@@ -70,7 +70,7 @@
         <% } else { %>
             <div class="search-grid">
                 <% results.forEach(blog => { %>
-                    <a href="/blog/<%= blog._id %>" class="search-card">
+                    <a href="/blog/<%= blog.slug || blog._id %>" class="search-card">
                         <img loading="lazy"
                              src="<%= typeof optimizeImage === 'function' ? optimizeImage(blog.coverImageURL || '/images/default-cover.png', { width: 300, crop: 'fill' }) : (blog.coverImageURL || '/images/default-cover.png') %>"
                              alt="" class="search-img" data-fallback="/images/default-cover.png">

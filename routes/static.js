@@ -6,7 +6,7 @@ const router = Router();
 // Sitemap.xml Generation
 router.get("/sitemap.xml", async (req, res) => {
     try {
-        const blogs = await Blog.find({ status: "published" }).select("_id updatedAt");
+        const blogs = await Blog.find({ status: "published" }).select("_id slug updatedAt");
         // Was hardcoded to the old Vercel domain, so the sitemap advertised URLs on
         // a host this deployment may not even serve. Follow the configured origin.
         const baseUrl = (process.env.BASE_URL || process.env.RENDER_EXTERNAL_URL || `${req.protocol}://${req.get("host")}`)
@@ -35,10 +35,15 @@ router.get("/sitemap.xml", async (req, res) => {
         <priority>0.3</priority>
     </url>`;
 
+        // The canonical URL is the slug. Listing the ObjectId form instead would
+        // fill the sitemap with URLs that answer 301, which wastes a crawler's
+        // budget and asks it to discover the real URL one redirect at a time.
+        // `|| blog._id` covers any post that predates slugs and has not been
+        // through scripts/backfill-slugs.js yet.
         blogs.forEach(blog => {
             sitemap += `
     <url>
-        <loc>${baseUrl}/blog/${blog._id}</loc>
+        <loc>${baseUrl}/blog/${blog.slug || blog._id}</loc>
         <lastmod>${new Date(blog.updatedAt).toISOString()}</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.8</priority>

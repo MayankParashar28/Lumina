@@ -155,7 +155,7 @@
                                         <img loading="lazy" src="<%= optimizeImage(blog.coverImageURL || '/images/default-cover.png', { width: 600, crop: 'fill' }) %>"
                                             alt="<%= blog.title %>" data-fallback="/images/default-cover.png">
                                         <div class="card-overlay">
-                                            <a href="/blog/<%= blog._id %>" class="read-btn">READ</a>
+                                            <a href="/blog/<%= blog.slug || blog._id %>" class="read-btn">READ</a>
                                         </div>
                                     </div>
                                     <div class="card-info mt-3">

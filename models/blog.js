@@ -2,13 +2,34 @@ const mongoose = require("mongoose");
 const { model } = require("mongoose");
 const { Schema } = require("mongoose");
 const User = require("./user"); // Ensure "User" model exists
-const { sanitizePostBody } = require("../utils/sanitize");
+const { sanitizePostBody, stripTags } = require("../utils/sanitize");
+const { buildSlug } = require("../utils/slug");
 
 const blogSchema = new mongoose.Schema(
   {
     title: {
       type: String,
       required: true,  // Fixed "require" to "required"
+    },
+    // Readable permalink: "my-post-title-a1b2c3". Assigned once on creation by
+    // the hook below and never regenerated, so a URL that has been shared keeps
+    // working after the title is edited. Legacy posts predate the field; the
+    // route falls back to an ObjectId lookup and 301s to the canonical URL, so
+    // `sparse` is what lets them stay index-legal with no slug at all.
+    slug: {
+      type: String,
+      unique: true,
+      sparse: true,
+      trim: true,
+    },
+    // The snippet a search engine and a link preview show. Left empty, the view
+    // route falls back to the first ~150 characters of the body, which is what
+    // every post used to get. Authoring one is strictly better: the opening line
+    // of an article is rarely the sentence that makes someone click.
+    metaDescription: {
+      type: String,
+      trim: true,
+      maxlength: 160,
     },
     body: {
       type: String,
@@ -84,6 +105,35 @@ const blogSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Assign the permalink, once.
+//
+// This runs on validate so the unique index never sees a document without a
+// slug, and it is guarded on `!this.slug` rather than on isNew: a legacy post
+// being edited picks one up here, while a post that already has one keeps it
+// even when the title changes.
+//
+// `this._id` is already populated at this point -- mongoose assigns it when the
+// document is constructed, not when it is saved -- so the six-hex uniqueness
+// suffix is available before the first write.
+blogSchema.pre("validate", function (next) {
+  if (!this.slug) this.slug = buildSlug(this.title, this._id);
+  next();
+});
+
+// Keep the meta description plain text within its length limit.
+//
+// It is rendered into a <meta content="..."> attribute, so markup in it is
+// meaningless at best; maxlength would reject an over-long one and fail the
+// whole save, which is a poor outcome for a field that is purely advisory.
+// Trim it instead.
+blogSchema.pre("validate", function (next) {
+  if (this.isModified("metaDescription") && typeof this.metaDescription === "string") {
+    const plain = stripTags(this.metaDescription).replace(/\s+/g, " ").trim();
+    this.metaDescription = plain.length > 160 ? plain.slice(0, 160).trim() : plain;
+  }
+  next();
+});
+
 // 🧼 Sanitise the body before anything else looks at it.
 //
 // The routes sanitise too, so their own length/emptiness checks run against what
@@ -119,6 +169,7 @@ blogSchema.index({ category: 1 });   // Filtering by Category
 blogSchema.index({ createdBy: 1 });  // User Profile Feed
 blogSchema.index({ tags: 1 });       // Efficient Tag Filtering
 blogSchema.index({ status: 1 });     // Filtering Drafts vs Published
+// slug already has a unique sparse index from the field definition above.
 
 blogSchema.statics.getTrendingTags = async function () {
   try {

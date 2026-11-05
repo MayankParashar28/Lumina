@@ -99,7 +99,7 @@
                 <% if (blogs && blogs.length> 0) { %>
                     <div class="public-story-grid">
                         <% blogs.forEach(blog=> { %>
-                            <a href="/blog/<%= blog._id %>" class="public-story-card">
+                            <a href="/blog/<%= blog.slug || blog._id %>" class="public-story-card">
                                 <div class="public-story-image">
                                     <img loading="lazy" src="<%= optimizeImage(blog.coverImageURL || '/images/default-cover.jpg', { width: 600, height: 400 }) %>"
                                         alt="Cover" loading="lazy">

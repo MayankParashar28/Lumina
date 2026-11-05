@@ -514,7 +514,7 @@
                                     <% blogs.forEach(b=> { %>
                                         <tr>
                                             <td data-label="Title">
-                                                <a href="/blog/<%= b._id %>"
+                                                <a href="/blog/<%= b.slug || b._id %>"
                                                     class="text-dark text-decoration-none fw-bold small">
                                                     <%= b.title %>
                                                 </a>

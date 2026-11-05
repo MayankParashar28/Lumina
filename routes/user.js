@@ -255,7 +255,7 @@ router.get("/analytics", async (req, res) => {
     const userId = new mongoose.Types.ObjectId(req.user._id);
 
     const blogs = await Blog.find({ createdBy: userId })
-      .select("title views likes createdAt status")
+      .select("title slug views likes createdAt status")
       .lean();
     const blogIds = blogs.map(b => b._id);
 
@@ -382,7 +382,7 @@ router.get("/vibe", async (req, res) => {
         createdBy: { $ne: req.user._id },
         _id: { $nin: [...tasteIds] }, // don't recommend what they've already engaged with
       })
-        .select("+embedding title coverImageURL createdAt readTime createdBy")
+        .select("+embedding title slug coverImageURL createdAt readTime createdBy")
         .populate("createdBy", "fullName profilePic")
         .lean();
 

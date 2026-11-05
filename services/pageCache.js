@@ -30,8 +30,16 @@ function set(path, body, type, nonce) {
 function bust(path) { store.delete(path); }
 
 // A blog changed → drop its page and the landing (its list/feed changed too).
-function bustBlog(id) {
-  if (id) store.delete(`/blog/${id}`);
+//
+// Variadic because a post has two cacheable paths: its slug (the canonical URL
+// readers and the cache actually see) and its ObjectId (every permalink shared
+// before slugs existed, which 301s but can itself have been cached). Busting
+// only one leaves the other serving the stale copy for up to a full TTL, so
+// callers pass both.
+function bustBlog(...keys) {
+  for (const key of keys) {
+    if (key) store.delete(`/blog/${key}`);
+  }
   store.delete("/");
 }
 
