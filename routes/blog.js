@@ -1271,6 +1271,65 @@ router.post("/edit/:id", upload.single("coverImage"), async (req, res) => {
   }
 });
 
+// Publish a draft (or a scheduled post) straight from the drafts list.
+//
+// Before this existed the only way to take a draft live was to open the editor
+// and submit the whole form again, which also meant clearing the editor's
+// 2-minute edit cooldown -- so a draft saved a moment ago could not be
+// published at all. This route touches nothing but the status, so it needs no
+// cooldown, and it goes through the same save -> cache-bust -> fanout sequence
+// as the editor's publish button so followers are notified exactly once.
+router.post("/publish/:id", async (req, res) => {
+  const wantJson = wantsJson(req);
+  const fail = (code, message) => {
+    if (wantJson) return res.status(code).json({ success: false, message });
+    req.flash("error", message);
+    return res.redirect("/blog/drafts");
+  };
+  try {
+    if (!req.user) return fail(401, "Please sign in first.");
+    if (!isObjectIdParam(req.params.id)) return fail(404, "Post not found.");
+
+    const blog = await Blog.findById(req.params.id);
+    if (!blog) return fail(404, "Post not found.");
+    if (blog.createdBy.toString() !== req.user._id.toString() && req.user.role !== "ADMIN") {
+      return fail(403, "That isn't your post.");
+    }
+    // Already live: nothing to do, and re-running the fan-out would email
+    // followers about the same post twice.
+    if (blog.status === "published") {
+      if (wantJson) return res.json({ success: true, url: `/blog/${blog.slug || blog._id}` });
+      return res.redirect(`/blog/${blog.slug || blog._id}`);
+    }
+    if (blog.status !== "draft" && blog.status !== "scheduled") {
+      return fail(400, "Only a draft can be published.");
+    }
+
+    blog.status = "published";
+    blog.createdAt = new Date(); // Bump to the top of the feed, as the editor does.
+    blog.publishAt = undefined;  // It is live now; the scheduler has nothing left to do.
+    await blog.save();
+
+    pageCache.bustBlog(blog._id.toString(), blog.slug);
+
+    // Only after the save: a failed write must not leave followers with a
+    // notification pointing at a post that never went live.
+    enqueue("fanout", {
+      authorId: blog.createdBy.toString(),
+      blogId: blog._id.toString(),
+      title: blog.title,
+      fromDraft: true,
+    });
+
+    const url = `/blog/${blog.slug || blog._id}?published=1`;
+    if (wantJson) return res.json({ success: true, url });
+    return res.redirect(url);
+  } catch (err) {
+    logger.error("\u274c Error publishing draft:", err);
+    return fail(500, "Couldn't publish that draft. Please try again.");
+  }
+});
+
 // Delete a Blog Post
 router.post("/delete/:blogId", async (req, res) => {
   try {

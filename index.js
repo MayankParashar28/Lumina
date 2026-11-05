@@ -300,8 +300,20 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
+// Body size.
+//
+// The default is 100kb, which is plenty for a login form and nowhere near
+// enough for a blog editor: a long article's HTML passes it on its own, and the
+// preview POST also carries a cover image the author picked but has not
+// uploaded yet, as a data URL. Past the limit the request did not fail
+// politely — it reached the error handler and came back as a 500, so previewing
+// a long post simply did not work.
+//
+// 3mb leaves room for a post plus a cover under the 5MB upload cap, without
+// inviting someone to post a video as a form field.
+const BODY_LIMIT = process.env.BODY_LIMIT || "3mb";
+app.use(express.urlencoded({ extended: true, limit: BODY_LIMIT }));
+app.use(express.json({ limit: BODY_LIMIT }));
 
 // 🚀 Static Asset Caching (1 Year)
 app.use(express.static(path.resolve("./public"), {
@@ -962,6 +974,18 @@ app.get("*", (req, res) => {
 
 // Global Error Handler
 app.use((err, req, res, next) => {
+  // Past the body limit express throws this. It is the author's work that was
+  // too big, not a server fault, and they need to be told which.
+  if (err.type === "entity.too.large" || err.status === 413) {
+    logger.warn("⚠️ Body too large on %s %s", req.method, req.originalUrl);
+    if (req.xhr || (req.get("accept") || "").includes("application/json")) {
+      return res.status(413).json({ error: "That is too large to send. Try a smaller cover image." });
+    }
+    return res.status(413).render("error", {
+      message: "That was too large to send. If you attached a cover image, try a smaller one.",
+    });
+  }
+
   if (err.code === "EBADCSRFTOKEN" || (err.message && err.message.includes("invalid csrf token"))) {
     logger.warn(`⚠️ CSRF Token Error on ${req.method} ${req.originalUrl}`);
     return res.status(403).render("error", {

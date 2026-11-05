@@ -873,43 +873,107 @@
             modal.classList.remove('hidden');
           });
 
+          // Shown only when the browser refuses the preview tab. The story is
+          // already saved to the session at this point, so all that is missing is
+          // a way to open it that does not cost the author their unsaved edits.
+          function offerPreviewLink() {
+              const existing = document.getElementById('preview-blocked');
+              if (existing) existing.remove();
+
+              const bar = document.createElement('div');
+              bar.id = 'preview-blocked';
+              bar.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:9999;display:flex;align-items:center;gap:12px;max-width:92vw;padding:12px 16px;border-radius:12px;background:#111827;color:#fff;box-shadow:0 10px 30px rgba(0,0,0,.4);font-size:.9rem;';
+
+              const text = document.createElement('span');
+              text.textContent = 'Preview is ready \u2014 your browser blocked the new tab.';
+
+              const link = document.createElement('a');
+              link.href = '/blog/preview';
+              link.target = '_blank';
+              link.rel = 'noopener';
+              link.textContent = 'Open preview';
+              link.style.cssText = 'display:inline-flex;align-items:center;min-height:40px;padding:0 14px;border-radius:8px;background:#6366f1;color:#fff;font-weight:600;text-decoration:none;white-space:nowrap;';
+              link.addEventListener('click', () => bar.remove());
+
+              bar.append(text, link);
+              document.body.appendChild(bar);
+          }
+
           // 👁️ Preview Logic
           // Save the draft to the session via POST, then open the rendered
           // preview. Opening over GET (new tab, else same tab) avoids the old
           // target="_blank" + POST behaviour that broke when popups are blocked.
           async function previewStory() {
-            const title = document.getElementById('title').value;
-            const body = quill.root.innerHTML;
-            const aiCoverURL = document.getElementById('aiCoverURL').value;
-            const coverInput = document.getElementById('coverImage');
+              const title = document.getElementById('title').value;
+              const body = quill.root.innerHTML;
+              const aiCoverURL = document.getElementById('aiCoverURL').value;
+              const coverInput = document.getElementById('coverImage');
 
-            const savePreview = async (coverBase64 = "") => {
-              const csrf = "<%= csrfToken %>";
-              try {
-                await fetch('/blog/preview', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'x-csrf-token': csrf },
-                  body: new URLSearchParams({ _csrf: csrf, title, body, aiCoverURL, coverImage: coverBase64, from: 'new' }),
-                  credentials: 'include',
-                  redirect: 'manual' // we don't need the response body; just persist the session
-                });
-              } catch (e) {
-                if (window.showToast) window.showToast("Couldn't build preview. Try again.", "error");
-                return;
+              // Opened NOW, while the click is still the browser's idea of a user
+              // gesture. Calling window.open after the await below is what made popup
+              // blockers refuse it — and the fallback then navigated the editor away,
+              // which looks exactly like "preview is broken".
+              const win = window.open('', '_blank');
+
+              const fail = (message) => {
+                  if (win) win.close();
+                  if (window.showToast) window.showToast(message, "error");
+                  else alert(message);
+              };
+
+              const savePreview = async (coverBase64 = "") => {
+                  const csrf = "<%= csrfToken %>";
+                  let res;
+                  try {
+                      res = await fetch('/blog/preview', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'x-csrf-token': csrf },
+                          body: new URLSearchParams({ _csrf: csrf, title, body, aiCoverURL, coverImage: coverBase64, from: 'new' }),
+                          credentials: 'include',
+                          redirect: 'manual'
+                      });
+                  } catch (e) {
+                      return fail("Couldn't build preview. Check your connection and try again.");
+                  }
+
+                  // `redirect: 'manual'` makes a redirect come back as an opaque response
+                  // with status 0, which is the success case here. Anything else that is
+                  // not 2xx really did fail, and used to be ignored — the preview tab
+                  // opened anyway and showed nothing, or last time's story.
+                  const ok = res.type === 'opaqueredirect' || res.status === 0 || res.ok;
+                  if (!ok) {
+                      return fail(res.status === 413
+                          ? "This story is too large to preview with that cover image. Try a smaller one."
+                          : "Couldn't build preview. Please try again.");
+                  }
+
+                  if (win) { win.location = '/blog/preview'; return; }
+                  // The pop-up was blocked. Navigating this tab instead would throw
+                  // away everything typed since the last save, so offer a link: a
+                  // click on it is a fresh gesture, which is never blocked.
+                  offerPreviewLink();
+              };
+
+              // A cover the author picked but has not uploaded yet can only be shown in
+              // the preview by sending it along. Past this size it is dropped rather
+              // than failing the whole preview over an image that is about to be
+              // uploaded properly anyway.
+              const MAX_PREVIEW_COVER = 1.5 * 1024 * 1024;
+
+              if (coverInput && coverInput.files && coverInput.files[0]) {
+                  if (coverInput.files[0].size > MAX_PREVIEW_COVER) {
+                      savePreview();
+                  } else {
+                      const reader = new FileReader();
+                      reader.onload = (e) => savePreview(e.target.result);
+                      reader.onerror = () => savePreview();
+                      reader.readAsDataURL(coverInput.files[0]);
+                  }
+              } else {
+                  savePreview();
               }
-              // Open the rendered preview — new tab if allowed, else same tab.
-              const win = window.open('/blog/preview', '_blank');
-              if (!win) window.location.href = '/blog/preview';
-            };
-
-            if (coverInput.files && coverInput.files[0]) {
-              const reader = new FileReader();
-              reader.onload = (e) => savePreview(e.target.result);
-              reader.readAsDataURL(coverInput.files[0]);
-            } else {
-              savePreview();
-            }
           }
+
           window.previewStory = previewStory;
 
           function updateCheckItem(id, isValid) {
