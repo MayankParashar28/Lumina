@@ -237,6 +237,25 @@ app.use((req, res, next) => {
   next();
 });
 
+// 👁️ Count the read HERE, above the page cache.
+//
+// The cache below answers an anonymous hit without ever running the blog route,
+// so counting inside that route missed the most common read on the site. This
+// runs first, for cached and uncached reads alike, signed in or not.
+//
+// Not awaited: a view count must never add latency to a page read, least of all
+// on the cache fast path whose entire purpose is to answer in under a
+// millisecond. countView never rejects.
+const { countView } = require("./services/viewCounter");
+const BLOG_READ_RE = /^\/blog\/([a-f\d]{24}|[a-z\d]+(?:-[a-z\d]+)*-[a-f\d]{6})$/i;
+app.use((req, res, next) => {
+  if (req.method === "GET") {
+    const match = BLOG_READ_RE.exec(req.path);
+    if (match) countView(req, match[1]);
+  }
+  next();
+});
+
 // ⚡ In-process HTML micro-cache for those anonymous public pages — serves repeat
 // hits from memory (<1ms) instead of re-querying Mongo and re-rendering EJS.
 const pageCache = require("./services/pageCache");

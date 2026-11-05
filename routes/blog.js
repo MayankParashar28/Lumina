@@ -335,13 +335,16 @@ router.get("/:idOrSlug", async (req, res) => {
       }
     }
 
-    // 🔥 Atomic Update: Increment view count without locking document
-    // We use findOneAndUpdate to get the document AND update it in one go.
-    // { new: true } return the updated doc, { upsert: false } ensures we don't create one.
-    const blog = await Blog.findOneAndUpdate(
-      byId ? { _id: param } : { slug: param },
-      { $inc: { views: 1 } },
-      { new: true }
+    // The view was already counted by the middleware in index.js, which sits
+    // above the page cache and so sees the anonymous reads that never reach
+    // this route. This is a plain read.
+    //
+    // One consequence worth knowing: the number rendered here does not include
+    // the reader's own view, because the count is incremented without being
+    // awaited. Nobody can tell, and it is a far smaller error than counting
+    // every crawler and every refresh, which is what it replaced.
+    const blog = await Blog.findOne(
+      byId ? { _id: param } : { slug: param }
     ).populate("createdBy", "fullName profilePic");
 
     if (!blog) {
