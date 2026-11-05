@@ -3,7 +3,7 @@
 
 <head>
   <%- include('./partials/header') %>
-    <link rel="stylesheet" href="/css/add-blog.css?v=25">
+    <link rel="stylesheet" href="/css/add-blog.css?v=26">
     <!-- Font Awesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <!-- Quill Rich Text Editor Theme -->
@@ -24,92 +24,63 @@
 
 
 
-        <!-- Title Section -->
-        <div class="editor-section">
-          <div class="section-header-row"
-            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-            <h3 class="section-label" style="margin-bottom: 0;">Title</h3>
+        <!-- Cover, then title, then the story. No section headings: a heading
+             over every field is what made this read as a form to fill in rather
+             than a page to write on. Everything that is a publishing decision
+             rather than a writing one now lives in the publish sheet below. -->
+        <div class="cover-strip" id="coverContainer">
+          <img loading="lazy" id="coverPreview" class="cover-preview hidden">
 
-            <!-- Magic Title Button -->
-            <button type="button" id="title-magic-btn" class="btn-ai-premium" data-action="generateTitles"
-              title="Generate AI Titles">
-              <i class="fas fa-magic"></i> AI Generate Title
+          <div class="cover-controls" id="coverControls">
+            <label for="coverImage" class="cover-chip">
+              <i class="far fa-image"></i> Add a cover image
+            </label>
+            <input type="file" id="coverImage" name="coverImage" accept="image/*" class="hidden-input"
+              data-change="previewCover">
+
+            <button type="button" class="cover-chip cover-chip--ghost" data-action="generateCoverWithAI">
+              <i class="fas fa-magic"></i> Generate
             </button>
+            <button type="button" class="cover-chip cover-chip--ghost" data-action="searchGiphy">
+              <i class="fas fa-film"></i> GIF
+            </button>
+
+            <input type="hidden" id="aiCoverURL" name="aiCoverURL">
           </div>
 
-          <div class="input-group" style="margin-bottom: 2rem; position: relative;">
-            <textarea name="title" id="title" class="input-title" placeholder="Enter your story title..." rows="1"
-              required data-input="autoResize"></textarea>
-
-            <!-- Suggestions Container -->
-            <div id="title-suggestions" style="display: none; margin-top: 10px; gap: 10px; flex-wrap: wrap;"></div>
-          </div>
+          <button type="button" id="removeCover" class="btn-remove-cover hidden" data-action="removeCoverImage">
+            <i class="fas fa-trash-alt"></i>
+          </button>
         </div>
 
-        <!-- Professional Cover Section -->
-        <div class="editor-section">
-          <h3 class="section-label">Cover Image</h3>
-          <div class="cover-container" id="coverContainer">
-            <img loading="lazy" id="coverPreview" class="cover-preview hidden">
-
-            <div class="cover-controls" id="coverControls">
-              <div class="cover-actions">
-                <!-- Manual Upload -->
-                <label for="coverImage" class="btn-cover-action">
-                  <i class="fas fa-cloud-upload-alt"></i> Upload Cover Image
-                </label>
-                <input type="file" id="coverImage" name="coverImage" accept="image/*" class="hidden-input"
-                  data-change="previewCover">
-
-                <!-- Separator -->
-                <span class="divider">or</span>
-
-                <!-- AI Generation -->
-                <button type="button" class="btn-cover-action btn-ai-glass" data-action="generateCoverWithAI">
-                  <i class="fas fa-magic"></i> AI Generate Cover
-                </button>
-
-                <!-- GIPHY Search (New!) -->
-                <button type="button" class="btn-cover-action btn-ai-glass" data-action="searchGiphy"
-                  style="color: #9333ea; border-color: #d8b4fe; background: #f3e8ff;">
-                  <i class="fas fa-film"></i> Search GIF
-                </button>
-
-                <input type="hidden" id="aiCoverURL" name="aiCoverURL">
-              </div>
-              <p class="cover-hint">Add a high-quality cover image to attract readers.</p>
-            </div>
-
-            <button type="button" id="removeCover" class="btn-remove-cover hidden" data-action="removeCoverImage">
-              <i class="fas fa-trash-alt"></i>
-            </button>
-          </div>
+        <div class="title-row">
+          <textarea name="title" id="title" class="input-title" placeholder="Title" rows="1"
+            required data-input="autoResize"></textarea>
+          <button type="button" id="title-magic-btn" class="ghost-ai" data-action="generateTitles"
+            title="Suggest titles">
+            <i class="fas fa-magic"></i> Suggest
+          </button>
         </div>
+        <div id="title-suggestions" style="display: none; margin-bottom: 1.5rem; gap: 10px; flex-wrap: wrap;"></div>
 
         <!-- Main Editor Area -->
         <!-- Main Editor Area -->
         <div class="editor-section">
-          <h3 class="section-label">Content</h3>
           <div class="main-editor">
 
-            <!-- AI Writing Toolbar (Sticky/Integrates) -->
-            <div class="ai-toolbar">
-              <div class="tone-wrapper">
-                <i class="fas fa-sliders-h"></i>
-                <select id="toneSelector" class="tone-select-naked">
-                  <option value="Professional">Tone: Professional</option>
-                  <option value="Casual">Tone: Casual</option>
-                  <option value="Funny">Tone: Funny</option>
-                  <option value="Inspirational">Tone: Inspirational</option>
-                  <option value="Technical">Tone: Technical</option>
-                </select>
-              </div>
-
-              <div class="toolbar-divider"></div>
-
-              <button type="button" class="btn-toolbar-ai" data-action="generateWithAI">
-                <i class="fas fa-sparkles"></i> AI Continue Writing
+            <!-- One quiet row rather than a toolbar: the tone picker only matters
+                 once you actually ask it to continue, so it sits next to that. -->
+            <div class="ai-row">
+              <button type="button" class="ghost-ai" data-action="generateWithAI">
+                <i class="fas fa-sparkles"></i> Continue writing
               </button>
+              <select id="toneSelector" class="tone-select-naked">
+                <option value="Professional">Professional</option>
+                <option value="Casual">Casual</option>
+                <option value="Funny">Funny</option>
+                <option value="Inspirational">Inspirational</option>
+                <option value="Technical">Technical</option>
+              </select>
             </div>
 
             <!-- Body -->
@@ -120,77 +91,14 @@
           </div>
         </div>
 
-        <!-- Category Section -->
-        <!-- Category Section -->
         <div class="editor-section">
-          <h3 class="section-label">Category</h3>
-          <span class="section-hint">Choose 1 main category</span>
-          <div class="meta-section">
-            <div class="cat-list">
-              <% const categories=['Technology', 'Health' , 'Education' , 'Business' , 'Lifestyle' , 'Travel' , 'Food'
-                , 'Finance' , 'Science' , 'Art' , 'Sports' , 'Music' , 'Gaming' , 'Politics' , 'History' ]; %>
-                <% categories.forEach(cat=> { %>
-                  <label class="cat-item">
-                    <input type="radio" name="category" value="<%= cat %>" required>
-                    <span>
-                      <%= cat %>
-                    </span>
-                  </label>
-                  <% }) %>
-            </div>
-          </div>
-        </div>
-
-        <!-- Tags Section -->
-        <!-- Tags Section -->
-        <div class="editor-section">
-          <h3 class="section-label">Tags</h3>
-          <span class="section-hint">Use 3–5 tags, comma separated</span>
-          <div class="meta-section">
-            <div class="tag-input-wrapper">
-              <i class="fas fa-hashtag"></i>
-              <input type="text" name="tags" id="tags" placeholder="Tags (comma separated)..." autocomplete="off">
-              <button type="button" class="btn-mini-ai" data-action="generateTags">
-                <i class="fas fa-bolt"></i> AI FIND TAGS
-              </button>
-
-            </div>
-            <!-- Preview Button Moved Outside -->
-            <button type="button" class="btn-mini-preview" data-action="previewStory" title="Preview Story">
-              <i class="far fa-eye"></i>
-            </button>
-          </div>
-
-          <!-- Search appearance: the slug and the snippet a search result shows. -->
-          <div class="seo-section">
-            <h3 class="section-label">Search appearance</h3>
-            <span class="section-hint">How this story looks on Google and in link previews</span>
-
-            <div class="seo-preview">
-              <div class="seo-preview__url" id="seo-url">
-                <span class="seo-preview__host"></span><span id="seo-slug">/blog/your-title-here</span>
-              </div>
-              <div class="seo-preview__title" id="seo-title">Your story title</div>
-              <div class="seo-preview__desc" id="seo-desc">
-                Add a description below, or the opening lines of your story will be used.
-              </div>
-            </div>
-
-            <div class="seo-field">
-              <label for="metaDescription" class="seo-field__label">
-                Meta description
-                <span class="seo-counter" id="meta-counter">0 / 160</span>
-              </label>
-              <textarea name="metaDescription" id="metaDescription" rows="2" maxlength="160"
-                        class="seo-textarea"
-                        placeholder="One or two sentences that make someone want to click. Leave blank to use the start of your story."></textarea>
-            </div>
-          </div>
-
           <!-- Moves Actions to Bottom -->
           <div class="editor-actions" style="margin-top: 30px; justify-content: flex-end; flex-wrap: wrap; gap: 10px;">
             <span id="word-count" class="word-counter" style="margin-right: 4px;">0 words</span>
             <span data-autosave-status class="autosave-status" style="margin-right: auto;"></span>
+            <button type="button" class="btn-mini-preview" data-action="previewStory" title="Preview story">
+              <i class="far fa-eye"></i>
+            </button>
             <div class="schedule-control">
               <button type="button" id="scheduleToggle" class="schedule-pill" aria-expanded="false">
                 <i class="fas fa-clock"></i>
@@ -214,6 +122,150 @@
           </div>
         </div>
         <style>
+          /* ---- The writing page: a cover strip, a title, a story. ---------- */
+          .cover-strip {
+            position: relative;
+            margin-bottom: 1.25rem;
+          }
+
+          .cover-strip .cover-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+          }
+
+          .cover-strip .cover-preview {
+            position: static;
+            display: block;
+            width: 100%;
+            height: 220px;
+            object-fit: cover;
+            border-radius: 12px;
+            margin-bottom: 0.75rem;
+          }
+
+          .cover-strip .cover-preview.hidden { display: none; }
+          .cover-strip .btn-remove-cover { top: 12px; right: 12px; }
+
+          .cover-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            min-height: 38px;
+            padding: 0 0.9rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 999px;
+            background: #fff;
+            color: #4b5563;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: border-color 0.15s, color 0.15s, background 0.15s;
+          }
+
+          .cover-chip:hover { border-color: #c7d2fe; background: #f5f3ff; color: #4338ca; }
+          .cover-chip--ghost { color: #9ca3af; }
+          .cover-strip .cover-preview:not(.hidden) + .cover-controls { margin-top: 0.75rem; }
+
+          /* The title is the loudest thing on the page, so it needs no label. */
+          .title-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            margin-bottom: 0.25rem;
+          }
+
+          .title-row .input-title { flex: 1; }
+
+          /* AI stays, but as quiet text rather than four bright chips. */
+          .ghost-ai {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            min-height: 36px;
+            padding: 0 0.7rem;
+            border: none;
+            border-radius: 8px;
+            background: transparent;
+            color: #9ca3af;
+            font: inherit;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: color 0.15s, background 0.15s;
+          }
+
+          .ghost-ai:hover { color: #4338ca; background: #f5f3ff; }
+
+          .ai-row {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            margin-bottom: 0.4rem;
+          }
+
+          .ai-row .tone-select-naked {
+            border: none;
+            background: transparent;
+            color: #9ca3af;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+          }
+
+          /* ---- The publish sheet ------------------------------------------- */
+          .publish-field { margin-bottom: 1.1rem; text-align: left; }
+
+          .publish-field__label {
+            display: block;
+            margin-bottom: 0.4rem;
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #9ca3af;
+          }
+
+          .publish-select {
+            width: 100%;
+            min-height: 44px;
+            padding: 0 0.8rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            background: #fff;
+            font: inherit;
+            font-size: 0.92rem;
+            color: #111;
+            cursor: pointer;
+          }
+
+          .publish-select:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+          }
+
+          .publish-more { margin-bottom: 1rem; text-align: left; }
+
+          .publish-more > summary {
+            cursor: pointer;
+            list-style: none;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #6b7280;
+            padding: 0.5rem 0;
+          }
+
+          .publish-more > summary::-webkit-details-marker { display: none; }
+          .publish-more > summary::before { content: "\25B8  "; color: #9ca3af; }
+          .publish-more[open] > summary::before { content: "\25BE  "; }
+          .publish-more .seo-section { margin-top: 0.5rem; }
+
+          .checklist-items li.valid { display: none; }
+          .checklist-items[hidden] { display: none; }
+
           .autosave-status { font-size: 0.78rem; color: #9ca3af; transition: color 0.2s; }
           .autosave-status.is-saving { color: #f59e0b; }
           .autosave-status.is-saved { color: #10b981; }
@@ -265,34 +317,92 @@
 
 
 
+        <!-- The publish sheet. These are the questions that only matter at the
+             moment you publish, so they are asked then rather than while you are
+             trying to write. It sits inside the form, so category, tags and the
+             search fields post exactly as they did when they lived on the page. -->
+        <div id="checklist-modal" class="modal-overlay hidden">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h3>Publish</h3>
+              <button type="button" class="close-modal" data-action="closeChecklist">&times;</button>
+            </div>
+
+            <div class="modal-body">
+              <div class="publish-field">
+                <label class="publish-field__label" for="tags">Tags</label>
+                <div class="tag-input-wrapper">
+                  <i class="fas fa-hashtag"></i>
+                  <input type="text" name="tags" id="tags" placeholder="3-5 tags, comma separated" autocomplete="off">
+                  <button type="button" class="btn-mini-ai" data-action="generateTags">
+                    <i class="fas fa-bolt"></i> Suggest
+                  </button>
+                </div>
+              </div>
+
+              <!-- One dropdown rather than a grid of fifteen chips. It is filled in
+                   from the tags where one of them names a category, so most writers
+                   never touch it -- but the field stays, because the feed's category
+                   filter and the label on every post are built on it. -->
+              <div class="publish-field publish-field--inline">
+                <label class="publish-field__label" for="category">Category</label>
+                <select name="category" id="category" class="publish-select">
+                  <option value="">Choose one</option>
+                  <% const categories=['Technology', 'Health' , 'Education' , 'Business' , 'Lifestyle' , 'Travel'
+                    , 'Food' , 'Finance' , 'Science' , 'Art' , 'Sports' , 'Music' , 'Gaming' , 'Politics' , 'History' ]; %>
+                    <% categories.forEach(cat=> { %>
+                      <option value="<%= cat %>"><%= cat %></option>
+                      <% }) %>
+                </select>
+              </div>
+
+              <!-- Optional, and collapsed: a blank meta description falls back to
+                   the opening of the story, so most writers never need to open it. -->
+              <details class="publish-more">
+                <summary>Search appearance</summary>
+                <div class="seo-section">
+                  <div class="seo-preview">
+                    <div class="seo-preview__url" id="seo-url">
+                      <span class="seo-preview__host"></span><span id="seo-slug">/blog/your-title-here</span>
+                    </div>
+                    <div class="seo-preview__title" id="seo-title">Your story title</div>
+                    <div class="seo-preview__desc" id="seo-desc">
+                      Add a description below, or the opening lines of your story will be used.
+                    </div>
+                  </div>
+
+                  <div class="seo-field">
+                    <label for="metaDescription" class="seo-field__label">
+                      Meta description
+                      <span class="seo-counter" id="meta-counter">0 / 160</span>
+                    </label>
+                    <textarea name="metaDescription" id="metaDescription" rows="2" maxlength="160"
+                              class="seo-textarea"
+                              placeholder="One or two sentences that make someone want to click."></textarea>
+                  </div>
+                </div>
+              </details>
+
+              <ul class="checklist-items">
+                <li id="check-title"><i class="far fa-circle"></i> <span>Title</span></li>
+                <li id="check-cover"><i class="far fa-circle"></i> <span>Cover image</span></li>
+                <li id="check-content"><i class="far fa-circle"></i> <span>50+ words</span></li>
+                <li id="check-category"><i class="far fa-circle"></i> <span>Category</span></li>
+                <li id="check-tags"><i class="far fa-circle"></i> <span>Tags</span></li>
+              </ul>
+            </div>
+
+            <div class="modal-footer">
+              <button type="button" class="btn-secondary" data-action="closeChecklist">Keep editing</button>
+              <button type="button" id="btn-confirm-publish" class="btn-primary" data-action="submitFinal" disabled>
+                Publish now
+              </button>
+            </div>
+          </div>
+        </div>
+
       </form>
 
-    </div>
-
-    <!-- Pre-Publish Checklist Modal -->
-    <div id="checklist-modal" class="modal-overlay hidden">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3>🚀 Ready to Publish?</h3>
-          <button type="button" class="close-modal" data-action="closeChecklist">&times;</button>
-        </div>
-        <div class="modal-body">
-          <p class="modal-intro">Let's check if your story is ready for the world:</p>
-          <ul class="checklist-items">
-            <li id="check-title"><i class="far fa-circle"></i> <span>Title</span></li>
-            <li id="check-cover"><i class="far fa-circle"></i> <span>Cover Image</span></li>
-            <li id="check-content"><i class="far fa-circle"></i> <span>Content (50+ words)</span></li>
-            <li id="check-category"><i class="far fa-circle"></i> <span>Category</span></li>
-            <li id="check-tags"><i class="far fa-circle"></i> <span>Tags</span></li>
-          </ul>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn-secondary" data-action="closeChecklist">Keep Editing</button>
-          <button type="button" id="btn-confirm-publish" class="btn-primary" data-action="submitFinal" disabled>
-            Publish Now
-          </button>
-        </div>
-      </div>
     </div>
 
     <%- include('./partials/footer') %>
@@ -794,11 +904,80 @@
             }
           }
 
+          // form.submit() does NOT carry the clicked button's name and value, so the
+          // POST arrives with no `action`. New posts default to published, but say
+          // it outright rather than relying on that -- the edit page's identical
+          // omission is what stopped drafts from ever going live.
+          function setAction(form, value) {
+            let field = form.querySelector('input[type="hidden"][name="action"]');
+            if (!field) {
+              field = document.createElement('input');
+              field.type = 'hidden';
+              field.name = 'action';
+              form.appendChild(field);
+            }
+            field.value = value;
+          }
+
           function submitFinal() {
+            const form = document.getElementById('publishForm');
+            setAction(form, 'publish');
             const btn = document.getElementById('btn-confirm-publish');
             setSubmitting(btn, 'Publishing…');
-            document.getElementById('publishForm').submit();
+            form.submit();
           }
+
+          // Readiness, recomputed on every keystroke rather than only on submit:
+          // tags and category are now answered inside the sheet, so the Publish
+          // button has to come alive while the sheet is already open.
+          function runChecks() {
+            const textContent = quill.getText().trim();
+            const wordCount = textContent.split(/\s+/).filter(Boolean).length;
+            const coverImage = document.getElementById('coverImage');
+
+            const checks = {
+              title: !!document.getElementById('title').value.trim(),
+              cover: (coverImage.files && coverImage.files.length > 0)
+                || document.getElementById('aiCoverURL').value !== "",
+              content: !!textContent && wordCount >= 50,
+              category: !!document.getElementById('category').value,
+              tags: !!document.getElementById('tags').value.trim()
+            };
+
+            updateCheckItem('check-title', checks.title);
+            updateCheckItem('check-cover', checks.cover);
+            updateCheckItem('check-content', checks.content);
+            updateCheckItem('check-category', checks.category);
+            updateCheckItem('check-tags', checks.tags);
+
+            const allValid = Object.values(checks).every(Boolean);
+            confirmBtn.disabled = !allValid;
+            confirmBtn.classList.toggle('btn-disabled', !allValid);
+            confirmBtn.innerHTML = allValid
+              ? "Publish now <i class='fas fa-arrow-right'></i>"
+              : "Fix missing items";
+
+            const list = document.querySelector('.checklist-items');
+            if (list) list.hidden = allValid;
+            return allValid;
+          }
+
+          // Guess the category from the tags, so the dropdown is usually already
+          // answered by the time it is looked at. Never overrides a deliberate pick.
+          (function () {
+            const tagsInput = document.getElementById('tags');
+            const select = document.getElementById('category');
+            if (!tagsInput || !select) return;
+            const known = [...select.options].map(o => o.value).filter(Boolean);
+            let touched = false;
+            select.addEventListener('change', () => { touched = true; });
+            tagsInput.addEventListener('input', () => {
+              if (touched || select.value) return;
+              const tags = tagsInput.value.toLowerCase().split(',').map(t => t.trim());
+              const hit = known.find(c => tags.includes(c.toLowerCase()));
+              if (hit) select.value = hit;
+            });
+          })();
 
           // Intercept Form Submission
           let submitAction = 'publish';
@@ -815,13 +994,9 @@
 
             // If action is draft, skip validation and submit immediately
             if (submitAction === 'draft') {
-              const hiddenOp = document.createElement('input');
-              hiddenOp.type = 'hidden';
-              hiddenOp.name = 'action';
-              hiddenOp.value = 'draft';
-              this.appendChild(hiddenOp);
-
-              // Populate body hidden input first
+              // One reusable field, so a Save Draft followed by a Publish cannot
+              // send action twice with the first value winning.
+              setAction(this, 'draft');
               document.getElementById('body').value = quill.root.innerHTML;
 
               const draftBtn = [...this.querySelectorAll('button[type="submit"]')].find(b => b.value === 'draft');
@@ -830,44 +1005,8 @@
               return;
             }
 
-            const title = document.getElementById('title').value.trim();
-            const bodyContent = quill.root.innerHTML;
-            const textContent = quill.getText().trim();
-            const wordCount = textContent.split(/\s+/).filter(word => word.length > 0).length;
-            const coverImage = document.getElementById('coverImage');
-            const hasAiCover = document.getElementById('aiCoverURL').value !== "";
-            const category = document.querySelector('input[name="category"]:checked');
-            const tags = document.getElementById('tags').value.trim();
-
-            // Populate hidden input
-            document.getElementById('body').value = bodyContent;
-
-            // Validation State
-            const checks = {
-              title: !!title,
-              cover: (coverImage.files && coverImage.files.length > 0) || hasAiCover,
-              content: textContent && wordCount >= 50,
-              category: !!category,
-              tags: !!tags
-            };
-
-            // Update UI
-            updateCheckItem('check-title', checks.title);
-            updateCheckItem('check-cover', checks.cover);
-            updateCheckItem('check-content', checks.content);
-            updateCheckItem('check-category', checks.category);
-            updateCheckItem('check-tags', checks.tags);
-
-            // Enable/Disable Confirm
-            const allValid = Object.values(checks).every(Boolean);
-            confirmBtn.disabled = !allValid;
-            if (allValid) {
-              confirmBtn.classList.remove('btn-disabled');
-              confirmBtn.innerHTML = "Publish Now <i class='fas fa-arrow-right'></i>";
-            } else {
-              confirmBtn.classList.add('btn-disabled');
-              confirmBtn.innerHTML = "Fix Missing Items";
-            }
+            document.getElementById('body').value = quill.root.innerHTML;
+            runChecks();
 
             // Show Modal
             modal.classList.remove('hidden');
@@ -1075,8 +1214,7 @@
               if (!hasCover) missing.push('cover');
               const words = quill.getText().trim().split(/\s+/).filter(Boolean).length;
               if (words < 50) missing.push(`${50 - words} more words`);
-              if (!document.querySelector('input[name="category"]:checked')) missing.push('category');
-              if (!document.getElementById('tags').value.trim()) missing.push('tags');
+              // category and tags are asked in the publish sheet, not here
 
               if (missing.length === 0) {
                 hint.className = 'ready-hint ok';
@@ -1090,6 +1228,11 @@
             quill.on('text-change', refresh);
             refresh();
           })();
+
+          // Same events drive the sheet's own readiness.
+          ['input', 'change'].forEach(ev =>
+            document.getElementById('publishForm').addEventListener(ev, runChecks));
+          quill.on('text-change', runChecks);
         </script>
 </body>
 

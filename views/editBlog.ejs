@@ -3,7 +3,7 @@
 
 <head>
     <%- include('./partials/header') %>
-        <link rel="stylesheet" href="/css/add-blog.css?v=25">
+        <link rel="stylesheet" href="/css/add-blog.css?v=26">
         <!-- Font Awesome for Icons -->
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
         <!-- Quill Rich Text Editor Theme -->
@@ -24,95 +24,67 @@
 
 
 
-                <!-- Title Section -->
-                <div class="editor-section">
-                    <h3 class="section-label">Title</h3>
-                    <div class="input-group" style="margin-bottom: 2rem; position: relative;">
-                        <textarea name="title" id="title" class="input-title" placeholder="Enter your story title..."
-                            rows="1" required data-input="autoResize"><%= blog.title %></textarea>
+                <!-- Cover, then title, then the story -- the same three things the
+                     new-story page shows, in the same order. Section headings over
+                     every field are what made this read as a form to fill in. -->
+                <div class="cover-strip <%= blog.coverImageURL ? 'has-cover' : '' %>" id="coverContainer">
+                    <img loading="lazy" id="coverPreview" class="cover-preview <%= blog.coverImageURL ? '' : 'hidden' %>"
+                        src="<%= blog.coverImageURL || '' %>">
 
-                        <!-- Magic Title Button (Text + Icon) -->
-                        <button type="button" id="title-magic-btn" class="btn-ai-premium" data-action="generateTitles"
-                            title="Generate AI Titles">
-                            <i class="fas fa-magic"></i> AI Generate Title
+                    <div class="cover-controls <%= blog.coverImageURL ? 'hidden' : '' %>" id="coverControls">
+                        <label for="coverImage" class="cover-chip">
+                            <i class="far fa-image"></i> Add a cover image
+                        </label>
+                        <input type="file" id="coverImage" name="coverImage" accept="image/*"
+                            class="hidden-input" data-change="previewCover">
+
+                        <button type="button" class="cover-chip cover-chip--ghost" data-action="generateCoverWithAI">
+                            <i class="fas fa-magic"></i> Generate
+                        </button>
+                        <button type="button" class="cover-chip cover-chip--ghost" data-action="searchGiphy">
+                            <i class="fas fa-film"></i> GIF
                         </button>
 
-                        <!-- Suggestions Container -->
-                        <div id="title-suggestions"
-                            style="display: none; margin-top: 10px; gap: 10px; flex-wrap: wrap;"></div>
-                        <div class="inline-error" id="title-error"></div>
+                        <input type="hidden" id="aiCoverURL" name="aiCoverURL"
+                            value="<%= blog.coverImageURL && blog.coverImageURL.startsWith('http') ? blog.coverImageURL : '' %>">
                     </div>
+
+                    <button type="button" id="removeCover"
+                        class="btn-remove-cover <%= blog.coverImageURL ? '' : 'hidden' %>"
+                        data-action="removeCoverImage">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
                 </div>
 
-                <!-- Professional Cover Section -->
-                <div class="editor-section">
-                    <h3 class="section-label">Cover Image</h3>
-                    <div class="cover-container <%= blog.coverImageURL ? 'has-cover' : '' %>" id="coverContainer">
-                        <img loading="lazy" id="coverPreview" class="cover-preview <%= blog.coverImageURL ? '' : 'hidden' %>"
-                            src="<%= blog.coverImageURL || '' %>">
-
-                        <div class="cover-controls <%= blog.coverImageURL ? 'hidden' : '' %>" id="coverControls">
-                            <div class="cover-actions">
-                                <!-- Manual Upload -->
-                                <label for="coverImage" class="btn-cover-action">
-                                    <i class="fas fa-cloud-upload-alt"></i> Upload Cover Image
-                                </label>
-                                <input type="file" id="coverImage" name="coverImage" accept="image/*"
-                                    class="hidden-input" data-change="previewCover">
-
-                                <!-- Separator -->
-                                <span class="divider">or</span>
-
-                                <!-- AI Generation -->
-                                <button type="button" class="btn-cover-action btn-ai-glass"
-                                    data-action="generateCoverWithAI">
-                                    <i class="fas fa-magic"></i> AI Generate Cover
-                                </button>
-
-                                <!-- GIPHY Search (New!) -->
-                                <button type="button" class="btn-cover-action btn-ai-glass" data-action="searchGiphy"
-                                    style="color: #9333ea; border-color: #d8b4fe; background: #f3e8ff;">
-                                    <i class="fas fa-film"></i> Search GIF
-                                </button>
-
-                                <input type="hidden" id="aiCoverURL" name="aiCoverURL"
-                                    value="<%= blog.coverImageURL && blog.coverImageURL.startsWith('http') ? blog.coverImageURL : '' %>">
-                            </div>
-                            <p class="cover-hint">Add a high-quality cover image to attract readers.</p>
-                        </div>
-
-                        <button type="button" id="removeCover"
-                            class="btn-remove-cover <%= blog.coverImageURL ? '' : 'hidden' %>"
-                            data-action="removeCoverImage">
-                            <i class="fas fa-trash-alt"></i>
-                        </button>
-                    </div>
+                <div class="title-row">
+                    <textarea name="title" id="title" class="input-title" placeholder="Title"
+                        rows="1" required data-input="autoResize"><%= blog.title %></textarea>
+                    <button type="button" id="title-magic-btn" class="ghost-ai" data-action="generateTitles"
+                        title="Suggest titles">
+                        <i class="fas fa-magic"></i> Suggest
+                    </button>
                 </div>
+                <div id="title-suggestions" style="display: none; margin-bottom: 1rem; gap: 10px; flex-wrap: wrap;"></div>
+                <div class="inline-error" id="title-error"></div>
 
                 <!-- Main Editor Area -->
                 <div class="editor-section">
-                    <h3 class="section-label">Content</h3>
                     <div class="main-editor">
 
-                        <!-- AI Writing Toolbar (Sticky/Integrates) -->
-                        <div class="ai-toolbar">
-                            <div class="tone-wrapper">
-                                <i class="fas fa-sliders-h"></i>
-                                <select id="toneSelector" class="tone-select-naked">
-                                    <option value="Professional">Tone: Professional</option>
-                                    <option value="Casual">Tone: Casual</option>
-                                    <option value="Funny">Tone: Funny</option>
-                                    <option value="Inspirational">Tone: Inspirational</option>
-                                    <option value="Technical">Tone: Technical</option>
-                                </select>
-                            </div>
-
-                            <div class="toolbar-divider"></div>
-
-                            <button type="button" class="btn-toolbar-ai" data-action="generateWithAI">
-                                <i class="fas fa-sparkles"></i> AI Continue Writing
+                    <!-- One quiet row rather than a toolbar: the tone only matters
+                         once you ask it to continue, so it sits beside that. -->
+                    <div class="ai-row">
+                            <button type="button" class="ghost-ai" data-action="generateWithAI">
+                                <i class="fas fa-sparkles"></i> Continue writing
                             </button>
-                        </div>
+                            <select id="toneSelector" class="tone-select-naked">
+                                <option value="Professional">Professional</option>
+                                <option value="Casual">Casual</option>
+                                <option value="Funny">Funny</option>
+                                <option value="Inspirational">Inspirational</option>
+                                <option value="Technical">Technical</option>
+                            </select>
+                    </div>
 
                         <!-- Body -->
                         <div class="editor-box">
@@ -125,87 +97,14 @@
                     </div>
                 </div>
 
-                <!-- Category Section -->
                 <div class="editor-section">
-                    <h3 class="section-label">Category</h3>
-                    <span class="section-hint">Choose 1 main category</span>
-                    <div class="meta-section">
-                        <div class="cat-list">
-                            <% const categories=['Technology', 'Health' , 'Education' , 'Business' , 'Lifestyle'
-                                , 'Travel' , 'Food' , 'Finance' , 'Science' , 'Art' , 'Sports' , 'Music' , 'Gaming'
-                                , 'Politics' , 'History' ]; %>
-                                <% categories.forEach(cat=> { %>
-                                    <label class="cat-item">
-                                        <input type="radio" name="category" value="<%= cat %>" required
-                                            <%=blog.category===cat ? 'checked' : '' %>>
-                                        <span>
-                                            <%= cat %>
-                                        </span>
-                                    </label>
-                                    <% }) %>
-                        </div>
-                        <div class="inline-error" id="category-error"></div>
-                    </div>
-                </div>
-
-                <!-- Tags Section -->
-                <div class="editor-section">
-                    <h3 class="section-label">Tags</h3>
-                    <span class="section-hint">Use 3–5 tags, comma separated</span>
-                    <div class="meta-section">
-                        <div class="tag-input-wrapper">
-                            <i class="fas fa-hashtag"></i>
-                            <input type="text" name="tags" id="tags" placeholder="Tags (comma separated)..."
-                                autocomplete="off" value="<%= blog.tags.join(', ') %>">
-                            <button type="button" class="btn-mini-ai" data-action="generateTags">
-                                <i class="fas fa-bolt"></i> AI FIND TAGS
-                            </button>
-
-                        </div>
-                        <!-- Preview Button Moved Outside -->
-                        <button type="button" class="btn-mini-preview" data-action="previewStory" title="Preview Story">
-                            <i class="far fa-eye"></i>
-                        </button>
-                    </div>
-
-                    <!-- Search appearance. The permalink is shown but not editable:
-                         it was fixed when the post was created so that links
-                         already shared keep working. -->
-                    <div class="seo-section">
-                        <h3 class="section-label">Search appearance</h3>
-                        <span class="section-hint">How this story looks on Google and in link previews</span>
-
-                        <div class="seo-locked">
-                            <i class="fas fa-link" aria-hidden="true"></i>
-                            <code><%= blog.slug ? '/blog/' + blog.slug : '/blog/' + blog._id %></code>
-                            <span class="seo-locked__note">Permalink can't change — it's already been shared</span>
-                        </div>
-
-                        <div class="seo-preview">
-                            <div class="seo-preview__url">
-                                <span class="seo-preview__host"></span><%= blog.slug ? '/blog/' + blog.slug : '/blog/' + blog._id %>
-                            </div>
-                            <div class="seo-preview__title" id="seo-title"><%= blog.title %></div>
-                            <div class="seo-preview__desc" id="seo-desc">
-                                Add a description below, or the opening lines of your story will be used.
-                            </div>
-                        </div>
-
-                        <div class="seo-field">
-                            <label for="metaDescription" class="seo-field__label">
-                                Meta description
-                                <span class="seo-counter" id="meta-counter">0 / 160</span>
-                            </label>
-                            <textarea name="metaDescription" id="metaDescription" rows="2" maxlength="160"
-                                      class="seo-textarea"
-                                      placeholder="One or two sentences that make someone want to click. Leave blank to use the start of your story."><%= blog.metaDescription || '' %></textarea>
-                        </div>
-                    </div>
-
                     <!-- Moves Actions to Bottom -->
                     <div class="editor-actions" style="margin-top: 30px; justify-content: flex-end;">
                         <span id="word-count" class="word-counter" style="margin-right: 4px;">0 words</span>
                         <span data-autosave-status class="autosave-status" style="margin-right: auto;"></span>
+                        <button type="button" class="btn-mini-preview" data-action="previewStory" title="Preview story">
+                            <i class="far fa-eye"></i>
+                        </button>
                         <button type="submit" name="action" value="draft" class="btn-secondary"
                             style="margin-right: 10px;">Save Draft</button>
                         <!-- A draft has never been published, so "Update" was the wrong word
@@ -217,40 +116,180 @@
                     </div>
                 </div>
                 <style>
+                    /* ---- The writing page: a cover strip, a title, a story. ---- */
+                    .cover-strip { position: relative; margin-bottom: 1.25rem; }
+                    .cover-strip .cover-controls { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+                    .cover-strip .cover-controls.hidden { display: none; }
+
+                    .cover-strip .cover-preview {
+                        position: static; display: block;
+                        width: 100%; height: 220px; object-fit: cover;
+                        border-radius: 12px; margin-bottom: 0.75rem;
+                    }
+                    .cover-strip .cover-preview.hidden { display: none; }
+                    .cover-strip .btn-remove-cover { top: 12px; right: 12px; }
+
+                    .cover-chip {
+                        display: inline-flex; align-items: center; gap: 0.45rem;
+                        min-height: 38px; padding: 0 0.9rem;
+                        border: 1px solid #e5e7eb; border-radius: 999px; background: #fff;
+                        color: #4b5563; font-size: 0.85rem; font-weight: 600; cursor: pointer;
+                        transition: border-color 0.15s, color 0.15s, background 0.15s;
+                    }
+                    .cover-chip:hover { border-color: #c7d2fe; background: #f5f3ff; color: #4338ca; }
+                    .cover-chip--ghost { color: #9ca3af; }
+
+                    .title-row { display: flex; align-items: flex-start; gap: 0.75rem; margin-bottom: 0.25rem; }
+                    .title-row .input-title { flex: 1; }
+
+                    .ghost-ai {
+                        display: inline-flex; align-items: center; gap: 0.4rem;
+                        min-height: 36px; padding: 0 0.7rem;
+                        border: none; border-radius: 8px; background: transparent;
+                        color: #9ca3af; font: inherit; font-size: 0.82rem; font-weight: 600;
+                        cursor: pointer; white-space: nowrap;
+                        transition: color 0.15s, background 0.15s;
+                    }
+                    .ghost-ai:hover { color: #4338ca; background: #f5f3ff; }
+
+                    .ai-row { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.4rem; }
+                    .ai-row .tone-select-naked {
+                        border: none; background: transparent; color: #9ca3af;
+                        font-size: 0.8rem; font-weight: 600; cursor: pointer;
+                    }
+
+                    /* ---- The publish sheet ------------------------------------- */
+                    .publish-field { margin-bottom: 1.1rem; text-align: left; }
+                    .publish-field__label {
+                        display: block; margin-bottom: 0.4rem;
+                        font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+                        letter-spacing: 0.04em; color: #9ca3af;
+                    }
+                    .publish-select {
+                        width: 100%; min-height: 44px; padding: 0 0.8rem;
+                        border: 1px solid #e5e7eb; border-radius: 10px; background: #fff;
+                        font: inherit; font-size: 0.92rem; color: #111; cursor: pointer;
+                    }
+                    .publish-select:focus {
+                        outline: none; border-color: #6366f1;
+                        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+                    }
+
+                    .publish-more { margin-bottom: 1rem; text-align: left; }
+                    .publish-more > summary {
+                        cursor: pointer; list-style: none;
+                        font-size: 0.82rem; font-weight: 600; color: #6b7280; padding: 0.5rem 0;
+                    }
+                    .publish-more > summary::-webkit-details-marker { display: none; }
+                    .publish-more > summary::before { content: "\25B8  "; color: #9ca3af; }
+                    .publish-more[open] > summary::before { content: "\25BE  "; }
+                    .publish-more .seo-section { margin-top: 0.5rem; }
+
+                    /* A row of green ticks is noise; show only what is still missing. */
+                    .checklist-items li.valid { display: none; }
+                    .checklist-items[hidden] { display: none; }
+
                     .autosave-status { font-size: 0.78rem; color: #9ca3af; transition: color 0.2s; }
                     .autosave-status.is-saving { color: #f59e0b; }
                     .autosave-status.is-saved { color: #10b981; }
                     .btn-publish[disabled], .btn-secondary[disabled] { opacity: 0.6; cursor: not-allowed; }
                 </style>
 
+                <!-- The publish sheet: the questions that only matter at the moment
+                     you publish. It sits inside the form, so category, tags and the
+                     search fields post exactly as they did from the page. -->
+                <div id="checklist-modal" class="modal-overlay hidden">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3><%= blog.status === 'published' ? 'Update' : 'Publish' %></h3>
+                            <button type="button" class="close-modal" data-action="closeChecklist">&times;</button>
+                        </div>
+
+                        <div class="modal-body">
+                            <div class="publish-field">
+                                <label class="publish-field__label" for="tags">Tags</label>
+                                <div class="tag-input-wrapper">
+                                    <i class="fas fa-hashtag"></i>
+                                    <input type="text" name="tags" id="tags" placeholder="3-5 tags, comma separated"
+                                        autocomplete="off" value="<%= blog.tags.join(', ') %>">
+                                    <button type="button" class="btn-mini-ai" data-action="generateTags">
+                                        <i class="fas fa-bolt"></i> Suggest
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- One dropdown rather than a grid of fifteen chips. The field
+                                 stays because the feed's category filter and the label on
+                                 every post are built on it. -->
+                            <div class="publish-field">
+                                <label class="publish-field__label" for="category">Category</label>
+                                <select name="category" id="category" class="publish-select">
+                                    <option value="">Choose one</option>
+                                    <% const categories=['Technology', 'Health' , 'Education' , 'Business' , 'Lifestyle'
+                                        , 'Travel' , 'Food' , 'Finance' , 'Science' , 'Art' , 'Sports' , 'Music'
+                                        , 'Gaming' , 'Politics' , 'History' ]; %>
+                                        <% categories.forEach(cat=> { %>
+                                            <option value="<%= cat %>" <%=blog.category===cat ? 'selected' : '' %>>
+                                                <%= cat %>
+                                            </option>
+                                            <% }) %>
+                                </select>
+                                <div class="inline-error" id="category-error"></div>
+                            </div>
+
+                            <details class="publish-more">
+                                <summary>Search appearance</summary>
+                                <!-- The permalink is shown but not editable: it was fixed when
+                                     the post was created so shared links keep working. -->
+                                <div class="seo-section">
+                                    <div class="seo-locked">
+                                        <i class="fas fa-link" aria-hidden="true"></i>
+                                        <code><%= blog.slug ? '/blog/' + blog.slug : '/blog/' + blog._id %></code>
+                                        <span class="seo-locked__note">Permalink can't change — it's already been shared</span>
+                                    </div>
+
+                                    <div class="seo-preview">
+                                        <div class="seo-preview__url">
+                                            <span class="seo-preview__host"></span><%= blog.slug ? '/blog/' + blog.slug : '/blog/' + blog._id %>
+                                        </div>
+                                        <div class="seo-preview__title" id="seo-title"><%= blog.title %></div>
+                                        <div class="seo-preview__desc" id="seo-desc">
+                                            Add a description below, or the opening lines of your story will be used.
+                                        </div>
+                                    </div>
+
+                                    <div class="seo-field">
+                                        <label for="metaDescription" class="seo-field__label">
+                                            Meta description
+                                            <span class="seo-counter" id="meta-counter">0 / 160</span>
+                                        </label>
+                                        <textarea name="metaDescription" id="metaDescription" rows="2" maxlength="160"
+                                                  class="seo-textarea"
+                                                  placeholder="One or two sentences that make someone want to click."><%= blog.metaDescription || '' %></textarea>
+                                    </div>
+                                </div>
+                            </details>
+
+                            <ul class="checklist-items">
+                                <li id="check-title"><i class="far fa-circle"></i> <span>Title</span></li>
+                                <li id="check-cover"><i class="far fa-circle"></i> <span>Cover image</span></li>
+                                <li id="check-content"><i class="far fa-circle"></i> <span>50+ words</span></li>
+                                <li id="check-category"><i class="far fa-circle"></i> <span>Category</span></li>
+                                <li id="check-tags"><i class="far fa-circle"></i> <span>Tags</span></li>
+                            </ul>
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="button" class="btn-secondary" data-action="closeChecklist">Keep editing</button>
+                            <button type="button" id="btn-confirm-publish" class="btn-primary" data-action="submitFinal" disabled>
+                                <%= blog.status === 'published' ? 'Update now' : 'Publish now' %>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
             </form>
 
-        </div>
-
-        <!-- Pre-Update Checklist Modal -->
-        <div id="checklist-modal" class="modal-overlay hidden">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>🚀 <%= blog.status === 'published' ? 'Ready to Update?' : 'Ready to Publish?' %></h3>
-                    <button type="button" class="close-modal" data-action="closeChecklist">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <p class="modal-intro">Let's check if your story is ready for the world:</p>
-                    <ul class="checklist-items">
-                        <li id="check-title"><i class="far fa-circle"></i> <span>Title</span></li>
-                        <li id="check-cover"><i class="far fa-circle"></i> <span>Cover Image</span></li>
-                        <li id="check-content"><i class="far fa-circle"></i> <span>Content (50+ words)</span></li>
-                        <li id="check-category"><i class="far fa-circle"></i> <span>Category</span></li>
-                        <li id="check-tags"><i class="far fa-circle"></i> <span>Tags</span></li>
-                    </ul>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn-secondary" data-action="closeChecklist">Keep Editing</button>
-                    <button type="button" id="btn-confirm-publish" class="btn-primary" data-action="submitFinal" disabled>
-                        <%= blog.status === 'published' ? 'Update Now' : 'Publish Now' %>
-                    </button>
-                </div>
-            </div>
         </div>
 
         <%- include('./partials/footer') %>
@@ -759,10 +798,90 @@
                         }
                     }
 
-                    function submitFinal() {
-                        setSubmitting(document.getElementById('btn-confirm-publish'), '<%= blog.status === "published" ? "Updating…" : "Publishing…" %>');
-                        document.getElementById('publishForm').submit();
+                    // form.submit() does NOT carry the clicked button's name and value,
+                    // so the POST arrived with no `action` at all -- and the edit route
+                    // only takes a draft live when it sees action=publish. That is why
+                    // the editor's Publish button saved the draft and left it a draft.
+                    function setAction(form, value) {
+                        let field = form.querySelector('input[type="hidden"][name="action"]');
+                        if (!field) {
+                            field = document.createElement('input');
+                            field.type = 'hidden';
+                            field.name = 'action';
+                            form.appendChild(field);
+                        }
+                        field.value = value;
                     }
+
+                    function submitFinal() {
+                        const form = document.getElementById('publishForm');
+                        setAction(form, 'publish');
+                        setSubmitting(document.getElementById('btn-confirm-publish'), '<%= blog.status === "published" ? "Updating…" : "Publishing…" %>');
+                        form.submit();
+                    }
+
+                    // Readiness, recomputed on every keystroke rather than only on
+                    // submit: tags and category are answered inside the sheet now, so
+                    // the button has to come alive while the sheet is already open.
+                    function runChecks() {
+                        const title = document.getElementById('title').value.trim();
+                        const textContent = quill.getText().trim();
+                        const wordCount = textContent.split(/\s+/).filter(Boolean).length;
+                        const coverImage = document.getElementById('coverImage');
+                        const hasCover = (coverImage.files && coverImage.files.length > 0)
+                            || document.getElementById('aiCoverURL').value !== ""
+                            || !document.getElementById('coverPreview').classList.contains('hidden');
+                        const category = document.getElementById('category').value;
+
+                        const checks = {
+                            title: !!title,
+                            cover: hasCover,
+                            content: !!textContent && wordCount >= 50,
+                            category: !!category,
+                            tags: !!document.getElementById('tags').value.trim()
+                        };
+
+                        updateCheckItem('check-title', checks.title);
+                        updateCheckItem('check-cover', checks.cover);
+                        updateCheckItem('check-content', checks.content);
+                        updateCheckItem('check-category', checks.category);
+                        updateCheckItem('check-tags', checks.tags);
+
+                        if (!checks.title) document.getElementById('title-error').textContent = "\u26a0\ufe0f Please enter a title for your story.";
+                        if (!checks.content) document.getElementById('content-error').textContent = textContent
+                            ? `\u26a0\ufe0f Too short! Please write at least 50 words (currently ${wordCount}).`
+                            : "\u26a0\ufe0f Your story is empty. Start writing!";
+                        if (!checks.category) document.getElementById('category-error').textContent = "\u26a0\ufe0f Please select a category.";
+
+                        const allValid = Object.values(checks).every(Boolean);
+                        confirmBtn.disabled = !allValid;
+                        confirmBtn.classList.toggle('btn-disabled', !allValid);
+                        confirmBtn.innerHTML = allValid
+                            ? "<%= blog.status === 'published' ? 'Update now' : 'Publish now' %> <i class='fas fa-arrow-right'></i>"
+                            : "Fix missing items";
+
+                        const list = document.querySelector('.checklist-items');
+                        if (list) list.hidden = allValid;
+                        return allValid;
+                    }
+
+                    // Guess the category from the tags so the dropdown is usually already
+                    // answered. Never overrides what the author picked, or what they chose
+                    // when the post was first written.
+                    (function () {
+                        const tagsInput = document.getElementById('tags');
+                        const select = document.getElementById('category');
+                        if (!tagsInput || !select) return;
+                        const known = [...select.options].map(o => o.value).filter(Boolean);
+                        let touched = false;
+                        select.addEventListener('change', () => { touched = true; });
+                        tagsInput.addEventListener('input', () => {
+                            if (touched || select.value) return;
+                            const tags = tagsInput.value.toLowerCase().split(',').map(t => t.trim());
+                            const hit = known.find(c => tags.includes(c.toLowerCase()));
+                            if (hit) select.value = hit;
+                        });
+                    })();
 
                     // Intercept Form Submission
                     let submitAction = 'publish';
@@ -779,11 +898,9 @@
 
                         // If action is draft, skip validation and submit immediately
                         if (submitAction === 'draft') {
-                            const hiddenOp = document.createElement('input');
-                            hiddenOp.type = 'hidden';
-                            hiddenOp.name = 'action';
-                            hiddenOp.value = 'draft';
-                            this.appendChild(hiddenOp);
+                            // One reusable field, so a Save Draft followed by a Publish cannot
+                            // send action twice with the first value winning.
+                            setAction(this, 'draft');
 
                             // Populate body hidden input first
                             document.getElementById('body').value = quill.root.innerHTML;
@@ -794,76 +911,9 @@
                             return;
                         }
 
-                        // Reset errors
                         document.querySelectorAll('.inline-error').forEach(el => el.textContent = '');
-
-                        const title = document.getElementById('title').value.trim();
-                        const bodyContent = quill.root.innerHTML;
-                        const textContent = quill.getText().trim();
-                        const wordCount = textContent.split(/\s+/).filter(word => word.length > 0).length;
-                        const coverImage = document.getElementById('coverImage');
-                        const hasAiCover = document.getElementById('aiCoverURL').value !== "";
-                        // Check if existing cover exists
-                        const hasExistingCover = !document.getElementById('coverPreview').classList.contains('hidden');
-
-                        const category = document.querySelector('input[name="category"]:checked');
-                        const tags = document.getElementById('tags').value.trim();
-
-                        const hasCover = (coverImage.files && coverImage.files.length > 0) || hasAiCover || hasExistingCover;
-
-                        let isValid = true;
-
-                        // Populate hidden input
-                        document.getElementById('body').value = bodyContent;
-
-                        // 1. Check Title
-                        if (!title) {
-                            document.getElementById('title-error').textContent = "⚠️ Please enter a title for your story.";
-                            isValid = false;
-                        }
-
-                        // 2. Check Content (At least 50 words)
-                        if (!textContent) {
-                            document.getElementById('content-error').textContent = "⚠️ Your story is empty. Start writing!";
-                            isValid = false;
-                        } else if (wordCount < 50) {
-                            document.getElementById('content-error').textContent = `⚠️ Too short! Please write at least 50 words (currently ${wordCount}).`;
-                            isValid = false;
-                        }
-
-                        // 3. Check Category
-                        if (!category) {
-                            document.getElementById('category-error').textContent = "⚠️ Please select a category.";
-                            isValid = false;
-                        }
-
-
-                        // Validation State for Modal
-                        const checks = {
-                            title: !!title,
-                            cover: hasCover,
-                            content: textContent && wordCount >= 50,
-                            category: !!category,
-                            tags: !!tags
-                        };
-
-                        // Update UI
-                        updateCheckItem('check-title', checks.title);
-                        updateCheckItem('check-cover', checks.cover);
-                        updateCheckItem('check-content', checks.content);
-                        updateCheckItem('check-category', checks.category);
-                        updateCheckItem('check-tags', checks.tags);
-
-                        // Enable/Disable Confirm
-                        const allValid = Object.values(checks).every(Boolean);
-                        confirmBtn.disabled = !allValid;
-                        if (allValid) {
-                            confirmBtn.classList.remove('btn-disabled');
-                            confirmBtn.innerHTML = "Update Now <i class='fas fa-arrow-right'></i>";
-                        } else {
-                            confirmBtn.classList.add('btn-disabled');
-                            confirmBtn.innerHTML = "Fix Missing Items";
-                        }
+                        document.getElementById('body').value = quill.root.innerHTML;
+                        runChecks();
 
                         // Show Modal
                         modal.classList.remove('hidden');
@@ -969,6 +1019,11 @@
                     }
 
                     window.previewStory = previewStory;
+
+                    // The sheet's readiness has to track what is typed inside it.
+                    ['input', 'change'].forEach(ev =>
+                        document.getElementById('publishForm').addEventListener(ev, runChecks));
+                    quill.on('text-change', runChecks);
 
                     function updateCheckItem(id, isValid) {
                         const el = document.getElementById(id);

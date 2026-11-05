@@ -249,13 +249,96 @@ test("the editor says Publish for a draft and Update for a live post", async () 
     .set("Cookie", authCookie(author));
   assert.equal(onDraft.status, 200);
   assert.match(onDraft.text, /value="publish"[\s\S]{0,200}?Publish\s*</, "the submit button says Publish");
-  assert.match(onDraft.text, /Ready to Publish\?/, "and so does the confirmation");
+  assert.match(onDraft.text, /id="btn-confirm-publish"[\s\S]{0,200}?Publish now/, "and so does the sheet");
 
   const onLive = await request(ctx.app)
     .get(`/blog/edit/${live._id}`)
     .set("Cookie", authCookie(author));
   assert.match(onLive.text, /value="publish"[\s\S]{0,200}?Update\s*</);
-  assert.match(onLive.text, /Ready to Update\?/);
+  assert.match(onLive.text, /id="btn-confirm-publish"[\s\S]{0,200}?Update now/);
+});
+
+// --- the editor after the fields moved into the publish sheet ----------------
+
+// Both editors are behind cooldowns keyed off the author's last post (30 minutes
+// to start a new one, 2 minutes between edits). Mongoose manages createdAt and
+// updatedAt under `timestamps: true` and silently drops a $set on either, so the
+// raw driver is the only way to move them.
+const backdate = (id, ms) =>
+  ctx.mongoose.connection.db.collection("blogs").updateOne(
+    { _id: id },
+    { $set: { createdAt: new Date(Date.now() - ms), updatedAt: new Date(Date.now() - ms) } }
+  );
+
+const between = (html, startNeedle, endNeedle) => {
+  const a = html.indexOf(startNeedle);
+  const b = html.indexOf(endNeedle, a);
+  assert.ok(a > -1 && b > a, `could not find ${startNeedle} ... ${endNeedle}`);
+  return html.slice(a, b);
+};
+
+test("every field the route reads is still inside the form", async () => {
+  // Category, tags and the search fields now live in a modal. A modal rendered
+  // outside <form> looks identical and silently posts none of them, so this is
+  // the invariant that has to hold -- on both editors.
+  const author = await makeUser();
+  const draft = await makeDraft(author);
+  await backdate(draft._id, 2 * 3600e3);
+
+  const pages = [
+    ["new story", await request(ctx.app).get("/blog/add-new").set("Cookie", authCookie(author))],
+    ["edit", await request(ctx.app).get(`/blog/edit/${draft._id}`).set("Cookie", authCookie(author))],
+  ];
+
+  for (const [label, res] of pages) {
+    assert.equal(res.status, 200, label);
+    const form = between(res.text, 'id="publishForm"', "</form>");
+    for (const field of ['name="title"', 'name="body"', 'name="category"', 'name="tags"',
+                         'name="metaDescription"', 'name="coverImage"']) {
+      assert.ok(form.includes(field), `${label}: ${field} is outside the form`);
+    }
+  }
+});
+
+test("the writing page itself asks for nothing but a cover, a title and a story", async () => {
+  const author = await makeUser();
+  const res = await request(ctx.app).get("/blog/add-new").set("Cookie", authCookie(author));
+
+  const page = between(res.text, 'id="publishForm"', 'id="checklist-modal"');
+  assert.ok(!page.includes('name="category"'), "category is asked when you publish, not while writing");
+  assert.ok(!page.includes('name="tags"'), "so are tags");
+  assert.ok(!page.includes('name="metaDescription"'), "and the search fields");
+  assert.ok(!/class="section-label"/.test(page), "no heading over every field");
+
+  const sheet = between(res.text, 'id="checklist-modal"', "</form>");
+  assert.ok(sheet.includes('name="category"') && sheet.includes('name="tags"'), "they are in the sheet");
+});
+
+test("publishing a draft from the editor needs action=publish, and sends it", async () => {
+  const author = await makeUser();
+  const draft = await makeDraft(author);
+  await backdate(draft._id, 864e5);
+
+  const body = "<p>" + "word ".repeat(80) + "</p>";
+  const fields = { title: draft.title, body, category: "Technology", tags: "one, two" };
+
+  // Without it the route takes neither branch and the draft stays a draft. This
+  // is what the editor's Publish button did for months: form.submit() does not
+  // carry the clicked button's name/value.
+  const silent = await post(`/blog/edit/${draft._id}`, author, fields);
+  assert.equal(silent.status, 302);
+  assert.equal((await ctx.Blog.findById(draft._id).lean()).status, "draft");
+
+  await backdate(draft._id, 864e5);
+  const explicit = await post(`/blog/edit/${draft._id}`, author, { ...fields, action: "publish" });
+  assert.equal(explicit.status, 302);
+  assert.match(explicit.headers.location, /\?published=1$/);
+  assert.equal((await ctx.Blog.findById(draft._id).lean()).status, "published");
+
+  // And the editor does send it.
+  const fresh = await makeUser();
+  const page = await request(ctx.app).get("/blog/add-new").set("Cookie", authCookie(fresh));
+  assert.match(page.text, /setAction\(form, 'publish'\)/, "submitFinal sets the action");
 });
 
 // --- preview -----------------------------------------------------------------
