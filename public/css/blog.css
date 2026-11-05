@@ -213,17 +213,21 @@ body {
     }
 }
 
-/* The rail follows the reader for the whole page, not just the article.
+/* The rail travels with the reader, but only for as long as the post does.
  *
- * `position: sticky` only travels inside its own grid area, so the bar stuck
- * while the post scrolled and then scrolled away for good at the author card and
- * the comments -- exactly where someone decides to like or comment. Fixed to the
- * viewport it stays reachable the whole way down.
+ * It is fixed rather than sticky, and not by choice: `body` is `overflow-x:
+ * hidden` site-wide, which makes body its own scroll container, and a sticky
+ * child of a scroll container that never scrolls internally simply never
+ * sticks. That is why this bar used to ride down the page and then stop dead --
+ * sticky was doing nothing at all here.
  *
- * Only from 1200px up: it is parked in the gutter beside the 1000px reading
- * column, and `(100vw - 1000px) / 2` is the width of that gutter. Below 1200 the
- * gutter is thinner than the bar, so there the sticky rule above still applies
- * and the bar rides the article as before.
+ * Fixed sidesteps that, and the bound the sticky version was supposed to give
+ * is restored in script: blog.ejs adds `is-out` once the rail's own centre line
+ * leaves the article, so it travels the height of the post and no further.
+ *
+ * `(100vw - 1000px) / 2` is the gutter beside the 1000px reading column, so
+ * the bar parks in it at a fixed distance from the text. Only from 1200px up:
+ * below that the gutter is narrower than the bar and it would sit on the words.
  */
 @media (min-width: 1200px) {
     .article-actions-bar-vertical {
@@ -233,7 +237,19 @@ body {
         right: calc((100vw - 1000px) / 2 - 56px);
         transform: translateY(-50%);
         margin: 0;
+        transition: opacity 0.2s ease, visibility 0.2s ease;
     }
+
+    .article-actions-bar-vertical.is-out {
+        opacity: 0;
+        visibility: hidden;
+    }
+}
+
+@media (min-width: 1200px) and (prefers-reduced-motion: reduce) {
+    .article-actions-bar-vertical { transition: none; }
+}
+}
 }
 
 .action-icon-btn {
