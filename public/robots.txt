@@ -17,5 +17,7 @@ Disallow: /captcha
 Disallow: /notifications
 Disallow: /search
 Disallow: /ai/
+Disallow: /user/unsubscribe/
+Disallow: /user/email-preferences
 
 Sitemap: https://llumina.online/sitemap.xml

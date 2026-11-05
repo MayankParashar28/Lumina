@@ -84,10 +84,6 @@ const blogSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
-    totalLikes: {
-      type: Number,
-      default: 0,
-    },
     totalComments: [
       {
         type: mongoose.Schema.Types.ObjectId,

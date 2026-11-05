@@ -953,3 +953,70 @@ article pre:hover .code-copy-btn,
     .app-toast { transition: opacity 0.2s; transform: none; }
     .reading-progress { transition: none; }
 }
+
+
+/* ---------------------------------------------------------------------------
+   Touch targets in the nav
+   ---------------------------------------------------------------------------
+   The icons here were 28-35px on a phone, well under the 44px a finger needs,
+   and the narrow-screen rules above shrank them further exactly where it
+   mattered most. This restores a real target on touch devices only — a mouse
+   pointer is precise and the desktop layout is unchanged.
+
+   The glyphs keep their size; only the button around them grows, so the nav
+   looks the same and simply stops being hard to hit.
+*/
+@media (pointer: coarse) {
+
+    .floating-nav .icon-btn,
+    .floating-nav .profile-trigger,
+    .floating-nav .mobile-menu-btn,
+    .floating-nav .search-trigger {
+        min-width: 44px;
+        min-height: 44px;
+        width: 44px;
+        height: 44px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* The avatar inside the profile button keeps its own smaller size — the
+       button around it is what grew. */
+    .floating-nav .profile-trigger img {
+        width: 32px;
+        height: 32px;
+    }
+
+    /* Five 44px targets plus the wordmark is a tight fit at 375px, so the gap
+       closes rather than the targets shrinking. They still do not overlap:
+       44 + 2 of gap means 46px between centres. */
+    .floating-nav .nav-actions {
+        gap: 2px;
+    }
+
+    /* The signed-out pair. "Sign In" is a bare text link, which is the smallest
+       target in the whole nav. */
+    .floating-nav .auth-buttons a,
+    .floating-nav .btn-pill {
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Every row of the profile menu is a destination, so each is a target. */
+    .dropdown-item {
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+    }
+
+    /* The wordmark is the link home. It keeps its type size; the box grows. */
+    .floating-nav .nav-brand {
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+    }
+}
