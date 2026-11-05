@@ -1346,18 +1346,37 @@ body {
 
    Several editor controls set `outline: none` for looks, which leaves someone
    tabbing through the form with no idea where they are. :focus-visible shows
-   the ring only for keyboard focus, so this costs the mouse user nothing. */
+   the ring only for keyboard focus, so on a BUTTON it costs the mouse user
+   nothing.
+
+   Text fields are the exception, and the reason this rule used to throw a blue
+   box around the title the moment you clicked it: a browser matches
+   :focus-visible on any focused text input, however it was focused, because the
+   field is about to take keyboard input either way. So the inputs are not in the
+   list below -- they get their own, quieter indicator instead. */
 .btn-ai-premium:focus-visible,
 .btn-cover-action:focus-visible,
+.cover-chip:focus-visible,
+.ghost-ai:focus-visible,
 .btn-toolbar-ai:focus-visible,
 .btn-mini-ai:focus-visible,
 .btn-mini-preview:focus-visible,
 .schedule-pill:focus-visible,
 .btn-secondary:focus-visible,
-.btn-publish:focus-visible,
-.input-title:focus-visible,
-.tag-input-wrapper input:focus-visible {
+.btn-publish:focus-visible {
     outline: 2px solid #3b82f6;
     outline-offset: 2px;
+}
+
+/* inset, so focusing the title does not nudge the layout by two pixels. */
+.input-title:focus {
+    outline: none;
+    box-shadow: inset 0 -2px 0 rgba(99, 102, 241, 0.45);
+}
+
+/* The tags box already darkens its own underline on :focus-within; make it the
+   same indigo so the two fields agree with each other. */
+.tag-input-wrapper:focus-within {
+    border-color: #6366f1;
 }
 

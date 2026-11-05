@@ -167,16 +167,16 @@ body {
      * every publication that cares about being read — print or web — sets prose
      * somewhere around 50-75 characters.
      *
-     * 820px at 18.4px is roughly 85 characters: past the ideal, and about as far
-     * as this should go. The hero image above runs to 1000px, so the page still
-     * uses the width of a large screen without dragging the prose out with it.
-     * (750px, the previous value, measured ~78 -- the old comment said 70.)
+     * This is now 1000px by request, which is about 105 characters -- well past
+     * that range, and a deliberate trade: it lines the prose up exactly with the
+     * hero image above it, so the article reads as one column instead of a
+     * narrow ribbon with a wider picture on top. (It was 750, then 820.)
      *
      * Only this track changes: .blog-body is grid-column 2 and the sticky action
      * bar is grid-column 3, so both keep their positions. Below 1025px the
      * override near the end of this file replaces the grid entirely and the body
      * goes full-width, which is correct on a phone and unaffected by this value. */
-    grid-template-columns: 1fr 820px 1fr;
+    grid-template-columns: 1fr 1000px 1fr;
     gap: 2rem;
     position: relative;
     padding: 0 1rem;
