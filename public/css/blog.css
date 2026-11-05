@@ -165,13 +165,18 @@ body {
      * It was 1200px, which at this font size runs past 120 characters a line.
      * The eye loses its place on the return sweep well before that, which is why
      * every publication that cares about being read — print or web — sets prose
-     * somewhere around 50-75 characters. 750px here lands near 70.
+     * somewhere around 50-75 characters.
+     *
+     * 820px at 18.4px is roughly 85 characters: past the ideal, and about as far
+     * as this should go. The hero image above runs to 1000px, so the page still
+     * uses the width of a large screen without dragging the prose out with it.
+     * (750px, the previous value, measured ~78 -- the old comment said 70.)
      *
      * Only this track changes: .blog-body is grid-column 2 and the sticky action
      * bar is grid-column 3, so both keep their positions. Below 1025px the
      * override near the end of this file replaces the grid entirely and the body
      * goes full-width, which is correct on a phone and unaffected by this value. */
-    grid-template-columns: 1fr 750px 1fr;
+    grid-template-columns: 1fr 820px 1fr;
     gap: 2rem;
     position: relative;
     padding: 0 1rem;

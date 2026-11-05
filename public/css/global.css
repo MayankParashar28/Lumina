@@ -136,7 +136,9 @@ input.form-control:focus {
     left: 50%;
     transform: translateX(-50%);
     width: 90%;
-    max-width: 1000px;
+    /* Matches .footer-content-minimal, which is already 1200px. At 1000 the bar
+       stopped well short of the footer under it on any wide screen. */
+    max-width: 1200px;
     box-sizing: border-box;
     /* Ensure padding doesn't add to width */
     z-index: 1000;
