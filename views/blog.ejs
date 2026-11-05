@@ -4,7 +4,7 @@
 <head>
     <%- include('./partials/header') %>
 </head>
-<link rel="stylesheet" href="/css/blog.css?v=10033">
+<link rel="stylesheet" href="/css/blog.css?v=10034">
 <!-- Quill Theme for matching styles -->
 <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
 <!-- Code blocks: loaded after blog.css so it wins on the shared `pre` rules. -->
@@ -302,6 +302,64 @@
                     </script>
 
         </article>
+
+        <!-- Author card: the end of the post is where a reader decides whether
+             they want more from this writer, so the ask belongs here, and it is
+             shown whether or not they are signed in. -->
+        <% if (authorCard) { %>
+            <section class="author-card" aria-labelledby="author-card-name">
+                <div class="author-card-head">
+                    <img loading="lazy"
+                        src="<%= optimizeImage(authorCard.profilePic, { width: 160, height: 160 }) %>"
+                        alt="" class="author-card-avatar">
+                    <div class="author-card-identity">
+                        <p class="author-card-kicker">Written by</p>
+                        <h3 class="author-card-name" id="author-card-name">
+                            <a href="/user/profile/<%= authorCard._id %>"><%= authorCard.fullName %></a>
+                        </h3>
+                        <p class="author-card-count">
+                            <%= authorCard.followerCount %> follower<%= authorCard.followerCount === 1 ? '' : 's' %>
+                        </p>
+                    </div>
+
+                    <% if (authorCard.isSelf) { %>
+                        <a href="/user/profile" class="author-card-btn is-secondary">Your profile</a>
+                        <% } else if (user) { %>
+                            <form method="POST" action="/user/follow/<%= authorCard._id %>" class="author-card-form">
+                                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                <button class="author-card-btn <%= authorCard.isFollowing ? 'is-secondary' : '' %>">
+                                    <%= authorCard.isFollowing ? 'Following' : 'Follow' %>
+                                </button>
+                            </form>
+                            <% } else { %>
+                                <!-- Signed out: the click is not wasted. The intent rides
+                                     through sign-in and the follow completes on the way back. -->
+                                <a class="author-card-btn"
+                                    href="/user/signin?follow=<%= authorCard._id %>&amp;next=<%= encodeURIComponent(canonicalPath) %>">Follow</a>
+                                <% } %>
+                </div>
+
+                <% if (authorCard.bio) { %>
+                    <p class="author-card-bio"><%= authorCard.bio %></p>
+                    <% } %>
+
+                        <% if (authorCard.morePosts && authorCard.morePosts.length) { %>
+                            <div class="author-card-more">
+                                <p class="author-card-more-label">More from <%= authorCard.fullName %></p>
+                                <ul class="author-card-list">
+                                    <% authorCard.morePosts.forEach(function (p) { %>
+                                        <li>
+                                            <a href="/blog/<%= p.slug || p._id %>">
+                                                <span class="author-card-list-title"><%= p.title %></span>
+                                                <span class="author-card-list-date"><%= moment(p.createdAt).format("MMM D, YYYY") %></span>
+                                            </a>
+                                        </li>
+                                        <% }); %>
+                                </ul>
+                            </div>
+                            <% } %>
+            </section>
+            <% } %>
 
         <!-- Comments -->
         <div class="comments-section" id="comments">

@@ -131,6 +131,7 @@ function renderPreview(req, res, data) {
     isBookmarked: false,
     relatedBlogs: [],
     isPreview: true,
+    authorCard: null,
     previewReturnTo: (data.from === "edit" && data.editId) ? `/blog/edit/${data.editId}` : "/blog/add-new"
   });
 }
@@ -478,10 +479,50 @@ router.get("/:idOrSlug", async (req, res) => {
       `${req.protocol}://${req.get("host")}`
     ).replace(/\/+$/, "");
 
+    // 👤 The author card under the post.
+    //
+    // The Follow button used to live next to the byline and render only for a
+    // signed-in reader, which is most of why 2,500 views produced four follows:
+    // almost nobody could see it, and those who could were asked to commit
+    // before they had read a word. The decision to follow happens at the end.
+    let authorCard = null;
+    if (blog.createdBy) {
+      const [profile, more] = await Promise.all([
+        User.findById(blog.createdBy._id).select("fullName profilePic bio followers").lean(),
+        Blog.find({
+          createdBy: blog.createdBy._id,
+          status: "published",
+          _id: { $ne: blog._id },
+        })
+          .sort({ createdAt: -1 })
+          .limit(3)
+          .select("title slug coverImageURL createdAt")
+          .lean(),
+      ]);
+
+      if (profile) {
+        authorCard = {
+          _id: profile._id,
+          fullName: profile.fullName,
+          profilePic: profile.profilePic,
+          bio: profile.bio || "",
+          followerCount: (profile.followers || []).length,
+          morePosts: more,
+          isFollowing: !!(
+            req.user &&
+            profile.followers &&
+            profile.followers.some((f) => String(f) === String(req.user._id))
+          ),
+          isSelf: !!(req.user && String(req.user._id) === String(profile._id)),
+        };
+      }
+    }
+
     return res.render("blog", {
       title: blog.title,
       metaDescription: metaDescription,
       canonicalPath,
+      authorCard,
       // Set by the publish redirect; views/blog.ejs shows the share panel once.
       justPublished: req.query.published === "1",
       shareUrl: `${shareOrigin}${canonicalPath}`,

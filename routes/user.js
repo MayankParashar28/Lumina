@@ -661,6 +661,103 @@ router.get("/profile", async (req, res) => {
 });
 
 // Follow a user
+// 🤝 Following someone, in one place.
+//
+// Used both by POST /follow/:userId and by the "Follow" a signed-out reader
+// clicks under a post, which completes after they sign in. Idempotent: an
+// $addToSet, so replaying it is harmless.
+async function followAndNotify({ followerId, targetId, io }) {
+  if (String(followerId) === String(targetId)) return false;
+
+  const [follower, target] = await Promise.all([
+    User.findById(followerId).select("fullName bio").lean(),
+    User.findById(targetId).select("_id followers").lean(),
+  ]);
+  if (!follower || !target) return false;
+
+  const already = (target.followers || []).some((f) => String(f) === String(followerId));
+  if (already) return false;
+
+  await Promise.all([
+    User.updateOne({ _id: followerId }, { $addToSet: { following: targetId } }),
+    User.updateOne({ _id: targetId }, { $addToSet: { followers: followerId } }),
+  ]);
+
+  await Notification.create({
+    userId: targetId,
+    senderId: followerId,
+    type: "follow",
+    message: `${follower.fullName} started following you.`,
+    createdAt: new Date(),
+    read: false,
+  });
+
+  if (io) {
+    io.to(`user:${targetId}`).emit("new_notification", {
+      message: `${follower.fullName} started following you.`,
+    });
+  }
+
+  notifyByEmail({
+    kind: "follow",
+    recipientId: targetId,
+    senderId: followerId,
+    build: (unsubscribeUrl) => ({
+      followerName: follower.fullName,
+      followerBio: follower.bio,
+      url: `${emailBaseUrl()}/user/profile/${followerId}`,
+      unsubscribeUrl,
+    }),
+    send: sendFollowEmail,
+  });
+
+  return true;
+}
+
+// 🎯 "Follow" pressed by a reader who is not signed in.
+//
+// Without this the click is simply thrown away: they are sent to sign in, land
+// on the home page, and the thing they actually wanted never happens. The
+// intent rides along in a short-lived cookie rather than the session, because
+// the Google callback regenerates the session and would lose it.
+const FOLLOW_INTENT = "follow_intent";
+const OBJECT_ID = /^[a-f\d]{24}$/i;
+
+function rememberFollowIntent(req, res) {
+  const target = String(req.query.follow || "");
+  if (!OBJECT_ID.test(target)) return;
+
+  // Only a path on this site. "//evil.com" is a protocol-relative URL that a
+  // browser treats as absolute, so one leading slash is not enough of a check.
+  const next = String(req.query.next || "");
+  const safeNext = next.startsWith("/") && !next.startsWith("//") ? next : "";
+
+  res.cookie(FOLLOW_INTENT, JSON.stringify({ a: target, n: safeNext }), {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 30 * 60 * 1000,
+  });
+}
+
+// Returns where to send them next, or null to use the caller's own default.
+// Never throws: a failed follow must not break a successful sign-in.
+async function applyFollowIntent(req, res, userId) {
+  const raw = req.cookies ? req.cookies[FOLLOW_INTENT] : null;
+  if (!raw) return null;
+  res.clearCookie(FOLLOW_INTENT);
+
+  try {
+    const { a, n } = JSON.parse(raw);
+    if (!OBJECT_ID.test(String(a))) return null;
+    await followAndNotify({ followerId: userId, targetId: a, io: req.app.get("io") });
+    return n && n.startsWith("/") && !n.startsWith("//") ? n : null;
+  } catch (err) {
+    logger.error("⚠️ Follow intent failed:", err.message);
+    return null;
+  }
+}
+
 router.post("/follow/:userId", async (req, res) => {
   try {
     if (!req.user) {
@@ -707,48 +804,13 @@ router.post("/follow/:userId", async (req, res) => {
       req.flash("success", `You have unfollowed ${userToFollow.fullName}.`);
       logger.info(`✅ ${user.fullName} unfollowed ${userToFollow.fullName}`);
     } else {
-      // ✅ Follow Logic
-      await Promise.all([
-        User.findByIdAndUpdate(user._id, { $addToSet: { following: userToFollow._id } }).exec(),
-        User.findByIdAndUpdate(userToFollow._id, { $addToSet: { followers: user._id } }).exec(),
-      ]);
-
-      // 🔔 Create a follow notification
-      const notification = new Notification({
-        userId: userToFollow._id,
-        senderId: user._id,
-        type: "follow",
-        message: `${user.fullName} started following you.`,
-        createdAt: new Date(),
-        read: false,
+      // ✅ Follow Logic — the same helper the signed-out "Follow" uses once the
+      // reader has signed in, so both produce the same notification and email.
+      await followAndNotify({
+        followerId: user._id,
+        targetId: userToFollow._id,
+        io: req.app.get("io"),
       });
-
-      await notification.save();
-
-      // ...and by email. Not awaited: the follower is waiting on a redirect,
-      // and notifyByEmail never rejects.
-      notifyByEmail({
-        kind: "follow",
-        recipientId: userToFollow._id,
-        senderId: user._id,
-        build: (unsubscribeUrl) => ({
-          followerName: user.fullName,
-          followerBio: user.bio,
-          url: `${emailBaseUrl()}/user/profile/${user._id}`,
-          unsubscribeUrl,
-        }),
-        send: sendFollowEmail,
-      });
-
-      // 📢 Emit real-time notification
-      const io = req.app.get("io");
-      if (io) {
-        io.to(`user:${userToFollow._id}`).emit("new_notification", {
-          message: `${user.fullName} started following you.`,
-        });
-      } else {
-        logger.warn("⚠️ Warning: Socket.io is not initialized.");
-      }
 
       req.flash("success", `You are now following ${userToFollow.fullName}!`);
       logger.info(`✅ ${user.fullName} started following ${userToFollow.fullName}`);
@@ -765,6 +827,7 @@ router.post("/follow/:userId", async (req, res) => {
 // Note: no authLimiter here. It belongs on the POST only — sharing it with the
 // GET let a handful of page views (or a reload) lock a visitor out of the form.
 router.get("/signin", redirectIfAuthenticated, (req, res) => {
+  rememberFollowIntent(req, res);
   return res.render("signin", {
     title: "Sign In - Lumina",
     metaDescription: "Welcome back to Lumina. Log in to continue your journey and explore new stories, connect with writers, and share your own unique perspectives today!..."
@@ -824,7 +887,7 @@ router.post("/signin", authLimiter, async (req, res) => {
     const token = await User.matchPasswordAndGenerateToken(email, password);
 
     // 🛡️ Security: Regenerate Session ID to prevent fixation attacks
-    req.session.regenerate((err) => {
+    req.session.regenerate(async (err) => {
       if (err) logger.error("Session Regeneration Error:", err);
 
       // Store new session data if needed (e.g., user info slightly)
@@ -832,7 +895,11 @@ router.post("/signin", authLimiter, async (req, res) => {
 
       res.cookie("token", token, AUTH_COOKIE);
 
-      return res.redirect("/");
+      // If they arrived here from a "Follow" under a post, do the thing they
+      // actually came to do and put them back where they were.
+      const signedIn = jwt.decode(token) || {};
+      const back = await applyFollowIntent(req, res, signedIn._id);
+      return res.redirect(back || "/");
     });
   } catch (error) {
     logger.error("❌ Error during sign-in:", error);
@@ -883,9 +950,10 @@ router.get(
         };
         const jwtToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' });
 
-        const setCookieAndRedirect = () => {
+        const setCookieAndRedirect = async () => {
           res.cookie("token", jwtToken, AUTH_COOKIE);
-          return res.redirect("/");
+          const back = await applyFollowIntent(req, res, user._id);
+          return res.redirect(back || "/");
         };
 
         if (req.session && typeof req.session.regenerate === "function") {
@@ -902,6 +970,7 @@ router.get(
 );
 
 router.get("/signup", redirectIfAuthenticated, (req, res) => {
+  rememberFollowIntent(req, res);
   return res.render("signup", {
     title: "Join Lumina - Start Writing",
     metaDescription: "Create an account on Lumina to share your stories, connect with the world, and join a vibrant community of passionate tech enthusiasts and creators!..."
@@ -1029,7 +1098,8 @@ router.get("/verify/:token", verifyLimiter, async (req, res) => {
 
     res.cookie("token", token, AUTH_COOKIE);
 
-    return res.redirect("/");
+    const back = await applyFollowIntent(req, res, newUser._id);
+    return res.redirect(back || "/");
   } catch (error) {
     logger.error("Verification Error:", error);
     return res.render("signin", { error: "Something went wrong during verification." });
