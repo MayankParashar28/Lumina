@@ -25,11 +25,22 @@ body {
     flex-direction: column;
     min-height: 100vh;
     width: 100%;
-    overflow-x: hidden;
-    /* Prevent horizontal scroll */
     overscroll-behavior: auto;
     /* Allow default browser behavior for safety */
-    overflow-y: auto;
+}
+
+/* Horizontal overflow is clipped on <html>, not on <body>.
+ *
+ * It used to be `overflow-x: hidden; overflow-y: auto` on <body>, which makes
+ * <body> a scroll container in Chrome -- and `position: sticky` inside a scroll
+ * container that never scrolls internally silently does nothing. That is why
+ * the post page's action rail scrolled away instead of sticking, and it would
+ * have broken any sticky element added anywhere on the site.
+ *
+ * On <html> the clip still applies to the whole viewport, so nothing scrolls
+ * sideways, and sticky works again. */
+html {
+    overflow-x: hidden;
 }
 
 /* Mobile: Allow natural scroll behavior */

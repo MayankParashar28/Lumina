@@ -25,21 +25,24 @@ body {
     /* 1200px to match .floating-nav and .footer-content-minimal, so the page's
        content lines up with the chrome above and below it. */
     max-width: 1200px;
-    margin: 3.5rem auto 2.5rem;
+    /* The top margin is nav clearance, not decoration: .floating-nav is fixed
+       and its bottom edge sits at 89px, so anything less than this slides the
+       avatar underneath it. All the height came out of the page below. */
+    margin: 6.5rem auto 2rem;
     padding: 0 1.5rem;
 }
 
 /* Header */
 .profile-header {
     text-align: center;
-    margin-bottom: 2.25rem;
+    margin-bottom: 1.25rem;
     animation: fadeUp 0.6s ease-out forwards;
 }
 
 .profile-avatar-wrapper {
-    width: 92px;
-    height: 92px;
-    margin: 0 auto 1rem;
+    width: 72px;
+    height: 72px;
+    margin: 0 auto 0.6rem;
     border-radius: 50%;
     padding: 4px;
     border: 1px solid var(--border-light);
@@ -54,17 +57,17 @@ body {
 
 .profile-name {
     font-family: var(--font-heading);
-    font-size: 2rem;
+    font-size: 1.6rem;
     font-weight: 800;
-    margin-bottom: 0.35rem;
+    margin-bottom: 0.2rem;
     letter-spacing: -0.03em;
 }
 
 .profile-bio {
-    font-size: 1.1rem;
+    font-size: 1rem;
     color: var(--text-secondary);
     max-width: 600px;
-    margin: 0 auto 0.9rem;
+    margin: 0 auto 0.5rem;
     line-height: 1.6;
 }
 
@@ -120,7 +123,7 @@ body {
     display: flex;
     justify-content: center;
     gap: 1rem;
-    margin-top: 1.25rem;
+    margin-top: 0.85rem;
 }
 
 .btn-action {
@@ -159,8 +162,8 @@ body {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 2rem;
-    margin: 1.75rem 0;
-    padding: 1.25rem 0;
+    margin: 1rem 0;
+    padding: 0.9rem 0;
     border-top: 1px solid var(--border-light);
     border-bottom: 1px solid var(--border-light);
 }
@@ -190,7 +193,7 @@ body {
     height: 1px;
     background: transparent;
     /* Was 4rem top and bottom: 129px of empty page per divider, twice. */
-    margin: 2rem 0;
+    margin: 1.25rem 0;
 }
 
 .section-title {
@@ -199,9 +202,9 @@ body {
     text-transform: uppercase;
     letter-spacing: 0.1em;
     color: #999;
-    margin-bottom: 1.25rem;
+    margin-bottom: 1rem;
     border-bottom: 1px solid var(--border-light);
-    padding-bottom: 0.7rem;
+    padding-bottom: 0.55rem;
 }
 
 /* Story Grid */

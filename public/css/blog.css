@@ -213,41 +213,26 @@ body {
     }
 }
 
-/* The rail travels with the reader, but only for as long as the post does.
+/* The rail travels with the reader for exactly as long as the post does.
  *
- * It is fixed rather than sticky, and not by choice: `body` is `overflow-x:
- * hidden` site-wide, which makes body its own scroll container, and a sticky
- * child of a scroll container that never scrolls internally simply never
- * sticks. That is why this bar used to ride down the page and then stop dead --
- * sticky was doing nothing at all here.
+ * That is plain `position: sticky` in grid-column 3 (set above): its travel is
+ * bounded by its own grid area, which is the article row, so it rides the post
+ * from top to bottom and stays behind at the author card and the comments. The
+ * bound is the point -- the rail acts on the post, so it belongs to the post.
  *
- * Fixed sidesteps that, and the bound the sticky version was supposed to give
- * is restored in script: blog.ejs adds `is-out` once the rail's own centre line
- * leaves the article, so it travels the height of the post and no further.
+ * This only started working once `overflow-x: hidden` moved off <body> (see
+ * global.css); until then <body> was a scroll container and sticky did nothing
+ * at all here.
  *
- * `(100vw - 1000px) / 2` is the gutter beside the 1000px reading column, so
- * the bar parks in it at a fixed distance from the text. Only from 1200px up:
- * below that the gutter is narrower than the bar and it would sit on the words.
+ * From 1200px up the bar is pulled to the near edge of its track instead of
+ * being centred in it, so the gap to the text stays the same as the window
+ * widens rather than drifting off towards the corner.
  */
 @media (min-width: 1200px) {
     .article-actions-bar-vertical {
-        position: fixed;
-        top: 50%;
-        /* 56px: the bar's own width plus a little air off the text. */
-        right: calc((100vw - 1000px) / 2 - 56px);
-        transform: translateY(-50%);
-        margin: 0;
-        transition: opacity 0.2s ease, visibility 0.2s ease;
-    }
-
-    .article-actions-bar-vertical.is-out {
-        opacity: 0;
-        visibility: hidden;
+        margin: 0 auto 0 0;
     }
 }
-
-@media (min-width: 1200px) and (prefers-reduced-motion: reduce) {
-    .article-actions-bar-vertical { transition: none; }
 }
 }
 }
