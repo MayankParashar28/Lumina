@@ -549,24 +549,13 @@ app.get('/user/edit-profile', (req, res) => {
 
 
 
-// ⚡ Cache slowly-changing taxonomy (categories / tags / trending tags) used on
-// every home render. Refreshes at most once every 5 minutes.
 // Taxonomy (categories/tags/trending) is read on nearly every page but changes
-// rarely. Cache it in the shared layer (Redis when enabled, else in-process) so
-// every instance skips these three Mongo aggregations for 5 minutes.
-const TAXONOMY_TTL_SECONDS = 5 * 60;
-async function getTaxonomy() {
-  const cached = await redisSvc.cache.get("taxonomy");
-  if (cached) return cached;
-  const [categories, tags, trendingTagsList] = await Promise.all([
-    Blog.distinct("category"),
-    Blog.distinct("tags"),
-    Blog.getTrendingTags(),
-  ]);
-  const data = { categories, tags, trendingTagsList };
-  await redisSvc.cache.set("taxonomy", data, TAXONOMY_TTL_SECONDS);
-  return data;
-}
+// rarely, so it is cached in the shared layer (Redis when enabled, else
+// in-process) and every instance skips these three Mongo aggregations for 5
+// minutes. It lives in services/taxonomy.js together with the feed filter
+// builder, because routes/blog.js serves the same feed as JSON and the two must
+// agree on what a given `?category=` means.
+const { getTaxonomy, buildFeedQuery, FEED_PAGE_SIZE } = require("./services/taxonomy");
 
 // ⚡ The "featured" and "trending" rails are identical for every reader, and the
 // home route was re-querying both on every signed-in page view. Same treatment
@@ -649,32 +638,24 @@ app.get("/", async (req, res) => {
     const categoryFilter = req.query.category ? req.query.category.toLowerCase() : "";
     const tagFilter = req.query.tag ? req.query.tag.toLowerCase() : "";
 
-    let filter = { status: "published" }; // ✅ Only show published blogs
-    let sort = { views: 1, createdAt: -1 }; // ⚡ Cold Start: Show "Hidden Gems" (Low views + Recent)
+    // One shared builder turns the query string into { filter, sort }; see
+    // services/taxonomy.js for why the category/tag match is no longer a regex.
+    //
+    // Resolving a real category or tag needs the vocabulary, so in that case it
+    // has to be fetched before the feed query. On an unfiltered load -- the
+    // common one -- nothing needs resolving, so the fetch stays down in the
+    // Promise.all with the rails rather than becoming an extra serial step.
+    const needsVocabulary =
+      Boolean(tagFilter) ||
+      Boolean(categoryFilter && !["all", "trending", "featured"].includes(categoryFilter));
+    const earlyTaxonomy = needsVocabulary ? await getTaxonomy() : null;
 
-    // Apply search query filter if provided
-    if (searchQuery) {
-      filter.$text = { $search: searchQuery }; // MongoDB full-text search
-      sort = { score: { $meta: "textScore" } }; // Sort by text relevance
-    }
-
-    // Apply category filter (case-insensitive)
-    if (categoryFilter) {
-      if (categoryFilter === 'trending') {
-        sort = { views: -1, createdAt: -1 }; // Sort by views for trending
-      } else if (categoryFilter === 'featured') {
-        filter.featured = true;
-        sort = { createdAt: -1 };
-      } else if (categoryFilter !== 'all') {
-        filter.category = { $regex: new RegExp(categoryFilter, "i") };
-        sort = { createdAt: -1 };
-      }
-    }
-
-    // Apply tag filter (case-insensitive)
-    if (tagFilter) {
-      filter.tags = { $in: [new RegExp(tagFilter, "i")] };
-    }
+    const { filter, sort } = buildFeedQuery({
+      taxonomy: earlyTaxonomy || {},
+      category: categoryFilter,
+      tag: tagFilter,
+      search: searchQuery,
+    });
 
     let blogs = [];
 
@@ -745,14 +726,16 @@ app.get("/", async (req, res) => {
 
     // Pagination Setup
     const page = parseInt(req.query.page) || 1;
-    const limit = 8; // Number of blogs per page
+    const limit = FEED_PAGE_SIZE; // shared with /blog/api/feed
     const skip = (page - 1) * limit;
 
     // Fallback: If no personalization (or it failed/empty), fetch standard
     if (blogs.length === 0) {
-      const totalBlogs = await Blog.countDocuments(filter);
-      const totalPages = Math.ceil(totalBlogs / limit);
-
+      // There used to be a `countDocuments(filter)` here, to work out a
+      // `totalPages` that was handed to the view as `res.locals.pagination`.
+      // No template ever read it -- the feed is infinite-scroll, driven by
+      // /blog/api/feed -- so every signed-in home render was paying for a
+      // second full pass over the filter to compute a number nobody saw.
       blogs = await Blog.find(filter)
         .sort(sort)
         .skip(skip)
@@ -760,13 +743,6 @@ app.get("/", async (req, res) => {
         .select("-body") // 📉 Optimization: Don't load full text
         .populate("createdBy", "fullName profilePic")
         .lean(); // ⚡ Optimization: Return plain JSON
-
-      res.locals.pagination = { currentPage: page, totalPages }; // Pass to layout
-    } else {
-      // If personalized blogs exist, we should manually slice them for consistency?
-      // For now, let's just paginate the 'standard' flow as it's the main issue.
-      // If personalization returns 10 items, that's effectively one page.
-      res.locals.pagination = null;
     }
 
     // Taxonomy, the two shared rails and "continue reading" need nothing from
@@ -781,7 +757,7 @@ app.get("/", async (req, res) => {
       : [];
 
     const [taxonomy, rails, recentlyReadDocs] = await Promise.all([
-      getTaxonomy(),   // ⚡ cached (5 min)
+      earlyTaxonomy || getTaxonomy(), // ⚡ cached (5 min)
       getHomeRails(),  // ⚡ cached (1 min)
       distinctIds.length
         ? Blog.find({ _id: { $in: distinctIds }, status: "published" })

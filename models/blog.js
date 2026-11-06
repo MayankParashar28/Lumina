@@ -164,14 +164,40 @@ blogSchema.pre("save", function (next) {
 
 
 
-// Indexing for search functionality and performance
-blogSchema.index({ title: "text", body: "text", tags: "text" }); // Text Search
-blogSchema.index({ createdAt: -1 }); // Sorting by Newest
-blogSchema.index({ views: -1 });     // Sorting by Trending
-blogSchema.index({ category: 1 });   // Filtering by Category
-blogSchema.index({ createdBy: 1 });  // User Profile Feed
-blogSchema.index({ tags: 1 });       // Efficient Tag Filtering
-blogSchema.index({ status: 1 });     // Filtering Drafts vs Published
+// Indexes, one per query shape this app actually issues.
+//
+// These used to be seven single-field indexes. MongoDB uses only ONE index per
+// query, so a single-field index cannot serve a filter and a sort at the same
+// time: every feed query matched on `status` with the `status_1` index and then
+// sorted the matches in memory, and the category and tag feeds fell back to
+// walking `createdAt_-1` end to end. Measured on the live collection, filtering
+// by category examined 31 documents to return 6, and the default signed-in feed
+// examined 27 to return 8, both with an in-memory SORT stage.
+//
+// Each compound below puts the equality field first, then the sort field, which
+// is the order MongoDB can walk without sorting. The sort direction matters: an
+// index can be read backwards, but {views:1, createdAt:-1} reversed is
+// {views:-1, createdAt:1}, which is NOT the trending sort -- hence two views
+// indexes rather than one.
+blogSchema.index({ title: "text", body: "text", tags: "text" }); // search
+
+// Newest-first, unfiltered: the admin list, where the filter may be empty.
+blogSchema.index({ createdAt: -1 });
+
+// Public feeds. `status` is an equality match on every one of them.
+blogSchema.index({ status: 1, createdAt: -1 });            // newest published
+blogSchema.index({ status: 1, views: -1, createdAt: -1 }); // trending
+blogSchema.index({ status: 1, views: 1, createdAt: -1 });  // hidden gems (default feed)
+blogSchema.index({ status: 1, featured: 1, createdAt: -1 });
+blogSchema.index({ status: 1, category: 1, createdAt: -1 });
+blogSchema.index({ status: 1, tags: 1, createdAt: -1 });
+
+// Author pages, drafts, "more from this author", the weekly digest.
+blogSchema.index({ createdBy: 1, createdAt: -1 });
+
+// The scheduler polls this shape every minute looking for posts that are due.
+blogSchema.index({ status: 1, publishAt: 1 });
+
 // slug already has a unique sparse index from the field definition above.
 
 blogSchema.statics.getTrendingTags = async function () {

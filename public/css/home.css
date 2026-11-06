@@ -622,3 +622,13 @@ body {
         font-size: 0.8rem;
     }
 }
+/* Shown when a filter matches nothing. The grid is emptied client-side when a
+   chip is clicked, so without this the reader would just get a blank area. */
+.bento-empty {
+    grid-column: 1 / -1;
+    margin: 0;
+    padding: 3rem 1.5rem;
+    text-align: center;
+    color: var(--text-secondary, #6b7280);
+    font-size: 1rem;
+}

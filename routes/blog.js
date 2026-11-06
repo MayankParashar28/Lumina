@@ -1568,41 +1568,36 @@ const CACHE_TTL = 30 * 1000; // 30 Seconds
 // Bound the map. The key is page+category, so a crawler walking deep pages or
 // probing categories could otherwise grow it without limit for the process's life.
 const FEED_CACHE_MAX = 200;
+const { getTaxonomy, buildFeedQuery, FEED_PAGE_SIZE } = require("../services/taxonomy");
 
 router.get("/api/feed", async (req, res) => {
   try {
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const categoryFilterRaw = String(req.query.category || "all").trim();
+    const tagFilterRaw = String(req.query.tag || "").trim();
 
-    // 🛑 Check Cache First
-    const cacheKey = `${page}-${categoryFilterRaw}`;
+    // 🛑 Check Cache First. The tag is part of the key -- it used to be ignored
+    // entirely, so a tag request was served the unfiltered feed.
+    const cacheKey = `${page}-${categoryFilterRaw}-${tagFilterRaw}`;
     const cachedData = feedCache.get(cacheKey);
 
     if (cachedData && (Date.now() - cachedData.timestamp < CACHE_TTL)) {
-      // console.log("🚀 Serving Feed from Cache:", cacheKey);
       return res.json(cachedData.data);
     }
 
-    const limit = 5;
-    // 🔒 Security: Escape categoryFilter for safe RegExp use (ReDoS prevention)
-    const categoryFilter = categoryFilterRaw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // Same page size as the server-rendered first page, so infinite scroll does
+    // not re-request rows the server already sent.
+    const limit = FEED_PAGE_SIZE;
     const skip = (page - 1) * limit;
 
-    let query = { status: "published" };
-    if (categoryFilterRaw !== "all") {
-      if (categoryFilterRaw === "featured") {
-        query.featured = true;
-      } else if (categoryFilterRaw === "trending") {
-        // Trending handled by sort
-      } else {
-        query.category = { $regex: new RegExp(categoryFilter, "i") };
-      }
-    }
-
-    let sort = { createdAt: -1 };
-    if (categoryFilterRaw === "trending") {
-      sort = { views: -1 };
-    }
+    // Same filter builder the server-rendered feed uses, so a chip click and a
+    // full page load of the same URL return the same posts in the same order.
+    const taxonomy = await getTaxonomy();
+    const { filter: query, sort } = buildFeedQuery({
+      taxonomy,
+      category: categoryFilterRaw,
+      tag: tagFilterRaw,
+    });
 
     // 🏎️ Optimized Query: Added .select() to exclude body
     const blogs = await Blog.find(query)

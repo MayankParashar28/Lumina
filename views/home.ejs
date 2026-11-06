@@ -82,20 +82,17 @@
 
         <!-- Bento Feed Wrapper -->
         <div class="bento-feed-wrapper" style="margin-top: 2rem;">
-            <!-- Skeleton Loading Phase (Initial) -->
-            <div class="skeleton-container initial" id="bento-skeleton">
-                <div class="skeleton-item item-main"></div>
-                <div class="skeleton-item item-normal"></div>
-                <div class="skeleton-item item-normal"></div>
-                <div class="skeleton-item item-wide"></div>
-                <div class="skeleton-item item-tall"></div>
-                <div class="skeleton-item item-normal"></div>
-                <div class="skeleton-item item-normal"></div>
-                <div class="skeleton-item item-wide"></div>
-            </div>
+            <!-- No initial skeleton: the cards below are server-rendered, so they
+                 are already in this HTML. This used to show eight placeholder
+                 tiles while the real feed sat underneath at `opacity: 0`, and
+                 only revealed it on `window.load` (which waits for every image)
+                 plus an 800ms timer -- so the page deliberately hid content it
+                 had already delivered. The pagination skeleton further down is
+                 still used, for infinite scroll, where there is really nothing
+                 to show yet. -->
 
             <!-- Bento Grid Feed -->
-            <div class="bento-grid" id="bento-grid" style="opacity: 0; transition: opacity 0.5s ease;">
+            <div class="bento-grid" id="bento-grid" style="transition: opacity 0.25s ease;">
                 <% if (blogs && blogs.length> 0) { %>
                     <% blogs.forEach((blog, index)=> {
                         let bentoClass = 'item-normal';
@@ -199,45 +196,108 @@
             let hasMore = true;
             let currentCategory = '<%= categoryFilter || "all" %>';
 
-            // Initial Load logic
-            window.addEventListener('load', () => {
-                const skeleton = document.getElementById('bento-skeleton');
-                const grid = document.getElementById('bento-grid');
-
-                // Set active class based on URL
-                const filterBtns = document.querySelectorAll('.filter-btn');
-                filterBtns.forEach(btn => {
-                    btn.classList.remove('active');
-                    if (btn.getAttribute('data-category') === currentCategory) {
-                        btn.classList.add('active');
-                    }
+            // Mark the chip matching the current URL. This runs on
+            // DOMContentLoaded rather than `load`: it only touches markup that
+            // is already parsed, so there is no reason to wait for images.
+            const syncActiveChip = () => {
+                document.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.classList.toggle(
+                        'active',
+                        btn.getAttribute('data-category') === currentCategory
+                    );
                 });
+            };
+            document.addEventListener('DOMContentLoaded', syncActiveChip);
 
-                if (skeleton && grid) {
-                    skeleton.style.opacity = '0';
-                    setTimeout(() => {
-                        skeleton.style.display = 'none';
-                        grid.style.opacity = '1';
-                    }, 800);
-                }
-            });
-
-            // --- Optimized Bento Reshuffle Logic ---
+            // --- Bento pattern ---
             const filterBtns = document.querySelectorAll('.filter-btn');
             const bentoGrid = document.getElementById('bento-grid');
 
-            // ... (Keep updateBentoPattern and applyFilter if needed for seamless trans, but let's do robust URL nav first)
+            // The grid's visual rhythm comes from the card's position, so it has
+            // to be reassigned whenever cards are added or replaced. The pattern
+            // here is the same one home.ejs applies server-side.
+            //
+            // The appended-cards path used to call `applyFilter(currentCategory)`
+            // here, but `applyFilter` was never defined -- it threw a
+            // ReferenceError on every infinite-scroll batch, which the caller's
+            // try/catch swallowed as "Error loading more blogs".
+            const BENTO = { 0: 'item-main', 3: 'item-wide', 4: 'item-tall', 7: 'item-wide' };
+            const updateBentoPattern = () => {
+                const items = bentoGrid.querySelectorAll('.bento-item');
+                items.forEach((el, i) => {
+                    el.classList.remove('item-main', 'item-wide', 'item-tall', 'item-normal');
+                    el.classList.add(BENTO[i % 8] || 'item-normal');
+                });
+            };
+
+            // --- Filter chips: swap the cards, not the whole page ---
+            //
+            // A chip click used to do `window.location.href = '/?category=x'`,
+            // re-rendering the entire page -- nav, rails, trending tags,
+            // personalization, every query behind them -- to change eight cards.
+            // The JSON feed already returns exactly those cards, so the chip now
+            // fetches them and swaps the grid, and pushState keeps the URL and
+            // the back button honest. A direct hit on /?category=x is still
+            // server-rendered, so links and no-JS loads are unaffected.
+            let currentTag = new URLSearchParams(location.search).get('tag') || '';
+
+            const feedUrl = (page) =>
+                `/blog/api/feed?page=${page}` +
+                `&category=${encodeURIComponent(currentCategory)}` +
+                (currentTag ? `&tag=${encodeURIComponent(currentTag)}` : '');
+
+            const switchFilter = async (category, { push = true } = {}) => {
+                if (isLoading) return;
+                isLoading = true;
+                currentCategory = category;
+                currentTag = '';
+                currentPage = 1;
+                hasMore = true;
+                syncActiveChip();
+                bentoGrid.style.opacity = '0.45';
+
+                if (push) {
+                    const url = category === 'all' ? '/' : `/?category=${encodeURIComponent(category)}`;
+                    history.pushState({ category }, '', url);
+                }
+
+                try {
+                    const res = await fetch(feedUrl(1), { headers: { 'Accept': 'application/json' } });
+                    if (!res.ok) throw new Error('feed ' + res.status);
+                    const data = await res.json();
+                    hasMore = !!data.hasMore;
+                    bentoGrid.replaceChildren();
+                    renderNewBlogs(data.blogs || []);
+                    if (!(data.blogs || []).length) {
+                        bentoGrid.innerHTML =
+                            '<p class="bento-empty">Nothing here yet. Try another filter.</p>';
+                    }
+                } catch (err) {
+                    // Don't leave the reader on a half-swapped grid: fall back to
+                    // the server-rendered page, which is what used to happen anyway.
+                    console.error('Filter switch failed, falling back to navigation:', err);
+                    window.location.href =
+                        currentCategory === 'all' ? '/' : `/?category=${encodeURIComponent(currentCategory)}`;
+                    return;
+                } finally {
+                    isLoading = false;
+                    bentoGrid.style.opacity = '1';
+                }
+            };
 
             filterBtns.forEach(btn => {
                 btn.addEventListener('click', () => {
                     const category = btn.getAttribute('data-category');
-                    // Navigate to URL for server-side filtering (Robust)
-                    if (category === 'all') {
-                        window.location.href = '/';
-                    } else {
-                        window.location.href = `/?category=${category}`;
-                    }
+                    if (category !== currentCategory) switchFilter(category);
                 });
+            });
+
+            // Back/forward through filters the reader applied.
+            window.addEventListener('popstate', () => {
+                const next = new URLSearchParams(location.search).get('category') || 'all';
+                const nextTag = new URLSearchParams(location.search).get('tag') || '';
+                if (nextTag) { window.location.reload(); return; }
+                if (next !== currentCategory) switchFilter(next, { push: false });
             });
 
             // --- Infinite Scroll Logic ---
@@ -249,7 +309,7 @@
                 pagSkeleton.style.display = 'grid';
 
                 try {
-                    const response = await fetch(`/blog/api/feed?page=${currentPage + 1}&category=${currentCategory}`);
+                    const response = await fetch(feedUrl(currentPage + 1));
                     const data = await response.json();
 
                     if (data.blogs && data.blogs.length > 0) {
@@ -318,11 +378,11 @@
                 if (document.startViewTransition) {
                     document.startViewTransition(() => {
                         bentoGrid.appendChild(fragment);
-                        applyFilter(currentCategory); // Recalculate everything
+                        updateBentoPattern();
                     });
                 } else {
                     bentoGrid.appendChild(fragment);
-                    applyFilter(currentCategory);
+                    updateBentoPattern();
                 }
             };
 
