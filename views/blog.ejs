@@ -151,8 +151,8 @@
                 <div class="blog-tags-container" style="margin-bottom: 2rem;">
                     <% if (blog.tags && blog.tags.length> 0) { %>
                         <% blog.tags.slice(0, 6).forEach(tag=> { %>
-                            <a href="/?tag=<%= tag %>" class="tag-link">
-                                #<%= tag %>
+                            <a href="/?tag=<%= encodeURIComponent(tag) %>" class="tag-link">
+                                #<%= String(tag).replace(/^#+/, '') %>
                             </a>
                             <% }) %>
                                 <% } %>

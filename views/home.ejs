@@ -34,7 +34,10 @@
             <% if (typeof trendingTagsList !=='undefined' && trendingTagsList.length> 0) { %>
                 <div class="feed-tags">
                     <% trendingTagsList.forEach(tag=> { %>
-                        <a href="/?tag=<%= tag._id %>" class="tag-chip">#<%= tag._id %></a>
+                        <%# Tags contain spaces ("Artificial Intelligence"), so the value has to be
+                            encoded for the URL. The label strips a leading "#" because a few stored
+                            tags already carry one, which rendered as "##poetry". %>
+                        <a href="/?tag=<%= encodeURIComponent(tag._id) %>" class="tag-chip">#<%= String(tag._id).replace(/^#+/, '') %></a>
                         <% }) %>
                 </div>
                 <% } %>

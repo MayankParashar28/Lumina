@@ -52,7 +52,9 @@ before(async () => {
       title: `Filterable Post ${String(i).padStart(2, "0")}`,
       body: "word ".repeat(300),
       category: i % 2 === 0 ? "Design" : "Science",
-      tags: i % 3 === 0 ? ["react", "ui"] : ["mongo"],
+      // Real tags in this app contain spaces ("Artificial Intelligence") and a
+      // couple carry a leading "#", so both shapes are represented here.
+      tags: i % 3 === 0 ? ["react", "Machine Learning"] : ["#poetry"],
       status: "published",
       createdBy: author._id,
       views: i,
@@ -150,4 +152,34 @@ test("an unknown category returns nothing rather than everything", async () => {
   const res = await request(ctx.app).get("/blog/api/feed?page=1&category=no-such-category");
   assert.equal(res.status, 200);
   assert.equal(res.body.blogs.length, 0);
+});
+
+test("a tag containing a space can be filtered", async () => {
+  const res = await request(ctx.app)
+    .get("/?tag=" + encodeURIComponent("Machine Learning"))
+    .set("Cookie", cookie);
+  assert.equal(res.status, 200);
+  const titles = titlesOf(res.text);
+  assert.ok(titles.length > 0, "a multi-word tag must still match");
+  for (const t of titles) {
+    const n = Number(t.match(/(\d+)$/)[1]);
+    assert.equal(n % 3, 0, `${t} does not carry the Machine Learning tag`);
+  }
+});
+
+test("a tag stored with a leading # can be filtered", async () => {
+  const res = await request(ctx.app)
+    .get("/blog/api/feed?page=1&tag=" + encodeURIComponent("#poetry"));
+  assert.equal(res.status, 200);
+  assert.ok(res.body.blogs.length > 0, "expected the #poetry posts");
+  for (const b of res.body.blogs) {
+    assert.ok(b.tags.includes("#poetry"), `${b.title} is missing the #poetry tag`);
+  }
+});
+
+test("tag matching is case-insensitive", async () => {
+  const res = await request(ctx.app)
+    .get("/blog/api/feed?page=1&tag=" + encodeURIComponent("machine learning"));
+  assert.equal(res.status, 200);
+  assert.ok(res.body.blogs.length > 0, "lowercase input must match the stored casing");
 });
