@@ -11,6 +11,7 @@ const { hashPassword } = require("../services/password");
 const passport = require("passport");
 const { googleEnabled } = require("../services/passport");
 const logger = require("../services/logger"); // Structured Logging
+const { wantsJson } = require("../utils/http");
 // Shared rate-limit counters across instances (Redis when enabled, else memory).
 const { makeRateLimitStore } = require("../services/redis");
 
@@ -669,19 +670,23 @@ router.get("/profile", async (req, res) => {
 async function followAndNotify({ followerId, targetId, io }) {
   if (String(followerId) === String(targetId)) return false;
 
-  const [follower, target] = await Promise.all([
-    User.findById(followerId).select("fullName bio").lean(),
-    User.findById(targetId).select("_id followers").lean(),
-  ]);
-  if (!follower || !target) return false;
+  const follower = await User.findById(followerId).select("fullName bio").lean();
+  if (!follower) return false;
 
-  const already = (target.followers || []).some((f) => String(f) === String(followerId));
-  if (already) return false;
-
-  await Promise.all([
-    User.updateOne({ _id: followerId }, { $addToSet: { following: targetId } }),
-    User.updateOne({ _id: targetId }, { $addToSet: { followers: followerId } }),
-  ]);
+  // Atomic: only adds when not already there, so a replayed intent or a double
+  // press can't double-count, and we never read the whole followers array.
+  const added = await User.updateOne(
+    { _id: targetId, followers: { $ne: followerId } },
+    { $addToSet: { followers: followerId } }
+  );
+  if (added.matchedCount === 0) {
+    // Either already following (repair `following` just in case) or no such user.
+    const exists = await User.exists({ _id: targetId });
+    if (!exists) return null;
+    await User.updateOne({ _id: followerId }, { $addToSet: { following: targetId } });
+    return false;
+  }
+  await User.updateOne({ _id: followerId }, { $addToSet: { following: targetId } });
 
   await Notification.create({
     userId: targetId,
@@ -758,69 +763,74 @@ async function applyFollowIntent(req, res, userId) {
   }
 }
 
+// Follow / unfollow toggle.
+//
+// The buttons call this with fetch and update themselves instantly, so it
+// answers JSON to them; a plain form post (no JavaScript) still gets the old
+// flash + redirect. Both directions are single atomic updates on just the
+// fields involved — no loading two whole user documents first.
 router.post("/follow/:userId", async (req, res) => {
+  const json = wantsJson(req);
+  const reply = (status, body, flashType, flashMsg) => {
+    if (json) return res.status(status).json(body);
+    if (flashMsg) req.flash(flashType, flashMsg);
+    return res.redirect("back");
+  };
+
   try {
     if (!req.user) {
-      logger.error("❌ Error: User not logged in");
-      req.flash("error", "You must be logged in to follow!");
-      return res.redirect("back");
+      return reply(401, { success: false, message: "Please sign in to follow." },
+        "error", "You must be logged in to follow!");
     }
 
-    const userToFollow = await User.findById(req.params.userId).exec();
-    const user = await User.findById(req.user._id).exec();
-
-    if (!userToFollow) {
-      logger.error(`❌ Error: User to follow not found (ID: ${req.params.userId})`);
-      req.flash("error", "User not found!");
-      return res.redirect("back");
+    const targetId = req.params.userId;
+    const meId = req.user._id;
+    if (!OBJECT_ID.test(String(targetId))) {
+      return reply(404, { success: false, message: "User not found." }, "error", "User not found!");
+    }
+    if (String(targetId) === String(meId)) {
+      return reply(400, { success: false, message: "You can't follow yourself." },
+        "error", "You can't follow yourself.");
     }
 
-    if (!user) {
-      logger.error(`❌ Error: Requesting user not found (ID: ${req.user._id})`);
-      req.flash("error", "Something went wrong. Please try again!");
-      return res.redirect("back");
-    }
+    // Unfollow if currently following. The filter makes this a no-op (and
+    // modifiedCount 0) when they weren't, so a double-press can't double-toggle.
+    const unfollowed = await User.updateOne(
+      { _id: meId, following: targetId },
+      { $pull: { following: targetId } }
+    );
 
-    // Ensure `user.following` is an array
-    if (!Array.isArray(user.following)) {
-      logger.warn(`⚠️ Warning: user.following is not an array for user ${user._id}`);
-      user.following = [];
-    }
-
-    const isFollowing = user.following.includes(userToFollow._id.toString());
-
-    if (isFollowing) {
-      // ✅ Unfollow Logic
+    let following;
+    if (unfollowed.modifiedCount > 0) {
       await Promise.all([
-        User.findByIdAndUpdate(user._id, { $pull: { following: userToFollow._id } }).exec(),
-        User.findByIdAndUpdate(userToFollow._id, { $pull: { followers: user._id } }).exec(),
-        Notification.findOneAndDelete({
-          userId: userToFollow._id,
-          senderId: user._id,
-          type: "follow",
-        }).exec(),
+        User.updateOne({ _id: targetId }, { $pull: { followers: meId } }),
+        Notification.deleteOne({ userId: targetId, senderId: meId, type: "follow" }),
       ]);
-
-      req.flash("success", `You have unfollowed ${userToFollow.fullName}.`);
-      logger.info(`✅ ${user.fullName} unfollowed ${userToFollow.fullName}`);
+      following = false;
     } else {
-      // ✅ Follow Logic — the same helper the signed-out "Follow" uses once the
-      // reader has signed in, so both produce the same notification and email.
-      await followAndNotify({
-        followerId: user._id,
-        targetId: userToFollow._id,
-        io: req.app.get("io"),
-      });
-
-      req.flash("success", `You are now following ${userToFollow.fullName}!`);
-      logger.info(`✅ ${user.fullName} started following ${userToFollow.fullName}`);
+      const ok = await followAndNotify({ followerId: meId, targetId, io: req.app.get("io") });
+      if (ok === null) {
+        return reply(404, { success: false, message: "User not found." }, "error", "User not found!");
+      }
+      following = true;
     }
 
-    return res.redirect("back");
+    const [target] = await User.aggregate([
+      { $match: { _id: new mongoose.Types.ObjectId(String(targetId)) } },
+      { $project: { fullName: 1, followerCount: { $size: { $ifNull: ["$followers", []] } } } },
+    ]);
+    const name = target ? target.fullName : "this author";
+
+    return reply(
+      200,
+      { success: true, following, followerCount: target ? target.followerCount : 0 },
+      "success",
+      following ? `You are now following ${name}!` : `You have unfollowed ${name}.`
+    );
   } catch (err) {
     logger.error("❌ Follow Error:", err);
-    req.flash("error", "Something went wrong. Please try again!");
-    return res.redirect("back");
+    return reply(500, { success: false, message: "Something went wrong. Please try again." },
+      "error", "Something went wrong. Please try again!");
   }
 });
 
