@@ -44,6 +44,17 @@ const redisSvc = require("./services/redis");
   queue.startWorker();
   queue.scheduleRepeatables();
   logger.info("✅ Worker ready — processing background jobs.");
+
+  // On shutdown, let in-flight jobs finish so their documents are removed from
+  // Redis rather than left half-processed.
+  const shutdown = async (signal) => {
+    logger.info(`👋 Worker: ${signal} received, finishing in-flight jobs…`);
+    await queue.close();
+    await mongoose.disconnect().catch(() => {});
+    process.exit(0);
+  };
+  process.once("SIGTERM", () => shutdown("SIGTERM"));
+  process.once("SIGINT", () => shutdown("SIGINT"));
 })().catch((e) => {
   logger.error("❌ Worker startup failed:", e.message);
   process.exit(1);
