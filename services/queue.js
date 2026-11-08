@@ -17,16 +17,20 @@ const QUEUE_NAME = "lumina-jobs";
 let Queue, Worker, IORedis;
 let queuesEnabled = false;
 let queue = null;
+let queueConn = null;
 
 try {
   if (redisEnabled && process.env.QUEUE_DISABLED !== "true" && process.env.NODE_ENV !== "test") {
     ({ Queue, Worker } = require("bullmq"));
     IORedis = require("ioredis");
     // BullMQ needs its own connection with maxRetriesPerRequest: null.
-    const queueConn = new IORedis(process.env.REDIS_URL, { maxRetriesPerRequest: null });
+    queueConn = new IORedis(process.env.REDIS_URL, { maxRetriesPerRequest: null });
     queueConn.on("error", (e) => logger.error("❌ BullMQ Queue Redis error:", e.message));
     queue = new Queue(QUEUE_NAME, {
       connection: queueConn,
+      // BullMQ also appends every job state change to an event stream. Keep it
+      // short so it doesn't become its own pile of leftover data.
+      streams: { events: { maxLen: 100 } },
     });
     // BullMQ forwards connection failures as an 'error' event on the Queue, and
     // an 'error' event with no listener throws — that is how an unreachable or
@@ -40,11 +44,16 @@ try {
   queuesEnabled = false;
 }
 
+// A job's `data` is the document handed to the worker: it is stored in Redis
+// only until the worker is finished with it. As soon as the job completes — or
+// fails for the LAST time, after its retries — BullMQ deletes the job and its
+// data, so Redis empties itself once the queue is drained. Retries still work:
+// a job between attempts is not "failed" yet and keeps its data.
 const DEFAULT_OPTS = {
   attempts: 3,
   backoff: { type: "exponential", delay: 2000 },
-  removeOnComplete: 100,
-  removeOnFail: 200,
+  removeOnComplete: true,
+  removeOnFail: true,
 };
 
 // Enqueue a job, or run it inline (fire-and-forget) when queues are off.
@@ -62,12 +71,34 @@ async function enqueue(name, data, opts = {}) {
   jobs.runJob(name, data).catch((err) => logger.error(`Inline job "${name}" error:`, err.message));
 }
 
+// Delete finished jobs still sitting in Redis — e.g. ones kept by an older
+// config that retained the last 100 completed / 200 failed jobs. New jobs remove
+// themselves (see DEFAULT_OPTS), so after this sweep nothing finished lingers.
+async function sweepFinishedJobs() {
+  if (!queuesEnabled || !redisSvc.isUsable()) return { completed: 0, failed: 0 };
+  try {
+    const completed = await queue.clean(0, 0, "completed");
+    const failed = await queue.clean(0, 0, "failed");
+    if (completed.length || failed.length) {
+      logger.info(`🧹 Removed ${completed.length} completed and ${failed.length} failed jobs left in Redis.`);
+    }
+    return { completed: completed.length, failed: failed.length };
+  } catch (e) {
+    logger.error("⚠️ Queue sweep failed:", e.message);
+    return { completed: 0, failed: 0 };
+  }
+}
+
+let worker = null;
+let workerConn = null;
+
 // Start a BullMQ worker in this process. Called by index.js (inline) and worker.js.
 function startWorker() {
   if (!queuesEnabled) return null;
-  const workerConn = new IORedis(process.env.REDIS_URL, { maxRetriesPerRequest: null });
+  sweepFinishedJobs();
+  workerConn = new IORedis(process.env.REDIS_URL, { maxRetriesPerRequest: null });
   workerConn.on("error", (e) => logger.error("❌ BullMQ Worker Redis error:", e.message));
-  const worker = new Worker(QUEUE_NAME, async (job) => jobs.runJob(job.name, job.data), {
+  worker = new Worker(QUEUE_NAME, async (job) => jobs.runJob(job.name, job.data), {
     connection: workerConn,
     concurrency: Number(process.env.QUEUE_CONCURRENCY) || 5,
   });
@@ -85,7 +116,7 @@ async function scheduleRepeatables() {
     await queue.add("publishScheduled", {}, {
       repeat: { every: 60 * 1000 },
       removeOnComplete: true,
-      removeOnFail: 50,
+      removeOnFail: true,
       jobId: "publishScheduled-repeat",
     });
     logger.info("✅ Scheduled-publish repeatable job registered.");
@@ -94,4 +125,15 @@ async function scheduleRepeatables() {
   }
 }
 
-module.exports = { enqueue, startWorker, scheduleRepeatables, queuesEnabled };
+// Close the worker (letting in-flight jobs finish) and the queue connection.
+async function close() {
+  if (worker) await worker.close().catch(() => {});
+  if (queue) await queue.close().catch(() => {});
+  for (const c of [workerConn, queueConn]) {
+    if (c) await c.quit().catch(() => c.disconnect());
+  }
+  worker = null;
+  workerConn = null;
+}
+
+module.exports = { enqueue, startWorker, scheduleRepeatables, sweepFinishedJobs, close, queuesEnabled };
