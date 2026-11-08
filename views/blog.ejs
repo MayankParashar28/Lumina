@@ -17,6 +17,7 @@
 -->
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 <script defer src="/javascript/code-blocks.js?v=1"></script>
+<script defer src="/javascript/follow.js?v=1"></script>
 <% if (locals.justPublished) { %>
 <!--
   Post-publish share panel. Both assets load only on the one render that follows
@@ -175,7 +176,9 @@
                                 style="display: inline;">
                                 <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                                 <% const isFollowingAuthor = user.following && user.following.map(String).includes(String(blog.createdBy._id)); %>
-                                <button
+                                <button data-follow-btn data-following="<%= isFollowingAuthor %>"
+                                    data-on-text="Following" data-off-text="Follow" data-on-class="followed"
+                                    aria-pressed="<%= isFollowingAuthor %>"
                                     class="btn-follow <%= isFollowingAuthor ? 'followed' : '' %>"
                                     style="padding: 0.2rem 0.8rem; font-size: 0.75rem; min-width: auto; margin-left: 0.5rem;">
                                     <%= isFollowingAuthor ? 'Following' : 'Follow' %>
@@ -307,9 +310,8 @@
                         <h3 class="author-card-name" id="author-card-name">
                             <a href="/user/profile/<%= authorCard._id %>"><%= authorCard.fullName %></a>
                         </h3>
-                        <p class="author-card-count">
-                            <%= authorCard.followerCount %> follower<%= authorCard.followerCount === 1 ? '' : 's' %>
-                        </p>
+                        <p class="author-card-count" data-follower-count="<%= authorCard._id %>"
+                            data-count="<%= authorCard.followerCount %>" data-singular=" follower" data-plural=" followers"><%= authorCard.followerCount %> follower<%= authorCard.followerCount === 1 ? '' : 's' %></p>
                     </div>
 
                     <% if (authorCard.isSelf) { %>
@@ -317,7 +319,10 @@
                         <% } else if (user) { %>
                             <form method="POST" action="/user/follow/<%= authorCard._id %>" class="author-card-form">
                                 <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                                <button class="author-card-btn <%= authorCard.isFollowing ? 'is-secondary' : '' %>">
+                                <button data-follow-btn data-following="<%= !!authorCard.isFollowing %>"
+                                    data-on-text="Following" data-off-text="Follow" data-on-class="is-secondary"
+                                    aria-pressed="<%= !!authorCard.isFollowing %>"
+                                    class="author-card-btn <%= authorCard.isFollowing ? 'is-secondary' : '' %>">
                                     <%= authorCard.isFollowing ? 'Following' : 'Follow' %>
                                 </button>
                             </form>
@@ -537,62 +542,89 @@
             // Progress bar is now driven by [data-reading-progress] in app.js.
 
             // Bookmark Logic (Class-based for Mobile + Desktop)
+            // Bookmark & Like: update the icon the moment it's clicked, send the
+            // request in the background, and roll back only if it fails. They
+            // used to wait for the server round trip before changing anything.
+            const setBookmarked = (on) => {
+                document.querySelectorAll('.bookmark-icon-target').forEach(icon => {
+                    icon.classList.toggle('fas', on);
+                    icon.classList.toggle('far', !on);
+                });
+            };
+            const isBookmarked = () => {
+                const icon = document.querySelector('.bookmark-icon-target');
+                return !!(icon && icon.classList.contains('fas'));
+            };
+            let bookmarkBusy = false;
             document.querySelectorAll('.bookmark-btn-trigger').forEach(btn => {
                 btn.addEventListener('click', async () => {
-                    const blogId = btn.dataset.blogId;
+                    if (bookmarkBusy) return;
+                    bookmarkBusy = true;
+                    const was = isBookmarked();
+                    setBookmarked(!was);
                     try {
-                        const response = await fetch(`/blog/bookmark/${blogId}`, {
+                        const response = await fetch(`/blog/bookmark/${btn.dataset.blogId}`, {
                             method: 'POST',
-                            headers: { 'x-csrf-token': '<%= csrfToken %>' }
+                            headers: { 'x-csrf-token': '<%= csrfToken %>', 'Accept': 'application/json' }
                         });
                         const data = await response.json();
-
-                        if (data.success) {
-                            // Update ALL bookmark icons on page
-                            document.querySelectorAll('.bookmark-icon-target').forEach(icon => {
-                                if (data.bookmarked) {
-                                    icon.classList.remove('far');
-                                    icon.classList.add('fas');
-                                } else {
-                                    icon.classList.remove('fas');
-                                    icon.classList.add('far');
-                                }
-                            });
-                        }
+                        if (!response.ok || !data.success) throw new Error(data.message || response.status);
+                        setBookmarked(data.bookmarked);
                     } catch (err) {
                         console.error('Error bookmarking blog:', err);
+                        setBookmarked(was);
+                    } finally {
+                        bookmarkBusy = false;
                     }
                 });
             });
 
-            // Like Button Logic (Class-based)
+            const setLiked = (on, count, animate) => {
+                document.querySelectorAll('.like-icon-target').forEach(icon => {
+                    icon.classList.toggle('fas', on);
+                    icon.classList.toggle('far', !on);
+                    icon.classList.toggle('text-red', on);
+                    if (animate) {
+                        icon.classList.add('animate-like');
+                        setTimeout(() => icon.classList.remove('animate-like'), 450);
+                    }
+                });
+                document.querySelectorAll('.like-count-target').forEach(span => {
+                    span.innerText = count;
+                });
+            };
+            const likeState = () => {
+                const icon = document.querySelector('.like-icon-target');
+                const span = document.querySelector('.like-count-target');
+                return {
+                    liked: !!(icon && icon.classList.contains('fas')),
+                    count: span ? (parseInt(span.innerText, 10) || 0) : 0,
+                };
+            };
+            let likeBusy = false;
             document.querySelectorAll('.like-btn-trigger').forEach(btn => {
                 btn.addEventListener('click', async () => {
-                    const blogId = btn.dataset.blogId;
+                    if (likeBusy) return;
+                    likeBusy = true;
+                    const before = likeState();
+                    setLiked(!before.liked, Math.max(0, before.count + (before.liked ? -1 : 1)), true);
                     try {
-                        const response = await fetch(`/blog/like/${blogId}`, {
+                        const response = await fetch(`/blog/like/${btn.dataset.blogId}`, {
                             method: 'POST',
-                            headers: { 'x-csrf-token': '<%= csrfToken %>' }
+                            headers: { 'x-csrf-token': '<%= csrfToken %>', 'Accept': 'application/json' }
                         });
-                        const data = await response.json();
-
-                        if (data.likes !== undefined) {
-                            // Update ALL like counts
-                            document.querySelectorAll('.like-count-target').forEach(span => {
-                                span.innerText = data.likes;
-                            });
-
-                            // Update ALL like icons
-                            document.querySelectorAll('.like-icon-target').forEach(icon => {
-                                icon.classList.toggle('fas');
-                                icon.classList.toggle('far');
-                                icon.classList.toggle('text-red');
-                                icon.classList.add('animate-like');
-                                setTimeout(() => icon.classList.remove('animate-like'), 450);
-                            });
+                        if (response.status === 401) {
+                            window.location.href = '/user/signin';
+                            return;
                         }
+                        const data = await response.json();
+                        if (!response.ok || data.likes === undefined) throw new Error(data.message || response.status);
+                        setLiked(data.liked, data.likes, false);
                     } catch (err) {
                         console.error('Error liking blog:', err);
+                        setLiked(before.liked, before.count, false);
+                    } finally {
+                        likeBusy = false;
                     }
                 });
             });
