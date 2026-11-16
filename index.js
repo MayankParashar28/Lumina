@@ -35,6 +35,7 @@ const userRoute = require("./routes/user");
 const blogRoute = require("./routes/blog");
 const notificationsRoute = require("./routes/notifications");
 const staticRoute = require("./routes/static");
+const highlightsRoute = require("./routes/highlights");
 const adminRoute = require("./routes/admin"); // 🛡️ Import Admin Route
 
 // MongoDB Connection
@@ -196,6 +197,27 @@ app.use(helmet({
   },
 }));
 app.use(cookieParser());
+
+// 🌐 Embeds + public API: used from OTHER sites, so they opt out of helmet's
+// same-origin resource policy, and sit above the auth/session layers because
+// they never need to know who is asking (and must not set cookies).
+app.use("/embed", express.static(path.resolve("./public/embed"), {
+  maxAge: "1h",
+  setHeaders: (res) => {
+    res.set("Cross-Origin-Resource-Policy", "cross-origin");
+    res.set("Access-Control-Allow-Origin", "*");
+  },
+}));
+app.use("/api", require("./routes/publicApi"));
+
+// 📱 PWA: the service worker and manifest must be revalidated, not cached for a
+// year like other static files, or a new service worker would never reach
+// installed copies of the app.
+app.get(["/sw.js", "/manifest.webmanifest"], (req, res, next) => {
+  res.set("Cache-Control", "no-cache");
+  if (req.path === "/sw.js") res.set("Service-Worker-Allowed", "/");
+  next();
+});
 
 // 🚀 Static assets, served BEFORE anything that touches the database.
 //
@@ -647,7 +669,7 @@ app.get("/", async (req, res) => {
     // Promise.all with the rails rather than becoming an extra serial step.
     const needsVocabulary =
       Boolean(tagFilter) ||
-      Boolean(categoryFilter && !["all", "trending", "featured"].includes(categoryFilter));
+      Boolean(categoryFilter && !["all", "trending", "featured", "following"].includes(categoryFilter));
     const earlyTaxonomy = needsVocabulary ? await getTaxonomy() : null;
 
     const { filter, sort } = buildFeedQuery({
@@ -655,6 +677,7 @@ app.get("/", async (req, res) => {
       category: categoryFilter,
       tag: tagFilter,
       search: searchQuery,
+      following: req.user.following || [],
     });
 
     let blogs = [];
@@ -788,6 +811,7 @@ app.get("/", async (req, res) => {
       searchQuery,
       categoryFilter,
       tagFilter,
+      followingCount: (req.user.following || []).length,
       moment,
       title: "Home Feed - Lumina",
       metaDescription: "Discover fresh perspectives and trending stories curated just for you. Join the Lumina community to read, write, and connect with visionary creators!..."
@@ -945,6 +969,7 @@ app.use("/blog", blogRoute);
 app.use("/user", userRoute);
 app.use("/admin", adminRoute); // 🛡️ Mount Admin Route
 app.use("/notifications", notificationsRoute);
+app.use("/highlights", highlightsRoute);
 app.use("/ai", aiRoute);
 
 // 🗓️ Scheduled publishing

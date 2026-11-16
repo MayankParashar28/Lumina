@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <%- include('./partials/header') %>
+    <style>
+        .nl-page {
+            max-width: 720px;
+            margin: 8rem auto 4rem;
+            padding: 0 16px;
+        }
+
+        .nl-title {
+            font-weight: 800;
+            margin: 0 0 0.25rem;
+        }
+
+        .nl-sub {
+            color: #6b7280;
+            margin: 0 0 2rem;
+        }
+
+        .nl-reach {
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            padding: 1rem 1.25rem;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            margin-bottom: 2rem;
+        }
+
+        .nl-reach__num {
+            font-size: 1.5rem;
+            font-weight: 800;
+            line-height: 1.1;
+        }
+
+        .nl-reach__label {
+            font-size: 0.8rem;
+            color: #6b7280;
+        }
+
+        .nl-field {
+            margin-bottom: 1.25rem;
+        }
+
+        .nl-field label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.4rem;
+        }
+
+        .nl-field input,
+        .nl-field textarea {
+            width: 100%;
+            box-sizing: border-box;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            padding: 0.7rem 0.85rem;
+            font: inherit;
+            background: var(--bg-color);
+            color: var(--text-color);
+        }
+
+        .nl-field textarea {
+            min-height: 260px;
+            line-height: 1.6;
+            resize: vertical;
+        }
+
+        .nl-field input:focus,
+        .nl-field textarea:focus {
+            outline: 2px solid #111827;
+            outline-offset: 1px;
+        }
+
+        .nl-hint {
+            font-size: 0.8rem;
+            color: #6b7280;
+            margin-top: 0.35rem;
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .nl-actions {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .nl-btn {
+            min-height: 44px;
+            padding: 0 1.25rem;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            border: 1px solid #111827;
+        }
+
+        .nl-btn--primary {
+            background: #111827;
+            color: #fff;
+        }
+
+        .nl-btn--secondary {
+            background: transparent;
+            color: #111827;
+        }
+
+        .nl-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .nl-note {
+            font-size: 0.85rem;
+            color: #6b7280;
+        }
+
+        .nl-history {
+            margin-top: 3rem;
+        }
+
+        .nl-history h2 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .nl-history ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .nl-history li {
+            padding: 0.85rem 0;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .nl-history__subject {
+            font-weight: 600;
+        }
+
+        .nl-history__meta {
+            font-size: 0.8rem;
+            color: #6b7280;
+            margin-top: 0.2rem;
+        }
+
+        @media (max-width: 480px) {
+            .nl-actions .nl-btn { width: 100%; }
+        }
+    </style>
+</head>
+
+<body>
+    <%- include('./partials/nav', { searchQuery: '' }) %>
+
+    <main class="nl-page">
+        <h1 class="nl-title">Email your followers</h1>
+        <p class="nl-sub">
+            Send a short note straight to the inbox of people who follow you — what you're working on,
+            a post you're proud of, a question for your readers. One note every <%= cooldownDays %> days.
+        </p>
+
+        <div class="nl-reach">
+            <div>
+                <div class="nl-reach__num"><%= followerCount %></div>
+                <div class="nl-reach__label">follower<%= followerCount === 1 ? '' : 's' %></div>
+            </div>
+            <div>
+                <div class="nl-reach__num"><%= reach %></div>
+                <div class="nl-reach__label">will receive it (verified, not opted out)</div>
+            </div>
+        </div>
+
+        <% const blocked = !me.isVerified || !!nextAllowedAt || reach === 0; %>
+
+        <form method="POST" action="/user/newsletter" id="nl-form">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <div class="nl-field">
+                <label for="nl-subject">Subject</label>
+                <input id="nl-subject" name="subject" type="text" maxlength="150" required
+                    value="<%= draft.subject %>" autocomplete="off">
+            </div>
+            <div class="nl-field">
+                <label for="nl-body">Message</label>
+                <textarea id="nl-body" name="body" maxlength="10000" required minlength="20"
+                    aria-describedby="nl-body-hint"><%= draft.body %></textarea>
+                <div class="nl-hint" id="nl-body-hint">
+                    <span>Plain text. Leave a blank line between paragraphs; links work as-is.</span>
+                    <span data-count>0 / 10,000</span>
+                </div>
+            </div>
+
+            <div class="nl-actions">
+                <button type="submit" name="action" value="send" class="nl-btn nl-btn--primary"
+                    <%= blocked ? 'disabled' : '' %>
+                    data-confirm-send="Send this note to <%= reach %> follower<%= reach === 1 ? '' : 's' %>? This can't be undone.">
+                    Send to <%= reach %> follower<%= reach === 1 ? '' : 's' %>
+                </button>
+                <button type="submit" name="action" value="test" class="nl-btn nl-btn--secondary">
+                    Send a test to myself
+                </button>
+            </div>
+            <p class="nl-note mt-3">
+                <% if (!me.isVerified) { %>
+                    Verify your email address to send notes to followers. You can still send yourself a test.
+                <% } else if (nextAllowedAt) { %>
+                    You've sent a note recently. You can send the next one on
+                    <strong><%= nextAllowedAt.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) %></strong>.
+                <% } else if (reach === 0) { %>
+                    None of your followers can receive email yet. Keep writing — followers come with posts.
+                <% } else { %>
+                    Each email includes a link to unsubscribe from notes like this.
+                <% } %>
+            </p>
+        </form>
+
+        <% if (history.length) { %>
+            <section class="nl-history" aria-labelledby="nl-history-title">
+                <h2 id="nl-history-title">Sent</h2>
+                <ul>
+                    <% history.forEach(function (n) { %>
+                        <li>
+                            <div class="nl-history__subject"><%= n.subject %></div>
+                            <div class="nl-history__meta">
+                                <%= new Date(n.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %> ·
+                                <% if (n.status === 'sending') { %>
+                                    Sending…
+                                <% } else if (n.status === 'failed') { %>
+                                    Couldn't be delivered
+                                <% } else { %>
+                                    Delivered to <%= n.sentCount %> of <%= n.recipientCount %>
+                                <% } %>
+                            </div>
+                        </li>
+                    <% }) %>
+                </ul>
+            </section>
+        <% } %>
+    </main>
+
+    <%- include('./partials/footer') %>
+
+    <script nonce="<%= cspNonce %>">
+        (function () {
+            const body = document.getElementById('nl-body');
+            const count = document.querySelector('[data-count]');
+            const update = () => { count.textContent = body.value.length.toLocaleString() + ' / 10,000'; };
+            body.addEventListener('input', update);
+            update();
+
+            // Confirm the real send (the test button sends only to the author).
+            document.getElementById('nl-form').addEventListener('submit', function (e) {
+                const btn = e.submitter;
+                if (btn && btn.value === 'send' && !window.confirm(btn.dataset.confirmSend)) e.preventDefault();
+            });
+        })();
+    </script>
+</body>
+
+</html>

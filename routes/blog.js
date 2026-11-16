@@ -33,7 +33,7 @@ const router = Router();
 // 💬 @mentions: notify people mentioned in a comment. Matches @name against the
 // thread's participants (blog author + commenters) by first name or full name,
 // so it works without a dedicated username field.
-async function notifyMentions(content, blog, author, req) {
+async function notifyMentions(content, blog, author, req, commentId) {
   try {
     const handles = [...new Set((String(content).match(/@([a-zA-Z0-9_]+)/g) || [])
       .map(m => m.slice(1).toLowerCase()))];
@@ -46,8 +46,11 @@ async function notifyMentions(content, blog, author, req) {
     const io = req.app.get("io");
     for (const p of participants) {
       if (p._id.toString() === author._id.toString()) continue; // don't notify yourself
-      const full = (p.fullName || "").toLowerCase().replace(/\s+/g, "");
-      const first = (p.fullName || "").toLowerCase().split(/\s+/)[0];
+      // Same normalisation as the autocomplete's handle: letters, digits and
+      // underscores only, so "Mary-Jane O'Neil" is @MaryJaneONeil (or @MaryJane).
+      const norm = (v) => String(v || "").toLowerCase().replace(/[^a-z0-9_]/g, "");
+      const full = norm(p.fullName);
+      const first = norm((p.fullName || "").split(/\s+/)[0]);
       if (!handles.some(h => h === full || h === first)) continue;
 
       await Notification.create({
@@ -56,7 +59,8 @@ async function notifyMentions(content, blog, author, req) {
         type: "mention",
         message: `${author.fullName} mentioned you in a comment.`,
         blogId: blog._id,
-        targetUrl: `/blog/${blog._id}`,
+        // Straight to the comment, not just the post.
+        targetUrl: `/blog/${blog._id}${commentId ? `#comment-${commentId}` : ""}`,
         read: false,
         createdAt: new Date(),
       });
@@ -762,7 +766,7 @@ router.post("/comment/:blogId", commentLimiter, async (req, res) => {
     });
 
     // 💬 Notify anyone @mentioned in the comment
-    notifyMentions(req.body.content, blog, req.user, req);
+    notifyMentions(req.body.content, blog, req.user, req, comment._id);
 
     // ✅ Send Notification (if not the owner commenting)
     // ✅ Send Notification (Async/Non-blocking)
@@ -919,7 +923,7 @@ router.post("/comment/:commentId/reply", async (req, res) => {
     });
 
     // 💬 Notify anyone @mentioned in the reply
-    notifyMentions(req.body.content, parentComment.blogId, req.user, req);
+    notifyMentions(req.body.content, parentComment.blogId, req.user, req, reply._id);
 
     // Notify Parent Author
     if (parentComment.createdBy.toString() !== req.user._id.toString()) {
@@ -1131,6 +1135,73 @@ router.get("/edit/:id", async (req, res) => {
   }
 });
 
+// 🕘 Version history + autosave for the editor.
+//
+// Autosave never changes the post: it only records a version. That keeps a
+// published post's live text unchanged until the author presses Update, and
+// keeps the edit cooldown (which reads blog.updatedAt) out of the way.
+const revisions = require("../services/revisions");
+const BlogRevision = require("../models/blogRevision");
+
+async function editableBlog(req, res) {
+  if (!req.user) { res.status(401).json({ success: false, message: "Sign in to edit." }); return null; }
+  if (!isObjectIdParam(req.params.id)) { res.status(404).json({ success: false }); return null; }
+  const blog = await Blog.findById(req.params.id).select("title body createdBy status updatedAt").lean();
+  if (!blog) { res.status(404).json({ success: false, message: "Post not found." }); return null; }
+  if (String(blog.createdBy) !== String(req.user._id) && req.user.role !== "ADMIN") {
+    res.status(403).json({ success: false, message: "Not your post." });
+    return null;
+  }
+  return blog;
+}
+
+router.post("/edit/:id/autosave", async (req, res) => {
+  try {
+    const blog = await editableBlog(req, res);
+    if (!blog) return;
+    const { title, body } = req.body || {};
+    if (typeof body !== "string" || typeof title !== "string") {
+      return res.status(400).json({ success: false, message: "Nothing to save." });
+    }
+    const kind = req.body.kind === "restore" ? "restore" : "autosave";
+    const { revision, unchanged } = await revisions.record({ blog, authorId: req.user._id, title, body, kind });
+    res.json({ success: true, unchanged: !!unchanged, revision: revisions.summary(revision) });
+  } catch (err) {
+    logger.error("❌ Autosave error:", err);
+    res.status(500).json({ success: false, message: "Autosave failed." });
+  }
+});
+
+router.get("/edit/:id/revisions", async (req, res) => {
+  try {
+    const blog = await editableBlog(req, res);
+    if (!blog) return;
+    const list = await BlogRevision.find({ blogId: blog._id })
+      .sort({ updatedAt: -1 })
+      .limit(BlogRevision.MAX_REVISIONS)
+      .select("kind title wordCount updatedAt")
+      .lean();
+    res.json({ success: true, savedAt: blog.updatedAt, revisions: list.map(revisions.summary) });
+  } catch (err) {
+    logger.error("❌ Revisions list error:", err);
+    res.status(500).json({ success: false });
+  }
+});
+
+router.get("/edit/:id/revisions/:revId", async (req, res) => {
+  try {
+    const blog = await editableBlog(req, res);
+    if (!blog) return;
+    if (!isObjectIdParam(req.params.revId)) return res.status(404).json({ success: false });
+    const r = await BlogRevision.findOne({ _id: req.params.revId, blogId: blog._id }).lean();
+    if (!r) return res.status(404).json({ success: false, message: "Version not found." });
+    res.json({ success: true, revision: { ...revisions.summary(r), body: r.body } });
+  } catch (err) {
+    logger.error("❌ Revision fetch error:", err);
+    res.status(500).json({ success: false });
+  }
+});
+
 // ✏️ Edit Blog Action (POST)
 router.post("/edit/:id", upload.single("coverImage"), async (req, res) => {
   // Set when this edit takes a draft live, so the author lands on the share
@@ -1143,6 +1214,8 @@ router.post("/edit/:id", upload.single("coverImage"), async (req, res) => {
     const blog = await Blog.findById(req.params.id);
 
     if (!blog) return res.status(404).send("Blog not found");
+    // The post as it was, for version history's "original" entry.
+    const beforeEdit = { _id: blog._id, title: blog.title, body: blog.body };
     // Check Ownership or Admin Role
     if (blog.createdBy.toString() !== req.user._id.toString() && req.user.role !== "ADMIN") {
       return res.status(403).send("Unauthorized");
@@ -1260,6 +1333,12 @@ router.post("/edit/:id", upload.single("coverImage"), async (req, res) => {
 
     // Save initial blog immediately
     await blog.save();
+
+    // Version history: what was just saved. Not awaited — history must never
+    // hold up or fail a save.
+    revisions
+      .record({ blog: beforeEdit, authorId: req.user._id, title: blog.title, body: blog.body, kind: "saved" })
+      .catch((err) => logger.error("⚠️ Saving revision failed:", err.message));
 
     // Edited content is cached under its page (and may show on the landing) — drop both.
     pageCache.bustBlog(blog._id.toString(), blog.slug);
@@ -1585,6 +1664,39 @@ const CACHE_TTL = 30 * 1000; // 30 Seconds
 const FEED_CACHE_MAX = 200;
 const { getTaxonomy, buildFeedQuery, FEED_PAGE_SIZE } = require("../services/taxonomy");
 
+// 💬 @mention autocomplete: the people a commenter can mention on this post —
+// its author and everyone who has commented — which is exactly the set
+// notifyMentions() matches against. `handle` is what gets inserted.
+router.get("/api/mentions/:blogId", async (req, res) => {
+  if (!req.user) return res.status(401).json({ people: [] });
+  if (!isObjectIdParam(req.params.blogId)) return res.status(400).json({ people: [] });
+  try {
+    const blog = await Blog.findById(req.params.blogId).select("createdBy").lean();
+    if (!blog) return res.status(404).json({ people: [] });
+    const commenterIds = await Comment.distinct("createdBy", { blogId: blog._id });
+    const ids = [...new Set([String(blog.createdBy), ...commenterIds.map(String)])]
+      .filter((id) => id !== String(req.user._id));
+    const people = await User.find({ _id: { $in: ids } })
+      .select("fullName profilePic")
+      .limit(200)
+      .lean();
+    res.json({
+      people: people
+        .filter((p) => p.fullName)
+        .map((p) => ({
+          name: p.fullName,
+          handle: p.fullName.replace(/[^a-zA-Z0-9_]/g, ""),
+          avatar: p.profilePic || "/images/default-user.png",
+          isAuthor: String(p._id) === String(blog.createdBy),
+        }))
+        .filter((p) => p.handle),
+    });
+  } catch (err) {
+    logger.error("❌ Mention list error:", err);
+    res.status(500).json({ people: [] });
+  }
+});
+
 router.get("/api/feed", async (req, res) => {
   try {
     const page = Math.max(1, parseInt(req.query.page) || 1);
@@ -1593,8 +1705,14 @@ router.get("/api/feed", async (req, res) => {
 
     // 🛑 Check Cache First. The tag is part of the key -- it used to be ignored
     // entirely, so a tag request was served the unfiltered feed.
+    // The "following" feed is different for every reader, so it is never
+    // cached (the shared cache key has no user in it) and needs a sign-in.
+    const isFollowingFeed = categoryFilterRaw.toLowerCase() === "following";
+    if (isFollowingFeed && !req.user) {
+      return res.status(401).json({ blogs: [], hasMore: false, message: "Sign in to see who you follow." });
+    }
     const cacheKey = `${page}-${categoryFilterRaw}-${tagFilterRaw}`;
-    const cachedData = feedCache.get(cacheKey);
+    const cachedData = isFollowingFeed ? null : feedCache.get(cacheKey);
 
     if (cachedData && (Date.now() - cachedData.timestamp < CACHE_TTL)) {
       return res.json(cachedData.data);
@@ -1612,6 +1730,7 @@ router.get("/api/feed", async (req, res) => {
       taxonomy,
       category: categoryFilterRaw,
       tag: tagFilterRaw,
+      following: isFollowingFeed ? (req.user.following || []) : undefined,
     });
 
     // 🏎️ Optimized Query: Added .select() to exclude body
@@ -1645,11 +1764,13 @@ router.get("/api/feed", async (req, res) => {
     };
 
     // 📝 Save to Cache
-    if (feedCache.size >= FEED_CACHE_MAX) feedCache.clear(); // simple bound; the TTL does the real work
-    feedCache.set(cacheKey, {
-      data: responseData,
-      timestamp: Date.now()
-    });
+    if (!isFollowingFeed) {
+      if (feedCache.size >= FEED_CACHE_MAX) feedCache.clear(); // simple bound; the TTL does the real work
+      feedCache.set(cacheKey, {
+        data: responseData,
+        timestamp: Date.now()
+      });
+    }
 
     res.json(responseData);
   } catch (error) {

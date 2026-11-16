@@ -18,6 +18,12 @@
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 <script defer src="/javascript/code-blocks.js?v=1"></script>
 <script defer src="/javascript/follow.js?v=1"></script>
+<link rel="stylesheet" href="/css/reader.css?v=1">
+<script defer src="/javascript/post-toc.js?v=1"></script>
+<% if (user && !locals.isPreview) { %>
+<script defer src="/javascript/highlights.js?v=1"></script>
+<script defer src="/javascript/comment-mentions.js?v=1"></script>
+<% } %>
 <% if (locals.justPublished) { %>
 <!--
   Post-publish share panel. Both assets load only on the one render that follows
@@ -216,6 +222,10 @@
                     <div class="content-wrapper">
 
 
+                        <% if (user && !locals.isPreview) { %>
+                            <!-- Highlights: signed-in readers only; the script reads these. -->
+                            <div id="reader-tools" hidden data-blog-id="<%= blog._id %>" data-csrf="<%= csrfToken %>"></div>
+                        <% } %>
                         <!-- Editorial Content -->
                         <div class="blog-body editorial-typography ql-snow" id="blog-content-wrapper">
                             <div class="ql-editor" id="blog-content">
@@ -291,6 +301,10 @@
                             // the enhancer rewriting the block's contents.
                             if (window.addCodeCopyButtons) window.addCodeCopyButtons(blogBody);
                             if (window.enhanceCodeBlocks) window.enhanceCodeBlocks(blogBody);
+
+                            // Tell the reader tools (contents, highlights) the body is in.
+                            blogBody.dataset.ready = "1";
+                            document.dispatchEvent(new CustomEvent("lumina:post-ready", { detail: { root: blogBody } }));
                         });
                     </script>
 
@@ -462,6 +476,7 @@
                     });
                 </script>
 
+                <div id="mention-source" hidden data-blog-id="<%= blog._id %>"></div>
                 <form method="post" action="/blog/comment/<%= blog._id %>" class="comment-form">
                     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                     <div class="comment-input-wrapper">

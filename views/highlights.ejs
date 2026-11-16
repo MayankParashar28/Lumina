@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <%- include('./partials/header') %>
+    <style>
+        .hl-page {
+            max-width: 760px;
+            margin: 8rem auto 4rem;
+            padding: 0 16px;
+        }
+
+        .hl-page__title {
+            font-weight: 800;
+            margin: 0 0 0.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .hl-page__sub {
+            color: #6b7280;
+            margin: 0 0 2.5rem;
+        }
+
+        .hl-group {
+            margin-bottom: 2.5rem;
+        }
+
+        .hl-group__post {
+            display: block;
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: inherit;
+            text-decoration: none;
+            margin-bottom: 0.15rem;
+        }
+
+        .hl-group__post:hover { text-decoration: underline; }
+
+        .hl-group__by {
+            font-size: 0.85rem;
+            color: #6b7280;
+            margin-bottom: 1rem;
+        }
+
+        .hl-item {
+            position: relative;
+            padding: 0.75rem 3rem 0.75rem 1rem;
+            border-left: 3px solid #facc15;
+            margin-bottom: 0.75rem;
+            background: var(--accent-gray);
+            border-radius: 0 8px 8px 0;
+        }
+
+        .hl-item__quote {
+            margin: 0;
+            font-family: Georgia, "Times New Roman", serif;
+            line-height: 1.6;
+        }
+
+        .hl-item__quote a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .hl-item__quote a:hover { text-decoration: underline; }
+
+        .hl-item__note {
+            margin: 0.5rem 0 0;
+            font-size: 0.9rem;
+            color: #374151;
+            white-space: pre-wrap;
+        }
+
+        .hl-item__note i { margin-right: 0.35rem; color: #b45309; }
+
+        .hl-item__date {
+            display: block;
+            margin-top: 0.4rem;
+            font-size: 0.75rem;
+            color: #6b7280;
+        }
+
+        .hl-item__remove {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            width: 40px;
+            height: 40px;
+            border: 0;
+            border-radius: 6px;
+            background: transparent;
+            color: #6b7280;
+            cursor: pointer;
+        }
+
+        .hl-item__remove:hover,
+        .hl-item__remove:focus-visible {
+            background: rgba(0, 0, 0, 0.06);
+            color: #b91c1c;
+        }
+
+        .hl-empty {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: #6b7280;
+        }
+
+        .hl-empty i { font-size: 2rem; opacity: 0.35; margin-bottom: 1rem; }
+    </style>
+</head>
+
+<body>
+    <%- include('./partials/nav', { searchQuery: '' }) %>
+
+    <main class="hl-page">
+        <h1 class="hl-page__title"><i class="fas fa-highlighter" aria-hidden="true"></i> Highlights</h1>
+        <p class="hl-page__sub">
+            <% if (total) { %>
+                <%= total %> passage<%= total === 1 ? '' : 's' %> you saved. Only you can see these.
+            <% } else { %>
+                Passages you save while reading. Only you can see these.
+            <% } %>
+        </p>
+
+        <% if (!groups.length) { %>
+            <div class="hl-empty">
+                <i class="fas fa-highlighter" aria-hidden="true"></i>
+                <h2 class="h5">No highlights yet</h2>
+                <p>Select any text in a story and choose <strong>Highlight</strong> or <strong>Note</strong>.</p>
+                <a href="/" class="btn btn-dark mt-2">Find something to read</a>
+            </div>
+        <% } %>
+
+        <% groups.forEach(function (g) { const href = '/blog/' + (g.blog.slug || g.blog._id); %>
+            <section class="hl-group">
+                <a class="hl-group__post" href="<%= href %>"><%= g.blog.title %></a>
+                <div class="hl-group__by">
+                    <% if (g.blog.createdBy) { %>by <%= g.blog.createdBy.fullName %><% } %>
+                </div>
+
+                <% g.highlights.forEach(function (h) { %>
+                    <article class="hl-item">
+                        <blockquote class="hl-item__quote">
+                            <a href="<%= href %>#hl-<%= h._id %>">“<%= h.text %>”</a>
+                        </blockquote>
+                        <% if (h.note) { %>
+                            <p class="hl-item__note"><i class="far fa-sticky-note" aria-hidden="true"></i><%= h.note %></p>
+                        <% } %>
+                        <span class="hl-item__date"><%= new Date(h.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %></span>
+                        <form method="POST" action="/highlights/<%= h._id %>/delete">
+                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                            <button type="submit" class="hl-item__remove" aria-label="Remove highlight" title="Remove highlight">
+                                <i class="far fa-trash-alt" aria-hidden="true"></i>
+                            </button>
+                        </form>
+                    </article>
+                <% }) %>
+            </section>
+        <% }) %>
+    </main>
+
+    <%- include('./partials/footer') %>
+</body>
+
+</html>

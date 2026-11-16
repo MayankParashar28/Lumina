@@ -145,6 +145,74 @@ async function emailFollowers(author, { blogId, title }) {
   logger.info("📨 New-post emails: %d/%d sent for \"%s\"", sent, recipients.length, title);
 }
 
+// --- An author's note to their followers ---
+//
+// Same audience rules as the new-post email (verified address, not opted out),
+// governed by its own preference so a reader can keep post alerts but drop
+// notes. Sequential and capped for the same reasons as emailFollowers.
+const MAX_NEWSLETTER_RECIPIENTS = Number(process.env.MAX_NEWSLETTER_RECIPIENTS) || 1000;
+
+async function newsletterJob({ newsletterId }) {
+  const Newsletter = require("../models/newsletter");
+  const User = require("../models/user");
+  const { sendNewsletterEmail } = require("./emailService");
+  const { linkFor } = require("../utils/unsubscribe");
+
+  // Claim it: only a "sending" note with no recipients counted yet is picked
+  // up, so a retried or duplicated job can't mail everyone twice.
+  const note = await Newsletter.findOneAndUpdate(
+    { _id: newsletterId, status: "sending", sentAt: { $exists: false } },
+    { $set: { sentAt: new Date() } },
+    { new: true }
+  ).lean();
+  if (!note) return;
+
+  const author = await User.findById(note.authorId).select("fullName followers").lean();
+  if (!author) {
+    await Newsletter.updateOne({ _id: note._id }, { $set: { status: "failed" } });
+    return;
+  }
+
+  const recipients = await User.find({
+    _id: { $in: author.followers || [] },
+    isVerified: true,
+    email: { $exists: true, $ne: "" },
+    "notificationPreferences.emailOnNewsletter": { $ne: false },
+  })
+    .select("_id email")
+    .limit(MAX_NEWSLETTER_RECIPIENTS)
+    .lean();
+
+  await Newsletter.updateOne({ _id: note._id }, { $set: { recipientCount: recipients.length } });
+
+  const baseUrl = (
+    process.env.BASE_URL || process.env.RENDER_EXTERNAL_URL || "http://localhost:8000"
+  ).replace(/\/+$/, "");
+  const authorUrl = `${baseUrl}/user/profile/${author._id}`;
+
+  let sent = 0;
+  for (const r of recipients) {
+    try {
+      await sendNewsletterEmail(r.email, {
+        authorName: author.fullName,
+        subject: note.subject,
+        body: note.body,
+        authorUrl,
+        unsubscribeUrl: linkFor(r._id, "newsletter", baseUrl),
+      });
+      sent += 1;
+    } catch (err) {
+      logger.error("⚠️ Newsletter email to %s failed: %s", r.email, err.message);
+    }
+  }
+
+  await Newsletter.updateOne(
+    { _id: note._id },
+    { $set: { status: sent > 0 || recipients.length === 0 ? "sent" : "failed", sentCount: sent } }
+  );
+  logger.info("📨 Newsletter %s: %d/%d sent", String(note._id), sent, recipients.length);
+}
+
 // --- Publish any scheduled posts whose time has arrived ---
 async function publishScheduledJob() {
   const { publishDueScheduled } = require("./scheduler");
@@ -162,6 +230,7 @@ const PROCESSORS = {
   fanout: fanoutJob,
   publishScheduled: publishScheduledJob,
   weeklyDigest: weeklyDigestJob,
+  newsletter: newsletterJob,
 };
 
 async function runJob(name, data) {

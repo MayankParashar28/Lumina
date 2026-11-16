@@ -53,6 +53,7 @@ const KINDS = {
   "comment": "notificationPreferences.emailOnComment",
   "follow": "notificationPreferences.emailOnFollow",
   "digest": "notificationPreferences.emailOnWeeklyDigest",
+  "newsletter": "notificationPreferences.emailOnNewsletter",
 };
 
 module.exports = { tokenFor, verify, linkFor, KINDS };

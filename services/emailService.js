@@ -342,6 +342,82 @@ const sendNewPostEmail = async (
   });
 };
 
+// A note an author wrote to their followers (the "newsletter").
+//
+// The body is plain text the author typed, so it is escaped first; blank lines
+// become paragraphs, single newlines become <br>, and bare http(s) URLs become
+// links. Nothing the author types can become markup.
+const sendNewsletterEmail = async (
+  email,
+  { authorName, subject, body, authorUrl, unsubscribeUrl }
+) => {
+  const safe = (v) => String(v == null ? "" : v)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+  const linkify = (escaped) =>
+    escaped.replace(/\bhttps?:\/\/[^\s<]+[^\s<.,;:!?)\]'"]/g, (url) => `<a href="${url}">${url}</a>`);
+  const paragraphs = String(body || "")
+    .replace(/\r\n?/g, "\n")
+    .split(/\n{2,}/)
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .map((p) => `<p class="para">${linkify(safe(p)).replace(/\n/g, "<br>")}</p>`)
+    .join("\n");
+
+  const baseUrl = process.env.BASE_URL || process.env.RENDER_EXTERNAL_URL || "http://localhost:8000";
+  const safeAuthor = safe(authorName);
+
+  await deliver({
+    to: email,
+    subject: `${authorName}: ${subject}`,
+    label: "Newsletter email",
+    headers: {
+      "List-Unsubscribe": `<${unsubscribeUrl}>`,
+      "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+    },
+    html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <style>
+            body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
+            .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 40px; border-radius: 8px; }
+            .header { text-align: center; margin-bottom: 30px; }
+            .logo { font-size: 24px; font-weight: bold; color: #1a1a1a; text-decoration: none; }
+            .kicker { color: #888888; font-size: 14px; margin: 0 0 8px; }
+            .title { color: #1a1a1a; font-size: 24px; line-height: 1.3; margin: 0 0 20px; }
+            .para { color: #333333; line-height: 1.7; font-size: 16px; margin: 0 0 16px; }
+            .para a { color: #1a1a1a; }
+            .button-container { text-align: center; margin: 30px 0 10px; }
+            .button { background-color: #000000; color: #ffffff; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; }
+            .footer { margin-top: 30px; text-align: center; color: #888888; font-size: 12px; border-top: 1px solid #eeeeee; padding-top: 20px; }
+            .footer a { color: #888888; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <a href="${baseUrl}" class="logo">Lumina</a>
+            </div>
+            <p class="kicker">A note from ${safeAuthor}</p>
+            <h2 class="title">${safe(subject)}</h2>
+            ${paragraphs}
+            <div class="button-container">
+              <a href="${safe(authorUrl)}" class="button">Read ${safeAuthor} on Lumina</a>
+            </div>
+            <div class="footer">
+              <p>You are getting this because you follow ${safeAuthor} on Lumina.<br>
+              <a href="${safe(unsubscribeUrl)}">Unsubscribe from notes by writers you follow</a></p>
+              <p>&copy; ${new Date().getFullYear()} Lumina. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+    `,
+  });
+};
+
 // Shared shell for the engagement mail below (a comment, a reply, a new
 // follower). These differ only in a line of text, a quote and a button, so they
 // share one template rather than three near-identical copies that drift.
@@ -558,6 +634,7 @@ module.exports = {
   sendWeeklyDigestEmail,
   sendResetPasswordEmail,
   sendNewPostEmail,
+  sendNewsletterEmail,
   sendCommentEmail,
   sendFollowEmail,
   createTransporter,
