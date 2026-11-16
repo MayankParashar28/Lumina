@@ -4,7 +4,7 @@
 <head>
     <%- include('./partials/header') %>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
-        <link rel="stylesheet" href="/css/notifications.css?v=3">
+        <link rel="stylesheet" href="/css/notifications.css?v=4">
 </head>
 
 <body>
@@ -12,17 +12,26 @@
 
 
         <div class="container">
+            <% const activeFilter = locals.filter || 'all'; %>
+            <div class="notif-header">
+                <h2 class="notif-title">Notifications</h2>
+                <% if (notifications.some(n => !n.read)) { %>
+                    <button id="mark-all-read" type="button" class="mark-all-btn">
+                        <i class="fas fa-check-double"></i> Mark all as read
+                    </button>
+                <% } %>
+            </div>
+            <nav class="notif-tabs" aria-label="Filter notifications">
+                <a href="/notifications" class="notif-tab <%= activeFilter === 'all' ? 'is-active' : '' %>"
+                    <%- activeFilter === 'all' ? 'aria-current="page"' : '' %>>All</a>
+                <a href="/notifications?filter=conversations" class="notif-tab <%= activeFilter === 'conversations' ? 'is-active' : '' %>"
+                    <%- activeFilter === 'conversations' ? 'aria-current="page"' : '' %>>Mentions &amp; replies</a>
+            </nav>
             <% if (notifications.length===0) { %>
-                <p class="no-notifications">No new notifications.</p>
+                <p class="no-notifications">
+                    <%= activeFilter === 'conversations' ? 'No mentions or replies yet. When someone @mentions you, replies to you, or comments on your post, it shows up here.' : 'No new notifications.' %>
+                </p>
                 <% } else { %>
-                    <div class="notif-header">
-                        <h2 class="notif-title">Notifications</h2>
-                        <% if (notifications.some(n => !n.read)) { %>
-                            <button id="mark-all-read" type="button" class="mark-all-btn">
-                                <i class="fas fa-check-double"></i> Mark all as read
-                            </button>
-                        <% } %>
-                    </div>
                     <ul id="notifications">
                         <% notifications.forEach(notification=> { %>
                             <% let link='#' ; if (notification.targetUrl) link=notification.targetUrl; else if
@@ -57,7 +66,7 @@
                     </ul>
                     <% if (typeof hasMore !== 'undefined' && hasMore && nextCursor) { %>
                         <div class="notif-loadmore">
-                            <a class="mark-all-btn" href="/notifications?before=<%= encodeURIComponent(nextCursor) %>">
+                            <a class="mark-all-btn" href="/notifications?before=<%= encodeURIComponent(nextCursor) %><%= activeFilter === 'conversations' ? '&filter=conversations' : '' %>">
                                 Load older notifications
                             </a>
                         </div>

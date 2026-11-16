@@ -13,6 +13,7 @@
         <link rel="stylesheet" href="/css/code.css?v=2">
     <link rel="stylesheet" href="/css/editor-bubble.css?v=2">
     <link rel="stylesheet" href="/css/editor-seo.css?v=1">
+    <link rel="stylesheet" href="/css/revisions.css?v=1">
 </head>
 
 <body>
@@ -101,7 +102,14 @@
                     <!-- Moves Actions to Bottom -->
                     <div class="editor-actions" style="margin-top: 30px; justify-content: flex-end;">
                         <span id="word-count" class="word-counter" style="margin-right: 4px;">0 words</span>
-                        <span data-autosave-status class="autosave-status" style="margin-right: auto;"></span>
+                        <span data-autosave-status class="autosave-status" hidden></span>
+                        <span id="cloud-save-status" class="autosave-status" style="margin-right: auto;" aria-live="polite"></span>
+                        <div id="revision-config" hidden data-blog-id="<%= blog._id %>" data-csrf="<%= csrfToken %>"
+                            data-saved-at="<%= new Date(blog.updatedAt).toISOString() %>"></div>
+                        <button type="button" class="btn-mini-preview" id="open-history" title="Version history" aria-label="Version history"
+                            aria-haspopup="dialog">
+                            <i class="fas fa-clock-rotate-left" aria-hidden="true"></i>
+                        </button>
                         <button type="button" class="btn-mini-preview" data-action="previewStory" title="Preview story">
                             <i class="far fa-eye"></i>
                         </button>
@@ -299,6 +307,7 @@
                 <script src="/javascript/editor-images.js?v=1"></script>
                 <script src="/javascript/editor-bubble.js?v=1"></script>
                 <script defer src="/javascript/editor-seo.js?v=1"></script>
+                <script defer src="/javascript/revisions.js?v=1"></script>
                 <script nonce="<%= cspNonce %>">
                     // Initialize Quill editor
                     var quill = new Quill('#editor', {
@@ -334,6 +343,8 @@
                     // Only auto-save after the editor is ready, so the initial
                     // programmatic paste above doesn't register as a user edit.
                     let editorReady = true;
+                    // Version history / server autosave (revisions.js) reads this.
+                    window.LuminaEditor = { quill: quill };
 
 
                     // Generate Title Logic

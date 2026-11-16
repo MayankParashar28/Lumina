@@ -1232,6 +1232,12 @@ const EMAIL_PREFS = [
     help: "When someone comments on your post or replies to you.",
   },
   {
+    key: "emailOnNewsletter",
+    kind: "newsletter",
+    label: "Notes from people you follow",
+    help: "Occasional emails a writer you follow sends to their followers (at most one a week from each).",
+  },
+  {
     key: "emailOnFollow",
     kind: "follow",
     label: "New followers",
@@ -1287,6 +1293,118 @@ router.post("/email-preferences", asyncRoute(async (req, res) => {
     // that was clicked.
     prefs: Object.fromEntries(prefsOf(fresh).map((p) => [p.key, p.enabled])),
   });
+}));
+
+// ✉️ Newsletter: an author emails a short note to their followers.
+//
+// Limited to one send per NEWSLETTER_COOLDOWN_DAYS, so following someone can't
+// turn into a daily mailing list. Delivery runs as a background job; the page
+// shows the history with live counts.
+const NEWSLETTER_COOLDOWN_DAYS = Number(process.env.NEWSLETTER_COOLDOWN_DAYS) || 7;
+const Newsletter = require("../models/newsletter");
+
+async function newsletterState(userId) {
+  const me = await User.findById(userId).select("fullName email isVerified followers").lean();
+  if (!me) return null;
+  const [reach, history] = await Promise.all([
+    User.countDocuments({
+      _id: { $in: me.followers || [] },
+      isVerified: true,
+      email: { $exists: true, $ne: "" },
+      "notificationPreferences.emailOnNewsletter": { $ne: false },
+    }),
+    Newsletter.find({ authorId: userId }).sort({ createdAt: -1 }).limit(20).lean(),
+  ]);
+  const last = history[0];
+  const nextAllowedAt = last
+    ? new Date(new Date(last.createdAt).getTime() + NEWSLETTER_COOLDOWN_DAYS * 864e5)
+    : null;
+  return {
+    me,
+    followerCount: (me.followers || []).length,
+    reach,
+    history,
+    nextAllowedAt: nextAllowedAt && nextAllowedAt > new Date() ? nextAllowedAt : null,
+  };
+}
+
+router.get("/newsletter", asyncRoute(async (req, res) => {
+  if (!req.user) return res.redirect("/user/signin");
+  const state = await newsletterState(req.user._id);
+  if (!state) return res.redirect("/user/signin");
+  return res.render("newsletter", {
+    title: "Email your followers - Lumina",
+    ...state,
+    cooldownDays: NEWSLETTER_COOLDOWN_DAYS,
+    draft: { subject: "", body: "" },
+    searchQuery: "",
+  });
+}));
+
+router.post("/newsletter", asyncRoute(async (req, res) => {
+  if (!req.user) return res.redirect("/user/signin");
+  const subject = String(req.body.subject || "").trim().slice(0, 150);
+  const body = String(req.body.body || "").trim().slice(0, 10000);
+  const isTest = req.body.action === "test";
+
+  const state = await newsletterState(req.user._id);
+  if (!state) return res.redirect("/user/signin");
+
+  const fail = (status, message) => res.status(status).render("newsletter", {
+    title: "Email your followers - Lumina",
+    ...state,
+    cooldownDays: NEWSLETTER_COOLDOWN_DAYS,
+    draft: { subject, body },
+    error: [message],
+    searchQuery: "",
+  });
+
+  if (!subject) return fail(400, "Add a subject line.");
+  if (body.length < 20) return fail(400, "Write a little more — at least a sentence or two.");
+
+  const baseUrl = emailBaseUrl();
+
+  if (isTest) {
+    // Exactly what followers will get, sent only to the author.
+    try {
+      const { sendNewsletterEmail } = require("../services/emailService");
+      const { linkFor } = require("../utils/unsubscribe");
+      await sendNewsletterEmail(state.me.email, {
+        authorName: state.me.fullName,
+        subject,
+        body,
+        authorUrl: `${baseUrl}/user/profile/${state.me._id}`,
+        unsubscribeUrl: linkFor(state.me._id, "newsletter", baseUrl),
+      });
+    } catch (err) {
+      logger.error("⚠️ Newsletter test send failed:", err.message);
+      return fail(502, "The test email couldn't be sent. Check the mail settings and try again.");
+    }
+    return res.status(200).render("newsletter", {
+      title: "Email your followers - Lumina",
+      ...state,
+      cooldownDays: NEWSLETTER_COOLDOWN_DAYS,
+      draft: { subject, body },
+      success_msg: [`Test sent to ${state.me.email}. Nothing went to your followers.`],
+      searchQuery: "",
+    });
+  }
+
+  if (!state.me.isVerified) return fail(403, "Verify your email address before emailing followers.");
+  if (state.nextAllowedAt) {
+    return fail(429, `You can send your next note on ${state.nextAllowedAt.toDateString()}.`);
+  }
+  if (state.reach === 0) {
+    return fail(400, "None of your followers can receive email yet, so there's nobody to send this to.");
+  }
+
+  const note = await Newsletter.create({ authorId: state.me._id, subject, body });
+  const { enqueue } = require("../services/queue");
+  enqueue("newsletter", { newsletterId: String(note._id) }, { attempts: 1 });
+  logger.info("✉️ Newsletter queued by %s for %d followers", String(state.me._id), state.reach);
+
+  req.flash("success", `Sending to ${state.reach} follower${state.reach === 1 ? "" : "s"}.`);
+  return res.redirect("/user/newsletter");
 }));
 
 // 📭 Unsubscribe from one kind of email.

@@ -162,6 +162,49 @@
                 </section>
                 <% } %>
 
+                    <!-- 🌐 Embed: show your latest posts on another website -->
+                    <% const EMBED_ORIGIN = (process.env.BASE_URL || process.env.RENDER_EXTERNAL_URL || locals.requestOrigin || '').replace(/\/+$/, ''); %>
+                    <div class="content-divider"></div>
+                    <section class="content-section embed-section" aria-labelledby="embed-title">
+                        <h3 class="section-title" id="embed-title">Show your posts on your website</h3>
+                        <p class="embed-help">
+                            Paste this into your personal site, portfolio or another blog. It shows your latest
+                            Lumina posts and a Follow button, and updates on its own when you publish.
+                        </p>
+                        <div class="embed-snippet">
+                            <pre id="embed-code"><code>&lt;div class="lumina-author" data-author="<%= user._id %>" data-limit="3"&gt;&lt;/div&gt;
+&lt;script async src="<%= EMBED_ORIGIN %>/embed/author.js"&gt;&lt;/script&gt;</code></pre>
+                            <button type="button" class="btn-action secondary embed-copy" data-copy-target="#embed-code">
+                                <i class="far fa-copy" aria-hidden="true"></i> Copy code
+                            </button>
+                        </div>
+                        <p class="embed-help embed-help--small">
+                            Options: <code>data-limit</code> (1–10), <code>data-theme="light|dark|auto"</code>,
+                            <code>data-images="false"</code>. Prefer raw data?
+                            <a href="/api/author/<%= user._id %>/latest.json" target="_blank" rel="noopener">JSON feed</a>.
+                        </p>
+                        <div class="embed-preview" aria-label="Preview">
+                            <div class="lumina-author" data-author="<%= user._id %>" data-limit="3"></div>
+                        </div>
+                        <script async src="/embed/author.js?v=1"></script>
+                    </section>
+                    <style>
+                        .embed-help { color: #6b7280; font-size: 0.9rem; margin: 0 0 1rem; }
+                        .embed-help--small { font-size: 0.8rem; margin-top: 0.75rem; }
+                        .embed-snippet { position: relative; }
+                        .embed-snippet pre {
+                            margin: 0; padding: 1rem; padding-right: 7.5rem; border-radius: 10px;
+                            background: #111827; color: #e5e7eb; font-size: 0.8rem; line-height: 1.6;
+                            white-space: pre-wrap; word-break: break-all;
+                        }
+                        .embed-copy { position: absolute; top: 0.6rem; right: 0.6rem; min-height: 36px; }
+                        .embed-preview { margin-top: 1.25rem; }
+                        @media (max-width: 560px) {
+                            .embed-snippet pre { padding-right: 1rem; }
+                            .embed-copy { position: static; margin-top: 0.5rem; width: 100%; }
+                        }
+                    </style>
+
                     <!-- Activity Chart (Clean) -->
                     <div class="content-divider"></div>
                     <section class="content-section">

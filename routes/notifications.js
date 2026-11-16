@@ -18,6 +18,10 @@ router.get("/", async (req, res) => {
     // `before` is the createdAt of the last item on the previous page.
     const PAGE_SIZE = 20;
     const query = { userId };
+    // "Mentions & replies": the conversation notifications — someone mentioned
+    // you, replied to your comment, or commented on your post.
+    const filter = req.query.filter === "conversations" ? "conversations" : "all";
+    if (filter === "conversations") query.type = { $in: ["mention", "reply", "comment"] };
     if (req.query.before) {
       const before = new Date(req.query.before);
       if (!isNaN(before)) query.createdAt = { $lt: before };
@@ -39,6 +43,7 @@ router.get("/", async (req, res) => {
       notifications,
       hasMore,
       nextCursor,
+      filter,
       searchQuery: "",
       user: req.user
     });

@@ -53,7 +53,12 @@ function resolveExact(known, wanted) {
 
 // Build the { filter, sort } pair for a feed request. `taxonomy` is passed in
 // so a caller that already has it does not fetch it twice.
-function buildFeedQuery({ taxonomy, category, tag, search }) {
+//
+// `following` is the list of author ids the reader follows; it is only used by
+// the "following" pseudo-category, which narrows the feed to those authors,
+// newest first. Signed out (or following nobody) it matches nothing rather than
+// silently falling back to everything.
+function buildFeedQuery({ taxonomy, category, tag, search, following }) {
   const { categories = [], tags = [] } = taxonomy || {};
   const categoryFilter = category ? String(category).trim().toLowerCase() : "";
   const tagFilter = tag ? String(tag).trim().toLowerCase() : "";
@@ -68,7 +73,10 @@ function buildFeedQuery({ taxonomy, category, tag, search }) {
   }
 
   if (categoryFilter && categoryFilter !== "all") {
-    if (categoryFilter === "trending") {
+    if (categoryFilter === "following") {
+      filter.createdBy = { $in: Array.isArray(following) ? following : [] };
+      sort = { createdAt: -1 };
+    } else if (categoryFilter === "trending") {
       sort = { views: -1, createdAt: -1 };
     } else if (categoryFilter === "featured") {
       filter.featured = true;

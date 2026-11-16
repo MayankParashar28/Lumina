@@ -1,0 +1,346 @@
+/* Reader tools on the post page: table of contents and highlights. */
+
+/* ---------- Table of contents ---------- */
+.post-toc__title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent-dark);
+    margin: 0 0 0.75rem;
+}
+
+.post-toc__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.post-toc__item a {
+    display: block;
+    padding: 0.3rem 0 0.3rem 0.75rem;
+    border-left: 2px solid var(--border-color);
+    color: var(--accent-dark);
+    font-size: 0.85rem;
+    line-height: 1.4;
+    text-decoration: none;
+    opacity: 0.75;
+    transition: opacity 0.15s ease, border-color 0.15s ease;
+}
+
+.post-toc__item--l1 a { padding-left: 1.5rem; }
+.post-toc__item--l2 a { padding-left: 2.25rem; }
+
+.post-toc__item a:hover,
+.post-toc__item a:focus-visible {
+    opacity: 1;
+}
+
+.post-toc__item a.is-active {
+    opacity: 1;
+    color: var(--text-color);
+    border-left-color: var(--text-color);
+    font-weight: 600;
+}
+
+.post-toc__left {
+    margin: 1rem 0 0;
+    font-size: 0.75rem;
+    color: var(--accent-dark);
+    opacity: 0.7;
+}
+
+/* Wide screens: sticky panel in the left gutter beside the 1000px column. */
+.post-toc--side {
+    display: none;
+}
+
+@media (min-width: 1440px) {
+    .post-toc--side {
+        display: block;
+        position: fixed;
+        top: 140px;
+        left: max(24px, calc((100vw - 1000px) / 2 - 260px));
+        width: 220px;
+        max-height: calc(100vh - 200px);
+        overflow-y: auto;
+        z-index: 20;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.2s ease, visibility 0.2s ease;
+    }
+
+    .post-toc--side.is-visible {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .post-toc--inline {
+        display: none;
+    }
+}
+
+/* Narrow screens: collapsible box above the article body. */
+.post-toc--inline {
+    max-width: 1000px;
+    margin: 0 auto 2rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background: var(--bg-color);
+}
+
+.post-toc--inline summary {
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    list-style: none;
+}
+
+.post-toc--inline summary::-webkit-details-marker { display: none; }
+
+.post-toc--inline summary::after {
+    content: "";
+    margin-left: auto;
+    width: 8px;
+    height: 8px;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(45deg) translateY(-2px);
+    transition: transform 0.15s ease;
+}
+
+.post-toc--inline[open] summary::after {
+    transform: rotate(-135deg) translateY(-2px);
+}
+
+.post-toc--inline .post-toc__list {
+    margin-top: 0.5rem;
+}
+
+.post-toc--inline .post-toc__item a {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+}
+
+/* Headings jumped to from the TOC shouldn't hide under the fixed nav. */
+#blog-content h1,
+#blog-content h2,
+#blog-content h3 {
+    scroll-margin-top: 100px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .post-toc--side,
+    .post-toc__item a {
+        transition: none;
+    }
+}
+
+/* ---------- Highlights ---------- */
+mark.hl {
+    background: rgba(250, 204, 21, 0.38);
+    color: inherit;
+    padding: 0.05em 0;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+mark.hl:hover,
+mark.hl:focus-visible {
+    background: rgba(250, 204, 21, 0.6);
+    outline: none;
+}
+
+/* A highlight with a note gets a small marker after its last piece. */
+mark.hl.hl--note.hl--last::after {
+    content: "";
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    margin-left: 3px;
+    border-radius: 50%;
+    background: #b45309;
+    vertical-align: super;
+}
+
+mark.hl.hl--flash {
+    background: rgba(250, 204, 21, 0.9);
+}
+
+.hl-pop {
+    position: absolute;
+    z-index: 1200;
+    background: var(--text-color);
+    color: var(--bg-color);
+    border-radius: 10px;
+    padding: 6px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+    max-width: min(340px, calc(100vw - 16px));
+}
+
+.hl-pop[hidden] { display: none; }
+
+.hl-pop__actions {
+    display: flex;
+    gap: 2px;
+}
+
+.hl-pop__actions[hidden] { display: none; }
+
+.hl-pop__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 36px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.hl-pop__btn[hidden] { display: none; }
+
+.hl-pop__btn:hover,
+.hl-pop__btn:focus-visible {
+    background: rgba(255, 255, 255, 0.14);
+    outline: none;
+}
+
+.hl-pop__btn--danger { color: #fca5a5; }
+
+.hl-pop__btn--primary {
+    background: var(--bg-color);
+    color: var(--text-color);
+}
+
+.hl-pop__btn--primary:hover,
+.hl-pop__btn--primary:focus-visible {
+    background: var(--accent-gray);
+}
+
+.hl-pop__note {
+    padding: 6px;
+    width: min(320px, calc(100vw - 28px));
+}
+
+.hl-pop__note[hidden] { display: none; }
+
+.hl-pop__label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-bottom: 6px;
+    opacity: 0.8;
+}
+
+.hl-pop__note textarea {
+    width: 100%;
+    box-sizing: border-box;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    background: rgba(255, 255, 255, 0.08);
+    color: inherit;
+    padding: 8px;
+    font: inherit;
+    font-size: 0.9rem;
+    resize: vertical;
+}
+
+.hl-pop__note textarea:focus {
+    outline: 2px solid rgba(250, 204, 21, 0.8);
+    outline-offset: 1px;
+}
+
+.hl-pop__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.hl-pop__status {
+    font-size: 0.75rem;
+    opacity: 0.8;
+}
+
+.hl-toast {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    transform: translateX(-50%);
+    z-index: 1300;
+    background: var(--text-color);
+    color: var(--bg-color);
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    max-width: calc(100vw - 32px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    mark.hl { transition: none; }
+}
+
+/* ---------- @mention autocomplete ---------- */
+.mention-menu {
+    position: absolute;
+    z-index: 1200;
+    list-style: none;
+    margin: 0;
+    padding: 4px;
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.mention-menu[hidden] { display: none; }
+
+.mention-menu__item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 0 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.mention-menu__item img {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.mention-menu__name {
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mention-menu__handle {
+    margin-left: auto;
+    font-size: 0.75rem;
+    opacity: 0.6;
+    white-space: nowrap;
+}
+
+.mention-menu__item.is-active,
+.mention-menu__item:hover {
+    background: var(--accent-gray);
+}

@@ -47,6 +47,7 @@ const userSchema = new Schema(
       emailOnFollow: { type: Boolean, default: true },
       emailOnNewPost: { type: Boolean, default: true },
       emailOnWeeklyDigest: { type: Boolean, default: true },
+      emailOnNewsletter: { type: Boolean, default: true },
     },
 
     // When this author was last sent a weekly digest. Also the watermark the

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Offline - Lumina</title>
+    <meta name="theme-color" content="#323741">
+    <link rel="icon" href="/images/icon-192.png">
+    <style>
+        :root { --bg: #ffffff; --fg: #111827; --muted: #6b7280; --line: #e5e7eb; --hover: #f9fafb; }
+        @media (prefers-color-scheme: dark) {
+            :root { --bg: #111827; --fg: #f9fafb; --muted: #9ca3af; --line: #374151; --hover: #1f2937; }
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--fg);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.5;
+        }
+        main { max-width: 640px; margin: 0 auto; padding: 64px 16px; }
+        .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.1rem; margin-bottom: 40px; }
+        .brand img { width: 32px; height: 32px; border-radius: 8px; }
+        h1 { font-size: 1.6rem; margin: 0 0 8px; }
+        .lead { color: var(--muted); margin: 0 0 24px; }
+        .retry {
+            min-height: 44px; padding: 0 18px; border-radius: 8px; border: 1px solid var(--fg);
+            background: var(--fg); color: var(--bg); font: inherit; font-weight: 700; cursor: pointer;
+        }
+        .retry:focus-visible, a:focus-visible { outline: 2px solid #6366f1; outline-offset: 2px; }
+        h2 { font-size: 1rem; margin: 48px 0 8px; }
+        ul { list-style: none; margin: 0; padding: 0; }
+        li a {
+            display: block; padding: 14px 8px; border-top: 1px solid var(--line);
+            color: inherit; text-decoration: none; font-weight: 600;
+        }
+        li a:hover { background: var(--hover); }
+        .none { color: var(--muted); font-size: 0.9rem; }
+        [hidden] { display: none !important; }
+    </style>
+</head>
+<body>
+    <main>
+        <div class="brand"><img src="/images/icon-192.png" alt="" width="32" height="32"> Lumina</div>
+        <h1 id="heading">You're offline</h1>
+        <p class="lead" id="lead">Check your connection and try again. Stories you've read recently are saved below.</p>
+        <button type="button" class="retry" id="retry">Try again</button>
+
+        <h2>Saved for offline reading</h2>
+        <ul id="saved"></ul>
+        <p class="none" id="none" hidden>Nothing saved yet. Stories you open are kept here automatically, so you can read them without a connection.</p>
+    </main>
+    <script src="/javascript/offline.js"></script>
+</body>
+</html>
