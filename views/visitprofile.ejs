@@ -38,9 +38,9 @@
                             <%= totalLikes || 0 %> Likes
                         </span>
                         <span class="divider">/</span>
-                        <span>
-                            <%= user.followers ? user.followers.length : 0 %> Followers
-                        </span>
+                        <% const followerTotal = user.followers ? user.followers.length : 0; %>
+                        <span data-follower-count="<%= user._id %>" data-count="<%= followerTotal %>"
+                            data-singular=" Follower" data-plural=" Followers"><%= followerTotal %> Followers</span>
                     </div>
 
                     <!-- Socials (Round Buttons) -->
@@ -77,11 +77,12 @@
                     <div class="author-actions">
                         <form method="POST" action="/user/follow/<%= user._id %>" style="display: inline;">
                             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                            <button type="submit"
-                                class="btn-action <%= (loggedInUser && user.followers && user.followers.includes(loggedInUser._id)) ? 'secondary' : 'primary' %>">
-                                <%= (loggedInUser && user.followers && user.followers.includes(loggedInUser._id))
-                                    ? 'Unfollow' : 'Follow Author' %>
-                            </button>
+                            <% const isFollowingProfile = !!(loggedInUser && user.followers && user.followers.some((f) => String(f && f._id ? f._id : f) === String(loggedInUser._id))); %>
+                            <button type="submit" data-follow-btn data-following="<%= isFollowingProfile %>"
+                                data-on-text="Unfollow" data-off-text="Follow Author"
+                                data-on-class="secondary" data-off-class="primary"
+                                aria-pressed="<%= isFollowingProfile %>"
+                                class="btn-action <%= isFollowingProfile ? 'secondary' : 'primary' %>"><%= isFollowingProfile ? 'Unfollow' : 'Follow Author' %></button>
                         </form>
                     </div>
                 </header>
@@ -155,6 +156,7 @@
                     border-bottom-color: #d32f2f;
                 }
             </style>
+            <script defer src="/javascript/follow.js?v=1"></script>
 </body>
 
 </html>

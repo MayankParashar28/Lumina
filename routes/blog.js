@@ -618,20 +618,18 @@ router.post("/bookmark/:blogId", async (req, res) => {
   }
 
   try {
-    const user = await User.findById(req.user._id);
     const blogId = req.params.blogId;
+    // One atomic update instead of loading and re-saving the whole user.
+    // Try removing first; if nothing was removed, it wasn't bookmarked — add it.
+    const removed = await User.updateOne(
+      { _id: req.user._id, bookmarks: blogId },
+      { $pull: { bookmarks: blogId } }
+    );
+    if (removed.modifiedCount > 0) return res.json({ success: true, bookmarked: false });
 
-    if (!user) return res.status(404).json({ success: false, message: "User not found" });
-
-    if (user.bookmarks.includes(blogId)) {
-      user.bookmarks = user.bookmarks.filter(id => id.toString() !== blogId);
-      await user.save();
-      return res.json({ success: true, bookmarked: false });
-    } else {
-      user.bookmarks.push(blogId);
-      await user.save();
-      return res.json({ success: true, bookmarked: true });
-    }
+    const added = await User.updateOne({ _id: req.user._id }, { $addToSet: { bookmarks: blogId } });
+    if (added.matchedCount === 0) return res.status(404).json({ success: false, message: "User not found" });
+    return res.json({ success: true, bookmarked: true });
   } catch (error) {
     logger.error("❌ Bookmarking Error:", error);
     res.status(500).json({ success: false, message: "Server error" });
@@ -652,44 +650,61 @@ router.post("/like/:blogId", async (req, res) => {
   }
 
   try {
-    const blog = await Blog.findById(req.params.blogId).populate("createdBy", "fullName profilePic");
+    const blogId = req.params.blogId;
+    const userId = req.user._id.toString();
+    const opts = { new: true, projection: { likes: 1, createdBy: 1 } };
+    const likedBy = { $ifNull: ["$likedBy", []] };
+
+    // Atomic toggle on just likedBy/likes — no loading and re-saving the whole
+    // post (body, tags, …), and two quick clicks can't overwrite each other.
+    // `likes` is recomputed from likedBy so the count can't drift.
+    let blog = await Blog.findOneAndUpdate(
+      { _id: blogId, likedBy: { $ne: userId } },
+      [
+        { $set: { likedBy: { $concatArrays: [likedBy, [userId]] } } },
+        { $set: { likes: { $size: "$likedBy" } } },
+      ],
+      opts
+    ).lean();
+    const isNewLike = !!blog;
+
+    if (!blog) {
+      blog = await Blog.findOneAndUpdate(
+        { _id: blogId, likedBy: userId },
+        [
+          { $set: { likedBy: { $filter: { input: likedBy, cond: { $ne: ["$$this", userId] } } } } },
+          { $set: { likes: { $size: "$likedBy" } } },
+        ],
+        opts
+      ).lean();
+    }
     if (!blog) return res.status(404).json({ success: false, message: "Blog not found" });
 
-    const userId = req.user._id.toString();
-    const likedIndex = blog.likedBy.indexOf(userId);
-    const isNewLike = likedIndex === -1;
+    // Answer first — the button is waiting on this — then notify the author.
+    res.json({ success: true, liked: isNewLike, likes: blog.likes });
 
-    // Toggle like
-    isNewLike ? blog.likedBy.push(userId) : blog.likedBy.splice(likedIndex, 1);
-    blog.likes = blog.likedBy.length;
-    await blog.save();
-
-    // Send notification if another user liked/unliked
-    if (isNewLike && blog.createdBy && blog.createdBy._id.toString() !== userId) {
-      await Notification.create({
-        userId: blog.createdBy._id.toString(),
+    if (isNewLike && blog.createdBy && blog.createdBy.toString() !== userId) {
+      const authorId = blog.createdBy.toString();
+      const message = `${req.user.fullName} liked your blog.`;
+      Notification.create({
+        userId: authorId,
         senderId: userId,
-        message: `${req.user.fullName} ${isNewLike ? "liked" : "unliked"} your blog.`,
+        message,
         type: "like",
         blogId: blog._id, // Deep Link Support
         targetUrl: `/blog/${blog._id}`, // 🎯 Deep Link
         read: false,
         createdAt: new Date(),
-      });
-
-      const io = req.app.get("io");
-      if (io) {
-        io.to(`user:${blog.createdBy._id}`).emit("new_notification", {
-          message: `${req.user.fullName} ${isNewLike ? "liked" : "unliked"} your blog.`
-        });
-      }
+      })
+        .then(() => {
+          const io = req.app.get("io");
+          if (io) io.to(`user:${authorId}`).emit("new_notification", { message });
+        })
+        .catch((err) => logger.error("⚠️ Like notification failed:", err.message));
     }
-
-    res.json({ success: true, liked: isNewLike, likes: blog.likes });
-
   } catch (error) {
     logger.error("❌ Error in liking blog:", error);
-    res.status(500).json({ success: false, message: "Server error" });
+    if (!res.headersSent) res.status(500).json({ success: false, message: "Server error" });
   }
 });
 
