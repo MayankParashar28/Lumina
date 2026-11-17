@@ -1,23 +1,23 @@
 <div align="center">
 
-#  Lumina
+# Lumina
 
 ### **Learning-Powered Blogging and Intelligent Retrieval**
 
 [![Node.js](https://img.shields.io/badge/Node.js-22.x-339933?style=for-the-badge&logo=node.js)](https://nodejs.org/)
 [![MongoDB](https://img.shields.io/badge/MongoDB-6.0+-47A248?style=for-the-badge&logo=mongodb)](https://www.mongodb.com/)
 [![Gemini](https://img.shields.io/badge/Google-Gemini-4285F4?style=for-the-badge&logo=google)](https://ai.google.dev/)
-[![License](https://img.shields.io/badge/License-ISC-blue?style=for-the-badge)](#-license)
+[![License](https://img.shields.io/badge/License-ISC-blue?style=for-the-badge)](#license)
 
 **A full-stack blogging platform with hybrid semantic search, a feed that learns from how you read, automatic topics, writing tools for authors, and real-time notifications.**
 
-[Live Site](https://llumina.online/) • [Features](#-features) • [Quick Start](#-quick-start) • [Report a Bug](https://github.com/MayankParashar28/Lumina/issues)
+[Live Site](https://llumina.online/) | [Features](#features) | [Quick Start](#quick-start) | [Report a Bug](https://github.com/MayankParashar28/Lumina/issues)
 
 </div>
 
 ---
 
-##  Screenshots
+## Screenshots
 
 <div align="center">
 
@@ -40,26 +40,26 @@
 
 ---
 
-##  Table of Contents
+## Table of Contents
 
-- [Features](#-features)
-- [How the Machine Learning Works](#-how-the-machine-learning-works)
-- [System Architecture](#-system-architecture)
-- [Tech Stack](#-tech-stack)
-- [Quick Start](#-quick-start)
-- [Configuration](#-configuration)
-- [Scripts & Operations](#-scripts--operations)
-- [Project Structure](#-project-structure)
-- [Security](#-security)
-- [Testing](#-testing)
-- [Roadmap](#-roadmap)
-- [Contributing](#-contributing)
+- [Features](#features)
+- [How the Machine Learning Works](#how-the-machine-learning-works)
+- [System Architecture](#system-architecture)
+- [Tech Stack](#tech-stack)
+- [Quick Start](#quick-start)
+- [Configuration](#configuration)
+- [Scripts & Operations](#scripts--operations)
+- [Project Structure](#project-structure)
+- [Security](#security)
+- [Testing](#testing)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
 
 ---
 
-##  Features
+## Features
 
-###  For Readers
+### For Readers
 - **Hybrid search** — finds posts by meaning *and* by words: "how to stay motivated" finds "Beating burnout", while an exact title still ranks first. Results appear as you type.
 - **"For you" feed** — learns from what you actually read to the end, highlight, like and save (a 5-second bounce barely counts), and tells you why each post is there.
 - **Following feed** — a tab with only the writers you follow, newest first.
@@ -71,7 +71,7 @@
 - **@mentions** in comments with autocomplete, and a *Mentions & replies* inbox.
 - **Installable app** — add Lumina to your home screen; posts you've read work offline.
 
-###  For Writers
+### For Writers
 - **Writing assistant** — readability, long sentences, passive voice, filler words and a headline score, live as you type; optional AI review for grammar, clarity and tone.
 - **Tag & category suggestions** — from the most similar posts on Lumina plus AI, as chips to accept.
 - **Originality check** — warns when a draft is very close to a post already on Lumina.
@@ -82,7 +82,7 @@
 - **Embed your latest posts** on any website with a one-line snippet, or use the public JSON feed.
 - **Analytics** — views, likes, comments, followers, top posts, and when your audience reads.
 
-###  Community & Safety
+### Community & Safety
 - **Real-time notifications** (Socket.IO) for likes, comments, replies, mentions, follows and new posts.
 - **Email notifications** with per-type preferences and one-click unsubscribe (RFC 8058).
 - **Smarter moderation** — profanity filter and AI safety check, plus spam/abuse risk scoring with reasons: spam and threats are blocked, borderline comments are posted but queued for an admin, and suspicious accounts are listed.
@@ -90,7 +90,7 @@
 
 ---
 
-##  How the Machine Learning Works
+## How the Machine Learning Works
 
 Everything is built on one idea: each post is turned into a **768-dimension embedding** (a list of numbers that captures its meaning) with Google's embedding model. Posts about similar things end up close together. The algorithms live in `services/ml/` as small, pure, unit-tested modules, and **every feature works without an AI key** — Gemini only improves tag suggestions, topic names and the AI review.
 
@@ -112,25 +112,25 @@ Everything is built on one idea: each post is turned into a **768-dimension embe
 
 ---
 
-##  System Architecture
+## System Architecture
 
 ```mermaid
 graph TB
     subgraph "Client"
-        Browser["🌐 Browser / installed app"]
-        SW["📦 Service worker (offline reading)"]
+        Browser["Browser / installed app"]
+        SW["Service worker (offline reading)"]
     end
 
     subgraph "Express app"
         Routes["Routes: blog, user, topics, writer, highlights, notifications, admin, api"]
-        Signals["📈 /signals (reading time)"]
-        Socket["⚡ Socket.IO"]
+        Signals["/signals (reading time)"]
+        Socket["Socket.IO"]
     end
 
     subgraph "Services"
-        ML["🧠 services/ml: search, for-you, topics, trends, tags, risk"]
-        Jobs["⚙️ Background jobs: embeddings, fan-out, digests, newsletters"]
-        Mail["✉️ Email (Resend / SMTP)"]
+        ML["services/ml: search, for-you, topics, trends, tags, risk"]
+        Jobs["Background jobs: embeddings, fan-out, digests, newsletters"]
+        Mail["Email (Resend / SMTP)"]
     end
 
     subgraph "External"
@@ -159,7 +159,7 @@ graph TB
     style Mongo fill:#47a248,color:#fff
 ```
 
-###  Search pipeline
+### Search pipeline
 
 ```mermaid
 sequenceDiagram
@@ -190,7 +190,7 @@ sequenceDiagram
 
 ---
 
-##  Tech Stack
+## Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
@@ -211,7 +211,7 @@ sequenceDiagram
 
 ---
 
-##  Quick Start
+## Quick Start
 
 ### Prerequisites
 - Node.js 22
@@ -228,7 +228,7 @@ sequenceDiagram
    npm install
    ```
 
-2. **Create `.env`** (see [Configuration](#-configuration) for everything else)
+2. **Create `.env`** (see [Configuration](#configuration) for everything else)
    ```env
    MONGODB_URL=mongodb://localhost:27017/lumina
    JWT_SECRET=a-long-random-string
@@ -259,7 +259,7 @@ sequenceDiagram
 
 ---
 
-##  Configuration
+## Configuration
 
 **Required:** `MONGODB_URL`, `JWT_SECRET`, `SESSION_SECRET`.
 
@@ -286,7 +286,7 @@ sequenceDiagram
 
 ---
 
-##  Scripts & Operations
+## Scripts & Operations
 
 | Command | What it does |
 |---|---|
@@ -294,18 +294,18 @@ sequenceDiagram
 | `npm run worker` | Run background jobs in their own process (with `REDIS_URL`) |
 | `npm test` | Run the test suite |
 | `node scripts/generate-embeddings.js [--stale]` | Embed posts that have no embedding (`--stale`: also re-embed posts made with an older model) |
-| `node scripts/build-topics.js [--no-ai]` | Rebuild topics now (otherwise rebuilt daily; also from Admin → Moderation) |
+| `node scripts/build-topics.js [--no-ai]` | Rebuild topics now (otherwise rebuilt daily; also from Admin > Moderation) |
 | `node scripts/make_admin.js <email>` | Give a user the admin role |
 | `node scripts/backfill-slugs.js` | Give older posts readable URLs |
 | `node scripts/sanitize-existing-posts.js` | Re-sanitise stored post bodies |
 
 **Background work** (embeddings, notification fan-out, follower emails, newsletters, weekly digests, scheduled publishing) runs through BullMQ when Redis is available, and inline otherwise. Topics are rebuilt daily by the web process.
 
-**After changing the embedding model**, run `generate-embeddings.js --stale`: vectors from different models can't be compared. Admin → Moderation shows how many posts still need it.
+**After changing the embedding model**, run `generate-embeddings.js --stale`: vectors from different models can't be compared. Admin > Moderation shows how many posts still need it.
 
 ---
 
-##  Project Structure
+## Project Structure
 
 ```
 index.js                 app setup, middleware, home feed, sockets, timers
@@ -331,7 +331,7 @@ tests/                   node:test suites
 
 ---
 
-##  Security
+## Security
 
 - **Passwords** hashed with **scrypt** and a per-user salt (older hashes upgrade on next sign-in).
 - **CSRF** protection on every form and write request.
@@ -340,7 +340,7 @@ tests/                   node:test suites
 - **Email links** to unsubscribe are HMAC-signed, so they can't be forged or reused for other users.
 - **Private data stays private**: highlights, notes, drafts, versions and reading history are only visible to their owner; the public API returns only what a profile already shows.
 
-###  Rate limits
+### Rate limits
 
 | What | Limit |
 |---|---|
@@ -356,7 +356,7 @@ tests/                   node:test suites
 
 ---
 
-##  Testing
+## Testing
 
 ```bash
 npm test
@@ -366,7 +366,7 @@ Tests use Node's built-in runner, Supertest, and an in-memory MongoDB (downloade
 
 ---
 
-##  Roadmap
+## Roadmap
 
 - [x] Hybrid search (vector + keyword)
 - [x] Redis caching layer
@@ -381,7 +381,7 @@ Tests use Node's built-in runner, Supertest, and an in-memory MongoDB (downloade
 
 ---
 
-##  Contributing
+## Contributing
 
 1. Fork the repo
 2. Create a branch: `git checkout -b feature/your-feature`
@@ -391,13 +391,13 @@ Tests use Node's built-in runner, Supertest, and an in-memory MongoDB (downloade
 
 ---
 
-##  License
+## License
 
 ISC
 
 ---
 
-##  Author
+## Author
 
 **Mayank Parashar**
 
