@@ -178,6 +178,20 @@ flowchart LR
 - **Auto Summarization** with TL;DR extraction
 - **Related Posts** based on semantic proximity
 
+###  Machine Learning
+- **Hybrid Search** — meaning (embeddings) + keywords + title, fused with Reciprocal Rank Fusion; live results while typing
+- **"For you" feed** — learns from read time, scroll depth, highlights, likes and bookmarks; explains each pick
+- **Automatic Topics** — k-means over post embeddings (k chosen by silhouette), named by AI or by shared tags; `/topics`
+- **Rising Trends** — this week vs. the previous four, per topic and tag (home page, topics, weekly digest)
+- **Writing Assistant** — readability, style issues and a headline score in the editor; optional AI review
+- **Tag & Category Suggestions** — votes from the most similar posts, plus AI; tags normalised (`#AI` = `ai` = `AI`)
+- **Originality Check** — embedding similarity + shingle overlap against posts already on Lumina
+- **Best Time to Publish** — when your readers and followers actually read, in your time zone
+- **Smarter Moderation** — spam/abuse risk scoring with reasons; borderline comments held for review, spam blocked
+
+The ML code lives in `services/ml/` (pure, unit-tested modules) and runs without an AI key — Gemini only improves
+tag suggestions, topic names and the AI review.
+
 ###  Real-Time & UX
 - **Live Notifications** via Socket.IO
 - **Instant Updates** for likes, comments, follows
@@ -356,6 +370,8 @@ Cloudinary API Key (for image uploads)
    
    # AI
    GOOGLE_GEMINI_API_KEY=your_api_key
+   # Optional: embedding model (default gemini-embedding-001, 768 dims)
+   # GOOGLE_EMBEDDING_MODEL=gemini-embedding-001
    
    # Cloud Storage
    CLOUDINARY_NAME=your_cloud_name
@@ -370,13 +386,19 @@ Cloudinary API Key (for image uploads)
    NODE_ENV=development
    ```
 
-4. **Run the app**
+4. **Embeddings and topics** (first run, or after changing the embedding model)
+   ```bash
+   node scripts/generate-embeddings.js --stale   # embed posts missing or using an old model
+   node scripts/build-topics.js                  # build topics now (otherwise done daily)
+   ```
+
+5. **Run the app**
    ```bash
    npm run dev     # Development
    npm start       # Production
    ```
 
-5. **Access**
+6. **Access**
    - Frontend: `http://localhost:8000`
    - Admin: `http://localhost:8000/admin`
 

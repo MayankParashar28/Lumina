@@ -24,23 +24,95 @@ const adminAuth = (req, res, next) => {
 // 🛡️ Apply Admin Middleware to all routes here
 router.use(checkForAdmin);
 
-// 🛡️ Moderation Logs Route
+// 🛡️ Moderation: held comments, accounts to watch, ML status, and the log.
 router.get("/moderation", adminAuth, async (req, res) => {
     try {
-        const logs = await ModerationLog.find()
-            .populate("userId", "fullName email profilePic")
-            .sort({ createdAt: -1 })
-            .limit(50); // Show last 50 events
+        const Topic = require("../models/topic");
+        const { EMBEDDING_MODEL_ID } = require("../services/ai");
+        const { suspiciousAccounts } = require("../services/ml/moderation");
+
+        const [pending, logs, accounts, published, embedded, current, topics, latestTopic] = await Promise.all([
+            ModerationLog.find({ actionTaken: "FLAGGED", resolvedAt: { $exists: false } })
+                .populate("userId", "fullName email profilePic")
+                .populate("blogId", "title slug")
+                .sort({ riskScore: -1, createdAt: -1 })
+                .limit(50)
+                .lean(),
+            ModerationLog.find()
+                .populate("userId", "fullName email profilePic")
+                .sort({ createdAt: -1 })
+                .limit(50)
+                .lean(),
+            suspiciousAccounts({ limit: 20 }).catch((err) => {
+                logger.error("Suspicious accounts failed:", err);
+                return [];
+            }),
+            Blog.countDocuments({ status: "published" }),
+            Blog.countDocuments({ status: "published", embedding: { $exists: true, $ne: [] } }),
+            Blog.countDocuments({ status: "published", embeddingModel: EMBEDDING_MODEL_ID }),
+            Topic.countDocuments(),
+            Topic.findOne().sort({ builtAt: -1 }).select("builtAt").lean(),
+        ]);
 
         res.render("admin/moderation", {
             user: req.user,
-            logs: logs
+            pending,
+            logs,
+            accounts,
+            ml: {
+                published,
+                embedded,
+                current,
+                model: EMBEDDING_MODEL_ID,
+                topics,
+                topicsBuiltAt: latestTopic ? latestTopic.builtAt : null,
+            },
         });
     } catch (error) {
         logger.error("Admin/Moderation Error:", error);
         res.status(500).render("error", { message: "Failed to load logs" });
     }
 });
+
+// Resolve a held comment: delete it, or keep it (it is already visible).
+router.post("/moderation/:id/resolve", adminAuth, async (req, res) => {
+    try {
+        const action = req.body.action === "delete" ? "deleted" : "kept";
+        const log = await ModerationLog.findById(req.params.id);
+        if (!log) return res.redirect("/admin/moderation");
+        if (action === "deleted" && log.commentId) {
+            // The comment and any replies to it.
+            await Comment.deleteMany({ $or: [{ _id: log.commentId }, { parentId: log.commentId }] });
+        }
+        log.resolvedAt = new Date();
+        log.resolution = action;
+        await log.save();
+        req.flash("success", action === "deleted" ? "Comment deleted." : "Comment kept.");
+    } catch (error) {
+        logger.error("Resolve moderation error:", error);
+        req.flash("error", "Couldn't update that item.");
+    }
+    return res.redirect("/admin/moderation");
+});
+
+// Rebuild automatic topics now (normally daily).
+router.post("/topics/rebuild", adminAuth, async (req, res) => {
+    try {
+        const { buildTopics } = require("../services/ml/topics");
+        const result = await buildTopics();
+        req.flash(
+            result.built ? "success" : "error",
+            result.built
+                ? `Topics rebuilt: ${result.topics} topics from ${result.posts} posts.`
+                : `Not enough embedded posts to build topics yet (${result.posts}).`
+        );
+    } catch (error) {
+        logger.error("Topic rebuild error:", error);
+        req.flash("error", "Topic rebuild failed: " + error.message);
+    }
+    return res.redirect("/admin/moderation");
+});
+
 // 📊 Admin Dashboard
 router.get("/", async (req, res) => {
     try {

@@ -4,6 +4,7 @@
 <head>
     <%- include('./partials/header') %>
         <link rel="stylesheet" href="/css/home.css?v=18">
+    <link rel="stylesheet" href="/css/ml.css?v=1">
 </head>
 
 <body>
@@ -42,6 +43,18 @@
                         <% }) %>
                 </div>
                 <% } %>
+            <% if (locals.trends && (trends.topics.length || trends.tags.length)) { %>
+                <!-- 📈 Rising this week: topics/tags read and written about more than usual. -->
+                <div class="feed-rising" aria-label="Rising this week">
+                    <span class="feed-rising__label"><i class="fas fa-arrow-trend-up" aria-hidden="true"></i> Rising this week</span>
+                    <% trends.topics.slice(0, 4).forEach(function (t) { %>
+                        <a class="tag-chip" href="/topics/<%= t.slug %>"><%= t.label %></a>
+                    <% }) %>
+                    <% trends.tags.slice(0, 4).forEach(function (t) { %>
+                        <a class="tag-chip" href="/?tag=<%= encodeURIComponent(t.tag) %>">#<%= t.tag %></a>
+                    <% }) %>
+                </div>
+            <% } %>
         </div>
 
         <div class="feed-divider"></div>
@@ -143,6 +156,9 @@
                                         <h2 class="card-heading">
                                             <%= blog.title %>
                                         </h2>
+                                        <% if (blog.reason) { %>
+                                            <span class="card-reason" title="<%= blog.reason %>"><i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i> <%= blog.reason %></span>
+                                        <% } %>
                                         <div class="card-footer-minimal">
                                             <% if (blog.createdBy) { %>
                                                 <div class="author-info">

@@ -20,6 +20,9 @@
 <script defer src="/javascript/follow.js?v=1"></script>
 <link rel="stylesheet" href="/css/reader.css?v=1">
 <script defer src="/javascript/post-toc.js?v=1"></script>
+<% if (!locals.isPreview) { %>
+<script defer src="/javascript/read-tracker.js?v=1"></script>
+<% } %>
 <% if (user && !locals.isPreview) { %>
 <script defer src="/javascript/highlights.js?v=1"></script>
 <script defer src="/javascript/comment-mentions.js?v=1"></script>
@@ -225,6 +228,10 @@
                         <% if (user && !locals.isPreview) { %>
                             <!-- Highlights: signed-in readers only; the script reads these. -->
                             <div id="reader-tools" hidden data-blog-id="<%= blog._id %>" data-csrf="<%= csrfToken %>"></div>
+                        <% } %>
+                        <% if (!locals.isPreview) { %>
+                            <!-- Reading signal (read time + depth): no user data, safe in the page cache. -->
+                            <div id="read-signal" hidden data-blog-id="<%= blog._id %>"></div>
                         <% } %>
                         <!-- Editorial Content -->
                         <div class="blog-body editorial-typography ql-snow" id="blog-content-wrapper">

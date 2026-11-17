@@ -44,14 +44,15 @@
 
     <div class="search-container">
         <form class="search-form" method="GET" action="/blog/search">
-            <input type="text" name="q" value="<%= query %>" placeholder="Search by meaning — e.g. 'how AI is changing work'" autofocus>
+            <input type="text" name="q" value="<%= query %>" placeholder="Search by meaning — e.g. 'how AI is changing work'" autofocus
+                autocomplete="off" data-live-search aria-label="Search stories">
             <button type="submit">Search</button>
         </form>
 
         <% if (query) { %>
             <p class="search-meta">
                 <%= results.length %> result<%= results.length === 1 ? '' : 's' %> for “<strong><%= query %></strong>”
-                <% if (mode === 'semantic') { %><span class="badge-mode">✨ by meaning</span><% } else if (mode === 'text') { %><span class="badge-mode">keyword match</span><% } %>
+                <% if (mode === 'hybrid') { %><span class="badge-mode">✨ by meaning + keywords</span><% } else if (mode === 'semantic') { %><span class="badge-mode">✨ by meaning</span><% } else if (mode === 'text') { %><span class="badge-mode">keyword match</span><% } %>
             </p>
         <% } %>
 
@@ -84,8 +85,11 @@
                                 <span><%= blog.views || 0 %> views</span>
                             </div>
                         </div>
-                        <% if (typeof blog.score === 'number' && mode === 'semantic') { %>
-                            <span class="search-score"><%= Math.round(blog.score * 100) %>% match</span>
+                        <% if (blog.matchedBy && blog.matchedBy.length) { %>
+                            <span class="search-score" title="How this result was found">
+                                <% if (typeof blog.meaningScore === 'number') { %><%= Math.round(blog.meaningScore * 100) %>% similar<% } %>
+                                <% const how = blog.matchedBy.filter(m => m !== 'meaning'); if (how.length) { %><%= typeof blog.meaningScore === 'number' ? ' · ' : '' %><%= how.includes('title') ? 'title' : 'keywords' %><% } %>
+                            </span>
                         <% } %>
                     </a>
                 <% }) %>

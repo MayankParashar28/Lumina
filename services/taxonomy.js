@@ -10,6 +10,7 @@
 
 const redisSvc = require("./redis");
 const Blog = require("../models/blog");
+const { tagKey } = require("./ml/tagger");
 
 const TAXONOMY_TTL_SECONDS = 5 * 60;
 
@@ -41,13 +42,17 @@ const escapeRe = (v) => String(v).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 // becomes an equality match. Only a value missing from the cache -- a category
 // used for the first time in the last five minutes -- falls back to a regex,
 // and that one is anchored and escaped.
-function resolveExact(known, wanted) {
-  const w = String(wanted).toLowerCase();
+function resolveExact(known, wanted, keyOf = (v) => String(v).toLowerCase()) {
+  const w = keyOf(wanted);
   const hits = (known || []).filter(
-    (v) => typeof v === "string" && v.toLowerCase() === w
+    (v) => typeof v === "string" && keyOf(v) === w
   );
-  return hits.length
-    ? { $in: hits }
+  if (hits.length) return { $in: hits };
+  // Not in the cached vocabulary (a value first used in the last few minutes).
+  // For tags, match any spelling of it: leading "#", stray spaces, any case.
+  const bare = String(wanted).replace(/^[#\s]+/, "").trim();
+  return keyOf === tagKey
+    ? { $regex: new RegExp("^[#\\s]*" + escapeRe(bare).replace(/\\? /g, "\\s+") + "\\s*$", "i") }
     : { $regex: new RegExp("^" + escapeRe(wanted) + "$", "i") };
 }
 
@@ -88,7 +93,9 @@ function buildFeedQuery({ taxonomy, category, tag, search, following }) {
   }
 
   if (tagFilter) {
-    filter.tags = resolveExact(tags, tagFilter);
+    // Tags match by their cleaned form, so "#poetry", "Poetry" and "poetry "
+    // are one tag (see services/ml/tagger.js).
+    filter.tags = resolveExact(tags, tagFilter, tagKey);
     if (!categoryFilter || categoryFilter === "all") sort = { createdAt: -1 };
   }
 

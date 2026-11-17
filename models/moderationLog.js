@@ -24,6 +24,14 @@ const moderationLogSchema = new Schema(
             enum: ["BLOCKED", "FLAGGED", "ALLOWED"],
             default: "BLOCKED",
         },
+        // Smarter moderation (services/ml/moderation.js): the risk score, and
+        // for a comment that was posted but held for review, where it is.
+        riskScore: { type: Number },
+        commentId: { type: Schema.Types.ObjectId, ref: "comment" },
+        blogId: { type: Schema.Types.ObjectId, ref: "blog" },
+        // Set when an admin has dealt with a FLAGGED entry.
+        resolvedAt: { type: Date },
+        resolution: { type: String, enum: ["deleted", "kept"] },
     },
     { timestamps: true }
 );

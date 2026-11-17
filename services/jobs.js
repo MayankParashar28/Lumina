@@ -11,11 +11,18 @@ function setIo(instance) { io = instance; }
 
 // --- Generate and store a blog's embedding (moves Gemini off the request path) ---
 async function embedJob({ blogId, text }) {
-  const { generateEmbedding } = require("./ai");
+  const { generateEmbedding, EMBEDDING_MODEL_ID } = require("./ai");
   const Blog = require("../models/blog");
   const embedding = await generateEmbedding(text);
   if (embedding && embedding.length > 0) {
-    await Blog.findByIdAndUpdate(blogId, { embedding });
+    // The post's topic is the nearest topic centroid (services/ml/topics.js).
+    const { nearestTopicId } = require("./ml/topics");
+    const topic = await nearestTopicId(embedding).catch(() => null);
+    await Blog.findByIdAndUpdate(blogId, {
+      embedding,
+      embeddingModel: EMBEDDING_MODEL_ID,
+      ...(topic ? { topic } : {}),
+    });
   }
 }
 

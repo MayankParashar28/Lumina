@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <%- include('./partials/header') %>
+    <link rel="stylesheet" href="/css/ml.css?v=1">
+</head>
+
+<body>
+    <%- include('./partials/nav', { searchQuery: '' }) %>
+
+    <main class="ml-page">
+        <nav class="ml-crumbs" aria-label="Breadcrumb"><a href="/topics">Topics</a> <span aria-hidden="true">/</span></nav>
+        <header class="ml-page__head">
+            <h1 class="ml-page__title">
+                <%= topic.label %>
+                <% if (rising) { %>
+                    <span class="ml-badge"><i class="fas fa-arrow-trend-up" aria-hidden="true"></i> Rising</span>
+                <% } %>
+            </h1>
+            <% if (topic.description) { %><p class="ml-page__sub"><%= topic.description %></p><% } %>
+            <p class="ml-page__meta">
+                <%= total %> stor<%= total === 1 ? 'y' : 'ies' %>
+                <% if (topic.keywords && topic.keywords.length) { %> · <%= topic.keywords.join(' · ') %><% } %>
+            </p>
+        </header>
+
+        <% if (!blogs.length) { %>
+            <div class="ml-empty"><p>No stories here yet.</p></div>
+        <% } else { %>
+            <ul class="ml-list">
+                <% blogs.forEach(function (b) { %>
+                    <li class="ml-list__item">
+                        <a class="ml-list__link" href="/blog/<%= b.slug || b._id %>">
+                            <% if (b.coverImageURL) { %>
+                                <img class="ml-list__img" loading="lazy" alt=""
+                                    src="<%= typeof optimizeImage === 'function' ? optimizeImage(b.coverImageURL, { width: 240, crop: 'fill' }) : b.coverImageURL %>">
+                            <% } %>
+                            <span class="ml-list__text">
+                                <span class="ml-list__title"><%= b.title %></span>
+                                <% if (b.metaDescription) { %><span class="ml-list__desc"><%= b.metaDescription %></span><% } %>
+                                <span class="ml-list__meta">
+                                    <% if (b.createdBy) { %><%= b.createdBy.fullName %> · <% } %>
+                                    <%= moment(b.createdAt).format('MMM D, YYYY') %> · <%= b.readTime || 1 %> min read
+                                </span>
+                            </span>
+                        </a>
+                    </li>
+                <% }) %>
+            </ul>
+            <nav class="ml-pager" aria-label="Pages">
+                <% if (page > 1) { %><a class="ml-chip" href="?page=<%= page - 1 %>">← Newer</a><% } %>
+                <% if (hasMore) { %><a class="ml-chip" href="?page=<%= page + 1 %>">Older →</a><% } %>
+            </nav>
+        <% } %>
+    </main>
+
+    <%- include('./partials/footer') %>
+</body>
+
+</html>

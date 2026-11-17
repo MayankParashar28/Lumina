@@ -14,8 +14,6 @@ const mongoose = require("mongoose");
 const moment = require("moment");
 const flash = require("connect-flash");
 const { csrfSync } = require("csrf-sync"); // Maintained, CommonJS, session-based CSRF (Vercel/serverless-safe)
-const { cosineSimilarity } = require("./services/ai");
-const { vectorSearchBlogs } = require("./services/vectorSearch"); // Phase-2: Atlas kNN (falls back to cosine)
 const { optimizeImage } = require("./services/imageHelper");
 const aiRoute = require("./routes/ai");
 const socketio = require("socket.io");
@@ -235,6 +233,10 @@ app.use(express.static(path.resolve("./public"), {
 }));
 
 app.use(checkForAuthenticationCookie("token"));
+
+// 📈 Reading signals (read time + scroll depth) for the ML features. Needs to
+// know the signed-in reader, but not a session — see routes/signals.js.
+app.use("/signals", require("./routes/signals"));
 
 // 🧱 Phase-3 scaling: anonymous GETs to public pages (landing + a published blog)
 // can be served cookie-less and cached by a CDN. Mark them so the session/CSRF/
@@ -578,6 +580,7 @@ app.get('/user/edit-profile', (req, res) => {
 // builder, because routes/blog.js serves the same feed as JSON and the two must
 // agree on what a given `?category=` means.
 const { getTaxonomy, buildFeedQuery, FEED_PAGE_SIZE } = require("./services/taxonomy");
+const { recommendForUser } = require("./services/ml/forYouService");
 
 // ⚡ The "featured" and "trending" rails are identical for every reader, and the
 // home route was re-querying both on every signed-in page view. Same treatment
@@ -683,68 +686,12 @@ app.get("/", async (req, res) => {
     let blogs = [];
 
 
-    // 🧠 Personalization Logic: If no search/filter & user has history
-    if (!searchQuery && !categoryFilter && !tagFilter && req.user.readingHistory && req.user.readingHistory.length > 0) {
-      try {
-        // 1. Get embedding of blogs in history (select +embedding to override schema default)
-        const historyIds = req.user.readingHistory.map(h => h.blogId);
-        const historyBlogs = await Blog.find({ _id: { $in: historyIds } }).select("+embedding").lean();
-
-        // 2. Calculate User Vector (centroid)
-        let validEmbeddings = historyBlogs.filter(b => b.embedding && b.embedding.length > 0);
-
-        if (validEmbeddings.length > 0) {
-          const vectorSize = validEmbeddings[0].embedding.length;
-          const userVector = new Array(vectorSize).fill(0);
-
-          validEmbeddings.forEach(b => {
-            b.embedding.forEach((val, i) => userVector[i] += val);
-          });
-
-          // Average it
-          userVector.forEach((_, i) => userVector[i] /= validEmbeddings.length);
-
-          // Preferred: native Atlas Vector Search (scales with content size),
-          // excluding posts already in the reader's history so the feed stays fresh.
-          const viaVector = await vectorSearchBlogs(userVector, {
-            limit: 10,
-            excludeIds: historyIds.map(String),
-          });
-
-          if (viaVector) {
-            blogs = viaVector;
-          } else {
-            // Fallback: in-memory cosine over recent candidates (two-stage ranking).
-            const ninetyDaysAgo = new Date();
-            ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-            const candidates = await Blog.find({
-              status: "published",
-              createdAt: { $gte: ninetyDaysAgo },
-              embedding: { $exists: true, $ne: [] }
-            }).select("_id +embedding").lean();
-
-            const scoredCandidates = candidates.map(b => ({
-              _id: b._id,
-              score: cosineSimilarity(userVector, b.embedding),
-            }));
-            scoredCandidates.sort((a, b) => b.score - a.score);
-
-            const topIds = scoredCandidates.slice(0, 10).map(c => c._id);
-            const topBlogs = await Blog.find({ _id: { $in: topIds } })
-              .select("-body")
-              .populate("createdBy", "fullName profilePic")
-              .lean();
-
-            blogs = topBlogs.map(blog => {
-              const candidate = scoredCandidates.find(c => c._id.toString() === blog._id.toString());
-              return { ...blog, score: candidate ? candidate.score : 0 };
-            }).sort((a, b) => b.score - a.score);
-          }
-        }
-      } catch (pError) {
-        console.error("⚠️ Personalization Error:", pError);
-        // Fallback to default fetch if error
-      }
+    // ✨ "For you": ranked from what this reader actually reads, finishes,
+    // highlights, likes and saves (services/ml/forYou.js). Falls back to the
+    // standard feed below when there's nothing to learn from yet.
+    if (!searchQuery && !categoryFilter && !tagFilter) {
+      const forYou = await recommendForUser(req.user, { limit: 10 });
+      if (forYou && forYou.length) blogs = forYou;
     }
 
     // Pagination Setup
@@ -779,15 +726,18 @@ app.get("/", async (req, res) => {
         )].slice(0, 4)
       : [];
 
-    const [taxonomy, rails, recentlyReadDocs] = await Promise.all([
+    const [taxonomy, rails, recentlyReadDocs, trends] = await Promise.all([
       earlyTaxonomy || getTaxonomy(), // ⚡ cached (5 min)
       getHomeRails(),  // ⚡ cached (1 min)
+      // 📈 rising topics/tags this week; ⚡ cached (1 h), never throws
+      // (resolves last in the list, see below)
       distinctIds.length
         ? Blog.find({ _id: { $in: distinctIds }, status: "published" })
             .select("-body")
             .populate("createdBy", "fullName profilePic")
             .lean()
         : [],
+      require("./services/ml/trendService").getTrends(),
     ]);
 
     const { categories, tags, trendingTagsList } = taxonomy;
@@ -812,6 +762,7 @@ app.get("/", async (req, res) => {
       categoryFilter,
       tagFilter,
       followingCount: (req.user.following || []).length,
+      trends,
       moment,
       title: "Home Feed - Lumina",
       metaDescription: "Discover fresh perspectives and trending stories curated just for you. Join the Lumina community to read, write, and connect with visionary creators!..."
@@ -970,6 +921,8 @@ app.use("/user", userRoute);
 app.use("/admin", adminRoute); // 🛡️ Mount Admin Route
 app.use("/notifications", notificationsRoute);
 app.use("/highlights", highlightsRoute);
+app.use("/topics", require("./routes/topics"));
+app.use("/writer", require("./routes/writerTools"));
 app.use("/ai", aiRoute);
 
 // 🗓️ Scheduled publishing
@@ -1003,6 +956,16 @@ if (process.env.NODE_ENV !== "test" && !require("./services/queue").queuesEnable
   const digestSweep = () =>
     sendDueDigests().catch((err) => logger.error("⚠️ Digest sweep failed:", err.message));
   setInterval(digestSweep, 60 * 60 * 1000).unref?.();
+}
+
+// 🧭 Automatic topics: rebuilt when missing or a day old. The hourly check is
+// one tiny query; the rebuild itself happens at most once a day.
+if (process.env.NODE_ENV !== "test") {
+  const { ensureFresh } = require("./services/ml/topics");
+  const topicSweep = () =>
+    ensureFresh().catch((err) => logger.error("⚠️ Topic rebuild failed:", err.message));
+  setTimeout(topicSweep, 2 * 60 * 1000).unref?.(); // after boot settles
+  setInterval(topicSweep, 60 * 60 * 1000).unref?.();
 }
 
 // 🏃 Keep-Alive Ping — prevents Render free-tier from spinning down after 15 min of inactivity.

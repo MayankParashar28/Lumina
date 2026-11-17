@@ -534,7 +534,7 @@ const sendFollowEmail = async (email, { followerName, followerBio, url, unsubscr
 // email that says "0 views this week" is worse than no email.
 const sendWeeklyDigestEmail = async (
   email,
-  { authorName, since, views, comments, followers, posts, url, unsubscribeUrl }
+  { authorName, since, views, comments, followers, posts, url, unsubscribeUrl, rising = [] }
 ) => {
   const safe = escapeHtml;
   const baseUrl = process.env.BASE_URL || process.env.RENDER_EXTERNAL_URL || "http://localhost:8000";
@@ -612,6 +612,11 @@ const sendWeeklyDigestEmail = async (
               <tr><th>Your posts</th><th style="text-align:right">Reads</th></tr>
               ${rows}
             </table>` : ""}
+
+            ${rising.length ? `<p class="sub" style="margin:24px 0 8px"><strong>Rising on Lumina this week</strong> — topics readers want more of:</p>
+            <p style="margin:0 0 10px;line-height:2">${rising
+              .map((r) => `<a href="${safe(r.url)}" style="display:inline-block;margin:0 6px 6px 0;padding:4px 12px;border:1px solid #dddddd;border-radius:999px;color:#1a1a1a;text-decoration:none;font-size:14px">${safe(r.label)}</a>`)
+              .join("")}</p>` : ""}
 
             <div class="button-container">
               <a href="${safe(url)}" class="button">See your stats</a>

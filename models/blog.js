@@ -95,6 +95,11 @@ const blogSchema = new mongoose.Schema(
       ref: "user",  // Ensure "User" model exists
       required: true, // Optional: Ensure blogs always have a creator
     },
+    // Which embedding model produced `embedding` (vectors from different models
+    // can't be compared; see services/ai.js and scripts/generate-embeddings.js).
+    embeddingModel: { type: String },
+    // Automatic topic (services/ml/topics.js); null until topics are built.
+    topic: { type: mongoose.Schema.Types.ObjectId, ref: "topic", index: true },
     embedding: {
       type: [Number], // Store vector embeddings
       select: false,   // Don't return by default to save bandwidth
