@@ -1,0 +1,214 @@
+/* Styles for the ML features: topics, rising trends, live search, "for you" reasons. */
+
+.ml-page {
+    max-width: 960px;
+    margin: 8rem auto 4rem;
+    padding: 0 16px;
+}
+
+.ml-page__title {
+    font-weight: 800;
+    margin: 0 0 0.35rem;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.ml-page__sub {
+    color: #4b5563;
+    max-width: 640px;
+    margin: 0 0 0.5rem;
+}
+
+.ml-page__meta {
+    color: #6b7280;
+    font-size: 0.85rem;
+    margin: 0;
+}
+
+.ml-page__head { margin-bottom: 2rem; }
+
+.ml-crumbs {
+    font-size: 0.85rem;
+    color: #6b7280;
+    margin-bottom: 0.5rem;
+}
+
+.ml-crumbs a { color: inherit; }
+
+/* Chips */
+.ml-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.ml-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-height: 36px;
+    padding: 0 0.9rem;
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    color: var(--text-color);
+    background: var(--bg-color);
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.ml-chip:hover { border-color: var(--text-color); }
+.ml-chip:focus-visible { outline: 2px solid #4f46e5; outline-offset: 2px; }
+.ml-chip__meta { color: #047857; font-weight: 700; font-size: 0.75rem; }
+
+.ml-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.15rem 0.55rem;
+    border-radius: 999px;
+    background: #ecfdf5;
+    color: #047857;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+}
+
+/* Rising this week */
+.ml-rising { margin-bottom: 2rem; }
+
+.ml-rising__title {
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #6b7280;
+    margin: 0 0 0.75rem;
+}
+
+/* Topic grid */
+.ml-topic-grid {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1rem;
+}
+
+.ml-topic {
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.1rem 1.15rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.ml-topic__link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    color: inherit;
+    text-decoration: none;
+}
+
+.ml-topic__link:hover .ml-topic__name { text-decoration: underline; }
+.ml-topic__name { font-size: 1.1rem; font-weight: 700; }
+.ml-topic__desc { margin: 0; color: #4b5563; font-size: 0.9rem; }
+
+.ml-topic__samples {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-size: 0.88rem;
+}
+
+.ml-topic__samples li { padding: 0.2rem 0; }
+
+.ml-topic__samples a {
+    color: inherit;
+    text-decoration: none;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.ml-topic__samples a:hover { text-decoration: underline; }
+.ml-topic__meta { margin: auto 0 0; font-size: 0.78rem; color: #6b7280; }
+
+/* Post list (topic page) */
+.ml-list { list-style: none; margin: 0; padding: 0; }
+.ml-list__item { border-top: 1px solid var(--border-color); }
+
+.ml-list__link {
+    display: flex;
+    gap: 1rem;
+    padding: 1rem 0.25rem;
+    color: inherit;
+    text-decoration: none;
+}
+
+.ml-list__link:hover .ml-list__title { text-decoration: underline; }
+
+.ml-list__img {
+    width: 120px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 8px;
+    flex-shrink: 0;
+}
+
+.ml-list__text { display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; }
+.ml-list__title { font-weight: 700; font-size: 1.05rem; }
+.ml-list__desc { color: #4b5563; font-size: 0.9rem; }
+.ml-list__meta { color: #6b7280; font-size: 0.8rem; }
+
+.ml-pager { display: flex; gap: 0.5rem; justify-content: center; margin-top: 1.5rem; }
+
+.ml-empty {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #6b7280;
+}
+
+.ml-empty i { font-size: 2rem; opacity: 0.35; margin-bottom: 1rem; }
+
+@media (max-width: 560px) {
+    .ml-list__img { width: 88px; height: 64px; }
+}
+
+/* Home: "Rising this week" row */
+.feed-rising {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0.75rem 0 0;
+    padding: 0 0 0.25rem;
+}
+
+.feed-rising__label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #047857;
+    margin-right: 0.25rem;
+}
+
+/* Home: why a post is in your "For you" feed */
+.card-reason {
+    display: block;
+    font-size: 0.72rem;
+    color: #6b7280;
+    margin-top: 0.15rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

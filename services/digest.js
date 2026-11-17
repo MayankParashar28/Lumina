@@ -48,6 +48,14 @@ async function sendDueDigests({ now = new Date() } = {}) {
 
   let sentCount = 0;
 
+  // 📈 The same "rising this week" list for everyone: a nudge about what
+  // readers want more of. Cached; an empty list just omits the section.
+  const trends = await require("./ml/trendService").getTrends();
+  const rising = [
+    ...trends.topics.slice(0, 3).map((t) => ({ label: t.label, url: `${baseUrl()}/topics/${t.slug}` })),
+    ...trends.tags.slice(0, 3).map((t) => ({ label: `#${t.tag}`, url: `${baseUrl()}/?tag=${encodeURIComponent(t.tag)}` })),
+  ];
+
   for (const author of due) {
     try {
       // First time we ever see this author: set the watermarks and send
@@ -115,6 +123,7 @@ async function sendDueDigests({ now = new Date() } = {}) {
         posts: withReads,
         url: `${baseUrl()}/user/analytics`,
         unsubscribeUrl: linkFor(author._id, "digest", baseUrl()),
+        rising,
       });
       sentCount += 1;
     } catch (err) {

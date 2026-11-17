@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <%- include('./partials/header') %>
+    <link rel="stylesheet" href="/css/ml.css?v=1">
+</head>
+
+<body>
+    <%- include('./partials/nav', { searchQuery: '' }) %>
+
+    <main class="ml-page">
+        <header class="ml-page__head">
+            <h1 class="ml-page__title">Topics</h1>
+            <p class="ml-page__sub">
+                Stories grouped by what they're about. Lumina finds these groups automatically from the
+                writing itself, so a post lands in the right topic even if it isn't tagged.
+            </p>
+        </header>
+
+        <% if (risingTags.length) { %>
+            <section class="ml-rising" aria-labelledby="rising-tags-title">
+                <h2 class="ml-rising__title" id="rising-tags-title"><i class="fas fa-arrow-trend-up" aria-hidden="true"></i> Rising this week</h2>
+                <div class="ml-chips">
+                    <% risingTags.forEach(function (t) { %>
+                        <a class="ml-chip" href="/?tag=<%= encodeURIComponent(t.tag) %>">
+                            #<%= t.tag %> <span class="ml-chip__meta">×<%= t.growth %></span>
+                        </a>
+                    <% }) %>
+                </div>
+            </section>
+        <% } %>
+
+        <% if (!topics.length) { %>
+            <div class="ml-empty">
+                <i class="fas fa-compass" aria-hidden="true"></i>
+                <h2 class="h5">Topics are on their way</h2>
+                <p>They appear once there are enough stories to group. Check back soon.</p>
+                <a href="/" class="btn btn-dark mt-2">Browse all stories</a>
+            </div>
+        <% } else { %>
+            <ul class="ml-topic-grid">
+                <% topics.forEach(function (t) { %>
+                    <li class="ml-topic">
+                        <a class="ml-topic__link" href="/topics/<%= t.slug %>">
+                            <span class="ml-topic__name"><%= t.label %></span>
+                            <% if (t.rising) { %>
+                                <span class="ml-badge" title="<%= t.rising.current %> this week vs about <%= Math.round(t.rising.current / t.rising.growth) %> usually">
+                                    <i class="fas fa-arrow-trend-up" aria-hidden="true"></i> Rising
+                                </span>
+                            <% } %>
+                        </a>
+                        <% if (t.description) { %><p class="ml-topic__desc"><%= t.description %></p><% } %>
+                        <% if (t.samples.length) { %>
+                            <ul class="ml-topic__samples">
+                                <% t.samples.forEach(function (p) { %>
+                                    <li><a href="/blog/<%= p.slug || p.id %>"><%= p.title %></a></li>
+                                <% }) %>
+                            </ul>
+                        <% } %>
+                        <p class="ml-topic__meta"><%= t.size %> stor<%= t.size === 1 ? 'y' : 'ies' %><% if (t.keywords && t.keywords.length) { %> · <%= t.keywords.slice(0, 3).join(', ') %><% } %></p>
+                    </li>
+                <% }) %>
+            </ul>
+        <% } %>
+    </main>
+
+    <%- include('./partials/footer') %>
+</body>
+
+</html>

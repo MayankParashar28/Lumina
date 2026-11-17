@@ -15,6 +15,13 @@
         .an-panel { background: #fff; border: 1px solid rgba(0,0,0,0.06); border-radius: 16px; padding: 1.6rem; box-shadow: 0 2px 12px rgba(0,0,0,0.04); margin-bottom: 2rem; }
         .an-panel h3 { font-size: 1rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: #444; margin: 0 0 1.2rem; }
         .an-chart-wrap { height: 300px; }
+        .hm-grid { display: grid; grid-template-columns: 2.6rem repeat(24, minmax(0, 1fr)); gap: 2px; font-size: 0.65rem; color: #6b7280; }
+        .hm-cell { aspect-ratio: 1; border-radius: 3px; background: #eef2ff; }
+        .hm-day { display: flex; align-items: center; }
+        .hm-hours { text-align: center; }
+        .hm-best { margin: 0.75rem 0 0; font-size: 0.9rem; }
+        .hm-note { margin: 0.5rem 0 0; font-size: 0.8rem; color: #6b7280; }
+        @media (max-width: 560px) { .hm-grid { grid-template-columns: 2.2rem repeat(24, minmax(0, 1fr)); gap: 1px; } .hm-hours:nth-child(odd) { visibility: hidden; } }
         .top-row { display: flex; align-items: center; gap: 1rem; padding: 0.8rem 0; border-bottom: 1px solid #f1f1f1; text-decoration: none; color: inherit; }
         .top-row:last-child { border-bottom: none; }
         .top-rank { font-weight: 800; color: #c7c7c7; width: 1.6rem; font-size: 1.1rem; }
@@ -45,6 +52,12 @@
             <div class="an-chart-wrap"><canvas id="activityChart"></canvas></div>
         </div>
 
+        <!-- ⏰ When your audience reads (services/ml/bestTime.js), in your time zone. -->
+        <div class="an-panel">
+            <h3>When your readers read</h3>
+            <div id="audience-heatmap" class="hm" aria-live="polite"><p class="hm-note">Loading…</p></div>
+        </div>
+
         <div class="an-panel">
             <h3>Top Posts</h3>
             <% if (topPosts && topPosts.length > 0) { %>
@@ -62,6 +75,7 @@
     </div>
 
     <%- include('./partials/footer') %>
+    <script defer src="/javascript/audience-heatmap.js?v=1"></script>
 
     <script id="analytics-data" type="application/json"><%- JSON.stringify(monthly) %></script>
     <script nonce="<%= cspNonce %>">

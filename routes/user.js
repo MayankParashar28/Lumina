@@ -769,6 +769,8 @@ async function applyFollowIntent(req, res, userId) {
 // answers JSON to them; a plain form post (no JavaScript) still gets the old
 // flash + redirect. Both directions are single atomic updates on just the
 // fields involved — no loading two whole user documents first.
+const FOLLOW_BURST_LIMIT = Number(process.env.FOLLOW_BURST_LIMIT) || 60;
+
 router.post("/follow/:userId", async (req, res) => {
   const json = wantsJson(req);
   const reply = (status, body, flashType, flashMsg) => {
@@ -808,6 +810,12 @@ router.post("/follow/:userId", async (req, res) => {
       ]);
       following = false;
     } else {
+      // Follow-bots follow hundreds of accounts an hour; people don't.
+      const { followsLastHour } = require("../services/ml/moderation");
+      if ((await followsLastHour(meId)) >= FOLLOW_BURST_LIMIT) {
+        return reply(429, { success: false, message: "You're following people very fast. Take a break and try again later." },
+          "error", "You're following people very fast. Take a break and try again later.");
+      }
       const ok = await followAndNotify({ followerId: meId, targetId, io: req.app.get("io") });
       if (ok === null) {
         return reply(404, { success: false, message: "User not found." }, "error", "User not found!");

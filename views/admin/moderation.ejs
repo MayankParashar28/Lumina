@@ -3,114 +3,201 @@
 
 <head>
     <%- include('../partials/header') %>
+    <style>
+        .mod-risk { display: inline-block; min-width: 2.6rem; text-align: center; font-weight: 700; font-size: 0.75rem; padding: 0.15rem 0.45rem; border-radius: 999px; }
+        .mod-risk--high { background: #fee2e2; color: #b91c1c; }
+        .mod-risk--mid { background: #fef3c7; color: #b45309; }
+        .mod-risk--low { background: #f3f4f6; color: #4b5563; }
+        .mod-reasons { list-style: none; margin: 0.25rem 0 0; padding: 0; font-size: 0.8rem; color: #4b5563; }
+        .mod-reasons li::before { content: "• "; }
+        .mod-content { max-height: 90px; overflow-y: auto; }
+        .mod-actions form { display: inline; }
+        .mod-stat dt { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; font-weight: 600; }
+        .mod-stat dd { font-size: 1.15rem; font-weight: 700; margin: 0; }
+    </style>
 </head>
 
 <body class="bg-light">
     <%- include('../partials/nav', { searchQuery: '' }) %>
 
-        <div class="container py-5" style="margin-top: 60px;">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h1 class="h3 fw-bold">🛡️ Moderation Logs</h1>
-                <a href="/admin" class="btn btn-outline-secondary btn-sm">
-                    <i class="fas fa-arrow-left me-1"></i> Back to Dashboard
-                </a>
-            </div>
+    <div class="container py-5" style="margin-top: 60px;">
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+            <h1 class="h3 fw-bold mb-0">🛡️ Moderation</h1>
+            <a href="/admin" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-arrow-left me-1"></i> Back to Dashboard
+            </a>
+        </div>
 
-            <div class="card border-0 shadow-sm rounded-4">
-                <div class="card-body p-0">
+        <!-- Needs review -->
+        <section class="card border-0 shadow-sm rounded-4 mb-4" aria-labelledby="pending-title">
+            <div class="card-body">
+                <h2 class="h5 fw-bold" id="pending-title">Needs review <span class="badge bg-warning text-dark"><%= pending.length %></span></h2>
+                <p class="text-muted small mb-3">
+                    Comments that were posted but looked borderline (rude, or a little spammy). Spam and threats are blocked
+                    automatically and appear in the log below.
+                </p>
+                <% if (!pending.length) { %>
+                    <p class="text-muted mb-0">Nothing waiting. 😇</p>
+                <% } else { %>
                     <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
-                            <thead class="bg-light text-muted small text-uppercase">
-                                <tr>
-                                    <th class="ps-4">Time</th>
-                                    <th>User</th>
-                                    <th style="width: 40%">Content</th>
-                                    <th>Reason</th>
-                                    <th>Status</th>
-                                </tr>
+                        <table class="table align-middle mb-0">
+                            <thead class="text-muted small text-uppercase">
+                                <tr><th>Risk</th><th>Who</th><th style="width:38%">Comment</th><th>Why</th><th class="text-end">Action</th></tr>
                             </thead>
-                            <tbody class="border-top-0">
-                                <% if (logs && logs.length> 0) { %>
-                                    <% logs.forEach(log=> { %>
-                                        <tr>
-                                            <!-- Time -->
-                                            <td class="ps-4 text-muted small">
-                                                <%= new Date(log.createdAt).toLocaleString() %>
-                                            </td>
-
-                                            <!-- User -->
-                                            <td>
-                                                <% if (log.userId) { %>
-                                                    <div class="d-flex align-items-center gap-2">
-                                                        <img loading="lazy" src="<%= log.userId.profilePic || '/images/default.png' %>"
-                                                            class="rounded-circle" width="30" height="30" alt="">
-                                                        <div>
-                                                            <div class="fw-bold small">
-                                                                <%= log.userId.fullName %>
-                                                            </div>
-                                                            <div class="text-muted" style="font-size: 0.75rem;">
-                                                                <%= log.userId.email %>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <% } else { %>
-                                                        <span
-                                                            class="badge bg-secondary text-white small">Anonymous</span>
-                                                        <div class="text-muted small mt-1">
-                                                            <%= log.ipAddress || 'Unknown IP' %>
-                                                        </div>
-                                                        <% } %>
-                                            </td>
-
-                                            <!-- Content (Masked/Truncated) -->
-                                            <td>
-                                                <div class="p-2 bg-light rounded-3 text-break small font-monospace text-secondary"
-                                                    style="max-height: 80px; overflow-y: auto;">
-                                                    <%= log.content %>
-                                                </div>
-                                            </td>
-
-                                            <!-- Reason -->
-                                            <td>
-                                                <% if (log.flaggedWords && log.flaggedWords.length> 0) { %>
-                                                    <span
-                                                        class="badge bg-danger-subtle text-danger border border-danger-subtle">
-                                                        🤬 <%= log.flaggedWords.join(", ") %>
-                                                </span>
-                                            <% } else { %>
-                                                <span class=" badge bg-warning-subtle text-warning border
-                                                            border-warning-subtle">
-                                                            🤖 AI Flagged
-                                                    </span>
-                                                    <% } %>
-                                                        <div class="text-muted small mt-1" style="font-size: 0.8rem;">
-                                                            <%= log.reason %>
-                                                        </div>
-                                            </td>
-
-                                            <!-- Status -->
-                                            <td>
-                                                <span class="badge bg-danger">BLOCKED</span>
-                                            </td>
-                                        </tr>
-                                        <% }) %>
-                                            <% } else { %>
-                                                <tr>
-                                                    <td colspan="5" class="text-center py-5 text-muted">
-                                                        <i
-                                                            class="fas fa-shield-halved fs-1 d-block mb-3 text-success"></i>
-                                                        No moderation events found. Everyone is behaving nicely! 😇
-                                                    </td>
-                                                </tr>
-                                                <% } %>
+                            <tbody>
+                                <% pending.forEach(function (p) { const r = p.riskScore || 0; %>
+                                    <tr>
+                                        <td><span class="mod-risk <%= r >= 0.75 ? 'mod-risk--high' : r >= 0.5 ? 'mod-risk--mid' : 'mod-risk--low' %>"><%= Math.round(r * 100) %></span></td>
+                                        <td class="small">
+                                            <% if (p.userId) { %><strong><%= p.userId.fullName %></strong><div class="text-muted"><%= p.userId.email %></div><% } %>
+                                            <div class="text-muted"><%= new Date(p.createdAt).toLocaleString() %></div>
+                                        </td>
+                                        <td>
+                                            <div class="mod-content p-2 bg-light rounded-3 small text-break"><%= p.content %></div>
+                                            <% if (p.blogId) { %>
+                                                <a class="small" href="/blog/<%= p.blogId.slug || p.blogId._id %><%= p.commentId ? '#comment-' + p.commentId : '' %>" target="_blank" rel="noopener">on “<%= p.blogId.title %>”</a>
+                                            <% } %>
+                                        </td>
+                                        <td><ul class="mod-reasons"><% String(p.reason || '').split(' · ').forEach(function (x) { %><li><%= x %></li><% }) %></ul></td>
+                                        <td class="text-end mod-actions text-nowrap">
+                                            <form method="POST" action="/admin/moderation/<%= p._id %>/resolve">
+                                                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                                <button class="btn btn-sm btn-outline-secondary" name="action" value="keep">Keep</button>
+                                            </form>
+                                            <form method="POST" action="/admin/moderation/<%= p._id %>/resolve" data-confirm="Delete this comment and its replies?">
+                                                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                                <button class="btn btn-sm btn-danger" name="action" value="delete">Delete</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                <% }) %>
                             </tbody>
                         </table>
                     </div>
+                <% } %>
+            </div>
+        </section>
+
+        <!-- Accounts to watch -->
+        <section class="card border-0 shadow-sm rounded-4 mb-4" aria-labelledby="accounts-title">
+            <div class="card-body">
+                <h2 class="h5 fw-bold" id="accounts-title">Accounts to watch</h2>
+                <p class="text-muted small mb-3">Activity in the last day that looks like spam or a bot: follow bursts, link-heavy or repeated comments, held comments.</p>
+                <% if (!accounts.length) { %>
+                    <p class="text-muted mb-0">No unusual accounts right now.</p>
+                <% } else { %>
+                    <ul class="list-unstyled mb-0">
+                        <% accounts.forEach(function (a) { %>
+                            <li class="d-flex gap-3 align-items-start py-2 border-top">
+                                <span class="mod-risk <%= a.level === 'high' ? 'mod-risk--high' : 'mod-risk--mid' %>"><%= Math.round(a.score * 100) %></span>
+                                <div class="flex-grow-1">
+                                    <a href="/user/profile/<%= a.user._id %>" class="fw-bold text-decoration-none"><%= a.user.fullName %></a>
+                                    <span class="text-muted small"><%= a.user.email %> · joined <%= new Date(a.user.createdAt).toLocaleDateString() %></span>
+                                    <ul class="mod-reasons"><% a.reasons.forEach(function (x) { %><li><%= x %></li><% }) %></ul>
+                                </div>
+                            </li>
+                        <% }) %>
+                    </ul>
+                <% } %>
+            </div>
+        </section>
+
+        <!-- ML status -->
+        <section class="card border-0 shadow-sm rounded-4 mb-4" aria-labelledby="ml-title">
+            <div class="card-body">
+                <h2 class="h5 fw-bold" id="ml-title">Recommendations &amp; topics</h2>
+                <dl class="row mod-stat mb-3">
+                    <div class="col-6 col-md-3"><dt>Published posts</dt><dd><%= ml.published %></dd></div>
+                    <div class="col-6 col-md-3"><dt>With embeddings</dt><dd><%= ml.embedded %></dd></div>
+                    <div class="col-6 col-md-3"><dt>Current model</dt><dd><%= ml.current %></dd></div>
+                    <div class="col-6 col-md-3"><dt>Topics</dt><dd><%= ml.topics %></dd></div>
+                </dl>
+                <p class="small text-muted mb-2">
+                    Embedding model: <code><%= ml.model %></code>.
+                    <% if (ml.current < ml.published) { %>
+                        <strong><%= ml.published - ml.current %> posts</strong> aren't embedded with it yet — run
+                        <code>node scripts/generate-embeddings.js --stale</code> so search, recommendations and topics see them.
+                    <% } %>
+                    <% if (ml.topicsBuiltAt) { %>Topics last built <%= new Date(ml.topicsBuiltAt).toLocaleString() %>.<% } %>
+                </p>
+                <form method="POST" action="/admin/topics/rebuild">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <button class="btn btn-sm btn-dark"><i class="fas fa-rotate me-1" aria-hidden="true"></i> Rebuild topics now</button>
+                </form>
+            </div>
+        </section>
+
+        <!-- Log -->
+        <section class="card border-0 shadow-sm rounded-4" aria-labelledby="log-title">
+            <div class="card-body pb-0">
+                <h2 class="h5 fw-bold" id="log-title">Log</h2>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light text-muted small text-uppercase">
+                            <tr>
+                                <th class="ps-4">Time</th>
+                                <th>User</th>
+                                <th style="width: 40%">Content</th>
+                                <th>Reason</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="border-top-0">
+                            <% if (logs && logs.length > 0) { %>
+                                <% logs.forEach(function (log) { %>
+                                    <tr>
+                                        <td class="ps-4 text-muted small"><%= new Date(log.createdAt).toLocaleString() %></td>
+                                        <td>
+                                            <% if (log.userId) { %>
+                                                <div class="fw-bold small"><%= log.userId.fullName %></div>
+                                                <div class="text-muted" style="font-size: 0.75rem;"><%= log.userId.email %></div>
+                                            <% } else { %>
+                                                <span class="badge bg-secondary text-white small">Anonymous</span>
+                                                <div class="text-muted small mt-1"><%= log.ipAddress || 'Unknown IP' %></div>
+                                            <% } %>
+                                        </td>
+                                        <td>
+                                            <div class="p-2 bg-light rounded-3 text-break small font-monospace text-secondary mod-content"><%= log.content %></div>
+                                        </td>
+                                        <td>
+                                            <% if (log.flaggedWords && log.flaggedWords.length > 0) { %>
+                                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle">🤬 <%= log.flaggedWords.join(", ") %></span>
+                                            <% } else if (typeof log.riskScore === 'number') { %>
+                                                <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle">📊 Risk <%= Math.round(log.riskScore * 100) %></span>
+                                            <% } else { %>
+                                                <span class="badge bg-warning-subtle text-warning border border-warning-subtle">🤖 AI Flagged</span>
+                                            <% } %>
+                                            <div class="text-muted small mt-1" style="font-size: 0.8rem;"><%= log.reason %></div>
+                                        </td>
+                                        <td>
+                                            <% if (log.actionTaken === 'FLAGGED') { %>
+                                                <span class="badge bg-warning text-dark">HELD<%= log.resolution ? ' · ' + log.resolution.toUpperCase() : '' %></span>
+                                            <% } else if (log.actionTaken === 'ALLOWED') { %>
+                                                <span class="badge bg-success">ALLOWED</span>
+                                            <% } else { %>
+                                                <span class="badge bg-danger">BLOCKED</span>
+                                            <% } %>
+                                        </td>
+                                    </tr>
+                                <% }) %>
+                            <% } else { %>
+                                <tr>
+                                    <td colspan="5" class="text-center py-5 text-muted">
+                                        <i class="fas fa-shield-halved fs-1 d-block mb-3 text-success"></i>
+                                        No moderation events found. Everyone is behaving nicely! 😇
+                                    </td>
+                                </tr>
+                            <% } %>
+                        </tbody>
+                    </table>
                 </div>
             </div>
-        </div>
+        </section>
+    </div>
 
-        <%- include('../partials/footer') %>
+    <%- include('../partials/footer') %>
 </body>
 
 </html>

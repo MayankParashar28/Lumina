@@ -15,7 +15,7 @@ dotenv.config();
 
 const axios = require("axios"); // Import Axios for GIPHY Proxy
 
-const { generateEmbedding, cosineSimilarity } = require("../services/ai"); // Import AI Service
+const { generateEmbedding, cosineSimilarity, EMBEDDING_MODEL_ID } = require("../services/ai"); // Import AI Service
 const { vectorSearchBlogs } = require("../services/vectorSearch"); // Phase-2: Atlas kNN (falls back to cosine)
 const { enqueue } = require("../services/queue"); // Phase-4: background jobs (falls back to inline)
 const { sendCommentEmail } = require("../services/emailService");
@@ -26,6 +26,9 @@ const rateLimit = require("express-rate-limit");
 
 const { wantsJson } = require("../utils/http");
 const { sanitizePostBody } = require("../utils/sanitize");
+const { cleanTags } = require("../services/ml/tagger");
+const { hybridSearch } = require("../services/ml/search");
+const { assessComment, logDecision } = require("../services/ml/moderation");
 const { isObjectIdParam, isSlugParam } = require("../utils/slug");
 
 const router = Router();
@@ -231,63 +234,54 @@ router.get("/drafts", async (req, res) => {
 
 // 🔍 Semantic search — ranks posts by meaning (query embedding × post embeddings),
 // with a text-search fallback. Must be defined BEFORE the "/:id" route.
+// 🔎 Search: meaning + keywords + title, fused (services/ml/search.js).
 router.get("/search", async (req, res) => {
-  const q = String(req.query.q || "").trim();
+  const q = String(req.query.q || "").trim().slice(0, 200);
   try {
     if (!q) {
       return res.render("search", { user: req.user, query: "", results: [], mode: null, moment });
     }
-
-    let results = [];
-    let mode = "semantic";
-
-    // 1) Semantic ranking via embeddings
-    const queryEmbedding = await generateEmbedding(q);
-    if (queryEmbedding && queryEmbedding.length > 0) {
-      // Preferred: native Atlas Vector Search (scales with content size).
-      const viaVector = await vectorSearchBlogs(queryEmbedding, { limit: 12 });
-      if (viaVector) {
-        results = viaVector.filter(r => r.score > 0.3);
-      } else {
-        // Fallback: in-memory cosine over all embeddings (fine at small scale).
-        const candidates = await Blog.find({
-          status: "published",
-          embedding: { $exists: true, $ne: [] }
-        })
-          .select("title slug coverImageURL category createdBy readTime views createdAt +embedding")
-          .populate("createdBy", "fullName profilePic")
-          .lean();
-
-        results = candidates
-          .map(b => {
-            const score = cosineSimilarity(queryEmbedding, b.embedding);
-            const { embedding, ...clean } = b;
-            return { ...clean, score };
-          })
-          .filter(r => r.score > 0.3)
-          .sort((a, b) => b.score - a.score)
-          .slice(0, 12);
-      }
-    }
-
-    // 2) Fallback to MongoDB text search if semantic found nothing
-    if (results.length === 0) {
-      mode = "text";
-      results = await Blog.find(
-        { $text: { $search: q }, status: "published" },
-        { score: { $meta: "textScore" } }
-      )
-        .select("title slug coverImageURL category createdBy readTime views createdAt")
-        .populate("createdBy", "fullName profilePic")
-        .sort({ score: { $meta: "textScore" } })
-        .limit(12)
-        .lean();
-    }
-
+    const { results, mode } = await hybridSearch(q, { limit: 20 });
     return res.render("search", { user: req.user, query: q, results, mode, moment });
   } catch (err) {
     logger.error("❌ Search error:", err);
     return res.render("search", { user: req.user, query: q, results: [], mode: null, moment });
+  }
+});
+
+// Live results while typing (nav search box and the search page).
+const liveSearchLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  store: makeRateLimitStore("rl:live-search:"),
+  handler: (req, res) => res.status(429).json({ results: [] }),
+});
+
+router.get("/api/search", liveSearchLimiter, async (req, res) => {
+  const q = String(req.query.q || "").trim().slice(0, 200);
+  if (q.length < 2) return res.json({ results: [] });
+  try {
+    // Meaning only once there's enough to mean something; while the first
+    // word is still being typed, titles and keywords are what helps.
+    const { results, mode } = await hybridSearch(q, { limit: 6, useMeaning: q.length >= 4 });
+    const { optimizeImage } = require("../services/imageHelper");
+    res.set("Cache-Control", "private, max-age=60");
+    return res.json({
+      mode,
+      results: results.map((b) => ({
+        title: b.title,
+        url: `/blog/${b.slug || b._id}`,
+        author: b.createdBy ? b.createdBy.fullName : null,
+        image: b.coverImageURL ? optimizeImage(b.coverImageURL, { width: 96, height: 96, crop: "fill" }) : null,
+        readTime: b.readTime || null,
+        matchedBy: b.matchedBy,
+      })),
+    });
+  } catch (err) {
+    logger.error("❌ Live search error:", err);
+    return res.status(500).json({ results: [] });
   }
 });
 
@@ -736,6 +730,16 @@ router.post("/comment/:blogId", commentLimiter, async (req, res) => {
       return res.redirect("back");
     }
 
+    // 🛡️ Spam / hostility risk from content + recent behaviour (services/ml/risk.js).
+    const risk = await assessComment(req.user, req.body.content);
+    if (risk.level === "block") {
+      logDecision({ user: req.user, content: req.body.content, risk, action: "BLOCKED", ip: req.ip });
+      const msg = `Comment not posted: it looks like spam or abuse (${risk.reasons.slice(0, 2).join(", ").toLowerCase()}).`;
+      if (wantsJson(req)) return res.status(400).json({ error: msg });
+      req.flash("error", msg);
+      return res.redirect("back");
+    }
+
     const blog = await Blog.findById(req.params.blogId);
     if (!blog) {
       req.flash("error", "Blog not found.");
@@ -764,6 +768,11 @@ router.post("/comment/:blogId", commentLimiter, async (req, res) => {
       createdBy: userId,
       createdAt: new Date(),
     });
+
+    // Posted, but borderline: put it in front of a moderator.
+    if (risk.level === "review") {
+      logDecision({ user: req.user, content: req.body.content, risk, action: "FLAGGED", ip: req.ip, commentId: comment._id, blogId: blog._id });
+    }
 
     // 💬 Notify anyone @mentioned in the comment
     notifyMentions(req.body.content, blog, req.user, req, comment._id);
@@ -912,6 +921,14 @@ router.post("/comment/:commentId/reply", async (req, res) => {
       return res.status(400).json({ error: `Reply Rejected: ${moderation.reason}` });
     }
 
+    const risk = await assessComment(req.user, req.body.content);
+    if (risk.level === "block") {
+      logDecision({ user: req.user, content: req.body.content, risk, action: "BLOCKED", ip: req.ip });
+      return res.status(400).json({
+        error: `Reply not posted: it looks like spam or abuse (${risk.reasons.slice(0, 2).join(", ").toLowerCase()}).`,
+      });
+    }
+
     // ✅ Threaded Reply: Create new Document
     const reply = await Comment.create({
       content: req.body.content,
@@ -921,6 +938,10 @@ router.post("/comment/:commentId/reply", async (req, res) => {
       depth: (parentComment.depth || 1) + 1,
       createdAt: new Date()
     });
+
+    if (risk.level === "review") {
+      logDecision({ user: req.user, content: req.body.content, risk, action: "FLAGGED", ip: req.ip, commentId: reply._id, blogId: parentComment.blogId._id });
+    }
 
     // 💬 Notify anyone @mentioned in the reply
     notifyMentions(req.body.content, parentComment.blogId, req.user, req, reply._id);
@@ -1259,7 +1280,8 @@ router.post("/edit/:id", upload.single("coverImage"), async (req, res) => {
     }
 
     if (tags) {
-      blog.tags = tags.split(",").map(tag => tag.trim());
+      // One canonical spelling per tag, matching the site's existing ones.
+      blog.tags = cleanTags(tags.split(","), { vocabulary: (await getTaxonomy()).tags });
     }
 
     // Update Cover Image if new one uploaded or AI URL provided
@@ -1324,7 +1346,13 @@ router.post("/edit/:id", upload.single("coverImage"), async (req, res) => {
     // We do NOT await this, so the user gets a faster response.
     generateEmbedding(`${title} ${textBody}`).then(async (embedding) => {
       if (embedding.length > 0) {
-        await Blog.findByIdAndUpdate(blog._id, { embedding });
+        const { nearestTopicId } = require("../services/ml/topics");
+        const topic = await nearestTopicId(embedding).catch(() => null);
+        await Blog.findByIdAndUpdate(blog._id, {
+          embedding,
+          embeddingModel: EMBEDDING_MODEL_ID,
+          ...(topic ? { topic } : {}),
+        });
 
       }
     }).catch(err => {
@@ -1523,7 +1551,9 @@ router.post("/", blogLimiter, upload.single("coverImage"), async (req, res) => {
     }
 
     const isDraft = req.body.action === "draft";
-    const tagArray = tags ? tags.split(",").map(tag => tag.trim()).filter(Boolean) : [];
+    const tagArray = tags
+      ? cleanTags(tags.split(","), { vocabulary: (await getTaxonomy()).tags })
+      : [];
     // 🧼 Sanitise before any validation runs: a body that is nothing but a
     // <script> must read as empty, not as content.
     let finalBody = sanitizePostBody(body || "").trim();
