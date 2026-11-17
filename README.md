@@ -1,23 +1,23 @@
 <div align="center">
 
-#  Lumina
+# Lumina
 
 ### **Learning-Powered Blogging and Intelligent Retrieval**
 
-[![Production Ready](https://img.shields.io/badge/STATUS-Production%20Ready-success?style=for-the-badge)](#)
-[![Node.js](https://img.shields.io/badge/Node.js-v20+-339933?style=for-the-badge&logo=node.js)](https://nodejs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-22.x-339933?style=for-the-badge&logo=node.js)](https://nodejs.org/)
 [![MongoDB](https://img.shields.io/badge/MongoDB-6.0+-47A248?style=for-the-badge&logo=mongodb)](https://www.mongodb.com/)
-[![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](#)
+[![Gemini](https://img.shields.io/badge/Google-Gemini-4285F4?style=for-the-badge&logo=google)](https://ai.google.dev/)
+[![License](https://img.shields.io/badge/License-ISC-blue?style=for-the-badge)](#license)
 
-**A full-stack blogging platform featuring AI-powered semantic search, real-time notifications, vector embeddings, and modern web architecture.**
+**A full-stack blogging platform with hybrid semantic search, a feed that learns from how you read, automatic topics, writing tools for authors, and real-time notifications.**
 
-[Live Demo](https://llumina.online/) • [Docs](#-tech-stack) • [Report Bug](https://github.com/MayankParashar28/BlogiFy/issues) • [GitHub](https://github.com/MayankParashar28/BlogiFy)
+[Live Site](https://llumina.online/) | [Features](#features) | [Quick Start](#quick-start) | [Report a Bug](https://github.com/MayankParashar28/Lumina/issues)
 
 </div>
 
 ---
 
-##  Screenshots
+## Screenshots
 
 <div align="center">
 
@@ -29,478 +29,377 @@
 | **Authentication** | **Admin Dashboard** |
 |:---:|:---:|
 | <img src="screenshots/authentication.png" width="300" alt="Authentication"> | <img src="screenshots/admin-dashboard.png" width="300" alt="Admin Dashboard"> |
-| **Secure Logic / Signup** | **Analytics & Management** |
+| **Sign In / Sign Up** | **Analytics & Management** |
 
 | **Engagement** | **Documentation** |
 |:---:|:---:|
 | <img src="screenshots/comment-smart-recommendation.png" width="300" alt="Comments & Recommendations"> | <img src="screenshots/docs.png" width="300" alt="Docs"> |
-| **Comments & Smart Recommendation System** | **Project Docs** |
+| **Comments & Smart Recommendations** | **Project Docs** |
 
 </div>
 
 ---
 
-##  System Architecture
+## Table of Contents
 
-### 🔭 High-Level Overview
+- [Features](#features)
+- [How the Machine Learning Works](#how-the-machine-learning-works)
+- [System Architecture](#system-architecture)
+- [Tech Stack](#tech-stack)
+- [Quick Start](#quick-start)
+- [Configuration](#configuration)
+- [Scripts & Operations](#scripts--operations)
+- [Project Structure](#project-structure)
+- [Security](#security)
+- [Testing](#testing)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
+
+---
+
+## Features
+
+### For Readers
+- **Hybrid search** — finds posts by meaning *and* by words: "how to stay motivated" finds "Beating burnout", while an exact title still ranks first. Results appear as you type.
+- **"For you" feed** — learns from what you actually read to the end, highlight, like and save (a 5-second bounce barely counts), and tells you why each post is there.
+- **Following feed** — a tab with only the writers you follow, newest first.
+- **Topics** (`/topics`) — posts grouped automatically by what they're about, even when they aren't tagged.
+- **Rising this week** — topics and tags getting more attention than usual, on the home page.
+- **Highlights & private notes** — select any passage to highlight it or attach a note; all of them on one page.
+- **Table of contents** — for long posts, with the current section marked and "N min left".
+- **Instant interactions** — follow, like and bookmark respond immediately.
+- **@mentions** in comments with autocomplete, and a *Mentions & replies* inbox.
+- **Installable app** — add Lumina to your home screen; posts you've read work offline.
+
+### For Writers
+- **Writing assistant** — readability, long sentences, passive voice, filler words and a headline score, live as you type; optional AI review for grammar, clarity and tone.
+- **Tag & category suggestions** — from the most similar posts on Lumina plus AI, as chips to accept.
+- **Originality check** — warns when a draft is very close to a post already on Lumina.
+- **Best time to publish** — when *your* readers and followers actually read, in your time zone, right in the scheduler; plus a heatmap on Analytics.
+- **Version history & autosave** — every few seconds and on every save; restore any version.
+- **Email your followers** — a short note to followers' inboxes, at most once a week, with a test send.
+- **Scheduled publishing**, drafts, AI title/continue-writing helpers, cover images (upload, AI, GIF).
+- **Embed your latest posts** on any website with a one-line snippet, or use the public JSON feed.
+- **Analytics** — views, likes, comments, followers, top posts, and when your audience reads.
+
+### Community & Safety
+- **Real-time notifications** (Socket.IO) for likes, comments, replies, mentions, follows and new posts.
+- **Email notifications** with per-type preferences and one-click unsubscribe (RFC 8058).
+- **Smarter moderation** — profanity filter and AI safety check, plus spam/abuse risk scoring with reasons: spam and threats are blocked, borderline comments are posted but queued for an admin, and suspicious accounts are listed.
+- **Admin dashboard** — users, posts, featuring, moderation queue, topic and embedding status.
+
+---
+
+## How the Machine Learning Works
+
+Everything is built on one idea: each post is turned into a **768-dimension embedding** (a list of numbers that captures its meaning) with Google's embedding model. Posts about similar things end up close together. The algorithms live in `services/ml/` as small, pure, unit-tested modules, and **every feature works without an AI key** — Gemini only improves tag suggestions, topic names and the AI review.
+
+| Feature | Technique | Code |
+|---|---|---|
+| Hybrid search | Meaning (vector similarity) + MongoDB full-text + title match, merged with **Reciprocal Rank Fusion**; query embeddings cached for a day | `services/ml/search.js`, `rank.js` |
+| "For you" feed | Taste vector = engagement-weighted, time-decayed average of the embeddings of posts you engaged with; candidates scored on relevance, freshness, popularity and follows; **Maximal Marginal Relevance** for variety | `services/ml/forYou.js` |
+| Topics | **k-means++** on normalised embeddings, k chosen by **silhouette score**; named by Gemini, or by the tag most posts share, or by **TF-IDF** keywords | `services/ml/kmeans.js`, `topics.js`, `text.js` |
+| Rising trends | This week vs. the average of the previous four, per topic and tag; Poisson-style **z-score** + smoothed growth ratio + minimum volume | `services/ml/trends.js` |
+| Tag suggestions | Similarity-weighted **k-nearest-neighbour voting** over similar posts' tags, merged with Gemini; tags normalised (`#AI` = `ai` = `AI`) | `services/ml/tagger.js` |
+| Originality | Embedding similarity to find candidates, then **word-shingle containment** to measure copied wording | `services/ml/text.js`, `routes/writerTools.js` |
+| Writing assistant | Flesch reading ease & grade, sentence/paragraph length, passive voice, intensifiers, wordy phrases; heuristic headline score — runs in the browser | `public/javascript/writing-core.js` |
+| Best time to publish | Reads binned into a **7×24 week grid** in your time zone, smoothed across neighbouring hours, peaks picked at least 3 hours apart | `services/ml/bestTime.js` |
+| Moderation | Feature-based risk score (links, shorteners, promotional wording, insults vs. threats, duplicates, bursts, account age) squashed with a **logistic** function; every point comes with a reason | `services/ml/risk.js` |
+
+**Signals.** Post pages report *active* reading time and how far into the article the reader got (`/signals/read`), checkpointed while reading. Anonymous readers are stored as a salted hash, never by IP, and data expires after 180 days.
+
+**Vector search.** With an Atlas Vector Search index on `blogs.embedding` (named `blog_vector_index`, or set `VECTOR_INDEX_NAME`), nearest-neighbour lookups run in the database. Without it, an in-memory index of recent posts is used automatically.
+
+---
+
+## System Architecture
 
 ```mermaid
 graph TB
-    subgraph "Client Layer"
-        Browser["🌐 Browser/Mobile"]
-        UI["⚛️ EJS Templates + CSS"]
+    subgraph "Client"
+        Browser["Browser / installed app"]
+        SW["Service worker (offline reading)"]
     end
-    
-    subgraph "Application Layer"
-        Express["🚀 Express Server"]
-        Auth["🔐 Passport.js + OAuth"]
-        RL["🛡️ Rate Limiter"]
-        Socket["⚡ Socket.IO"]
+
+    subgraph "Express app"
+        Routes["Routes: blog, user, topics, writer, highlights, notifications, admin, api"]
+        Signals["/signals (reading time)"]
+        Socket["Socket.IO"]
     end
-    
-    subgraph "Business Logic"
-        BlogService["📝 Blog Service"]
-        AIService["🤖 AI Service"]
-        SearchService["🔍 Search Service"]
-        NotifService["🔔 Notification Service"]
+
+    subgraph "Services"
+        ML["services/ml: search, for-you, topics, trends, tags, risk"]
+        Jobs["Background jobs: embeddings, fan-out, digests, newsletters"]
+        Mail["Email (Resend / SMTP)"]
     end
-    
-    subgraph "External Services"
-        Gemini["🧠 Google Gemini API"]
-        Cloudinary["☁️ Cloudinary CDN"]
-        MongoDB["🗄️ MongoDB Atlas"]
+
+    subgraph "External"
+        Gemini["Google Gemini (embeddings + text)"]
+        Mongo["MongoDB Atlas (+ Vector Search)"]
+        Redis["Redis (optional: cache, rate limits, queue)"]
+        Cloudinary["Cloudinary"]
     end
-    
-    Browser --> UI
-    UI --> Express
-    Express --> Auth
-    Express --> RL
-    Express --> Socket
-    
-    Express --> BlogService
-    Express --> AIService
-    Express --> SearchService
-    Express --> NotifService
-    
-    AIService --> Gemini
-    BlogService --> Cloudinary
-    BlogService --> MongoDB
-    SearchService --> MongoDB
-    NotifService --> Socket
-    
+
+    Browser --> SW --> Routes
+    Browser --> Signals
+    Routes --> ML
+    Routes --> Jobs
+    Routes --> Socket
+    ML --> Mongo
+    ML --> Gemini
+    Jobs --> Gemini
+    Jobs --> Mongo
+    Jobs --> Mail
+    Routes --> Cloudinary
+    Routes -.-> Redis
+    Jobs -.-> Redis
+
     style Gemini fill:#4285f4,color:#fff
     style Cloudinary fill:#3448c5,color:#fff
-    style MongoDB fill:#47a248,color:#fff
+    style Mongo fill:#47a248,color:#fff
 ```
 
-###  Semantic Search Pipeline
+### Search pipeline
 
 ```mermaid
 sequenceDiagram
     participant User
-    participant Frontend
-    participant Backend
+    participant App
     participant Gemini
     participant MongoDB
-    
-    Note over User,MongoDB: Content Creation Flow
-    User->>Frontend: Write blog post
-    Frontend->>Backend: POST /blog
-    Backend->>Gemini: Generate embedding
-    Gemini-->>Backend: 768-dim vector
-    Backend->>MongoDB: Store blog + embedding
-    MongoDB-->>Backend: Confirmation
-    Backend-->>Frontend: Success
-    
-    Note over User,MongoDB: Search Flow
-    User->>Frontend: Search "AI tutorials"
-    Frontend->>Backend: GET /search?q=AI+tutorials
-    Backend->>Gemini: Embed query
-    Gemini-->>Backend: Query vector
-    Backend->>MongoDB: Cosine similarity search
-    MongoDB-->>Backend: Top 10 results (sorted by score)
-    Backend-->>Frontend: Ranked results
-    Frontend-->>User: Display relevant posts
-```
 
-###  Data Flow Architecture
+    Note over User,MongoDB: Publishing
+    User->>App: Publish post
+    App->>Gemini: Embed title + text (background job)
+    Gemini-->>App: 768-dim vector
+    App->>MongoDB: Save embedding, join nearest topic
 
-```mermaid
-flowchart LR
-    A[User Request] --> B{Authenticated?}
-    B -->|No| C[Login/OAuth]
-    B -->|Yes| D[Route Handler]
-    
-    D --> E{Request Type}
-    E -->|Blog CRUD| F[Blog Service]
-    E -->|AI Generation| G[AI Service]
-    E -->|Search| H[Search Service]
-    
-    F --> I[(MongoDB)]
-    G --> J[Google Gemini]
-    H --> I
-    
-    J --> K[Generate Embedding]
-    K --> I
-    
-    I --> L[Response]
-    L --> M[Render View]
-    M --> N[User]
-    
-    style J fill:#4285f4,color:#fff
-    style I fill:#47a248,color:#fff
+    Note over User,MongoDB: Searching
+    User->>App: "how to stay motivated"
+    App->>Gemini: Embed query (cached 24h)
+    par By meaning
+        App->>MongoDB: Vector search
+    and By keywords
+        App->>MongoDB: Full-text search
+    and By title
+        App->>MongoDB: Title match
+    end
+    App->>App: Reciprocal Rank Fusion
+    App-->>User: One ranked list, each result says how it matched
 ```
 
 ---
 
-##  Table of Contents
+## Tech Stack
 
-- [Screenshots](#-screenshots)
-- [System Architecture](#️-system-architecture)
-- [Features](#-features)
-- [Search Innovation](#-search-innovation-our-competitive-edge)
-- [Tech Stack](#️-tech-stack)
-- [Quick Start](#-quick-start)
-- [Performance](#-performance)
-- [Security](#-security)
-- [Testing](#-testing)
-- [Contributing](#-contributing)
-- [ License](#-license)
-
----
-
-##  Features
-
-###  AI & Search
-- **Semantic Search** using 768-dim vector embeddings
-- **Smart Recommendations** with cosine similarity
-- **AI Content Generation** via Google Gemini API
-- **Auto Summarization** with TL;DR extraction
-- **Related Posts** based on semantic proximity
-
-###  Machine Learning
-- **Hybrid Search** — meaning (embeddings) + keywords + title, fused with Reciprocal Rank Fusion; live results while typing
-- **"For you" feed** — learns from read time, scroll depth, highlights, likes and bookmarks; explains each pick
-- **Automatic Topics** — k-means over post embeddings (k chosen by silhouette), named by AI or by shared tags; `/topics`
-- **Rising Trends** — this week vs. the previous four, per topic and tag (home page, topics, weekly digest)
-- **Writing Assistant** — readability, style issues and a headline score in the editor; optional AI review
-- **Tag & Category Suggestions** — votes from the most similar posts, plus AI; tags normalised (`#AI` = `ai` = `AI`)
-- **Originality Check** — embedding similarity + shingle overlap against posts already on Lumina
-- **Best Time to Publish** — when your readers and followers actually read, in your time zone
-- **Smarter Moderation** — spam/abuse risk scoring with reasons; borderline comments held for review, spam blocked
-
-The ML code lives in `services/ml/` (pure, unit-tested modules) and runs without an AI key — Gemini only improves
-tag suggestions, topic names and the AI review.
-
-###  Real-Time & UX
-- **Live Notifications** via Socket.IO
-- **Instant Updates** for likes, comments, follows
-- **Dark/Light Themes** with smooth transitions
-- **Responsive Design** with Bento grid layout
-- **Infinite Scroll** with skeleton loading
-
-###  Core Features
-- **Role-Based Access Control** (User, Creator, Admin)
-- **User Authentication** with SHA-256 hashing
-- **Admin Dashboard** for content moderation
-- **Multi-format Content** support
-- **View Tracking** and engagement metrics
-
+| Layer | Technology |
+|-------|-----------|
+| **Runtime & server** | Node.js 22, Express 4, EJS (server-side rendering) |
+| **Database** | MongoDB + Mongoose; Atlas Vector Search (optional) |
+| **AI** | Google Gemini (`gemini-2.5-flash` for text, `gemini-embedding-001` for embeddings) |
+| **ML** | Hand-written, dependency-free modules: k-means, TF-IDF, RRF, MMR, shingling, readability |
+| **Real-time** | Socket.IO (Redis adapter for multiple instances) |
+| **Background work** | BullMQ on Redis, or inline when Redis is off |
+| **Caching & limits** | Redis with automatic in-process fallback; express-rate-limit |
+| **Media** | Cloudinary (uploads, AVIF/WebP, resizing) |
+| **Email** | Resend API, or SMTP via Nodemailer |
+| **Auth** | JWT cookie + sessions, Passport (Google OAuth), scrypt passwords, CSRF (csrf-sync) |
+| **Security** | Helmet with nonce-based CSP, DOMPurify sanitising |
+| **Editor** | Quill |
+| **Observability** | Winston logs, Prometheus metrics (`/metrics`), `/health` and `/healthz` |
+| **Hosting** | Render (`render.yaml`), Docker |
 
 ---
 
-##  Search & AI: Embeddings & Smart Recommendations
-
-### 😵 The Discovery Crisis: Why Keywords Fail
-In an era of information overflow, traditional search engines suffer from **"Context Blindness."**
-- 🚫 **Rigid Algorithms**: They rely on exact-match (SQL `LIKE`) and fail to grasp human intent.
-- 🚫 **Missed Connections**: A search for *"scalable systems"* misses *"Microservices 101"* because keywords don't match.
-- 🚫 **Information Silos**: Valuable insights remain buried, leading to dead-end user journeys.
-
-###  The Solution: RAG-Powered Cognitive Retrieval
-Lumina implements a high-performance **Retrieval-Augmented Generation (RAG)** architecture using **Google's Text Embedding 004**.
-We don't just index words; we vectorize *meaning*.
-
-1. **Semantic Understanding**: Transforms every article into a **768-dimensional vector** to map concepts.
-2. **Intent Bridging**: Connects abstract queries (e.g., *"future of tech"*) with concrete results (e.g., *"Generative AI Trends"*).
-3. **Adaptive Knowledge Graph**: Powers a "Smart Ecosystem" based on the *conceptual proximity* of your reading history.A fully database-driven CMS where every element is customizable.
--  **Context-Aware Personalization**: The "Smart Feed" learns from user behavior to surface relevant content.
--  **Integrated Growth Tools**:
-  - **Analytics**: Built-in view tracking and engagement metrics.
-  - **SEO**: Automated meta-tag generation and sitemap bridging.
-  - **Monetization**: Native support for **Stripe** subscriptions and Creator Tipping.
--  **API-First Design**: Ready for integrations with CRM, Email Marketing, and Social Media automations.
--  **Enterprise-Grade Security**: Helmet.js headers, Rate Limiting, and XSS protection out of the box.
-
-###  Technical Implementation
-
-```javascript
-// Generate embedding for new blog
-const embedding = await model.embedContent(blogContent);
-blog.embedding = embedding.values; // 768-dim array
-
-// Find similar posts
-const userVector = calculateCentroid(readingHistory);
-const results = blogs.map(b => ({
-  blog: b,
-  score: cosineSimilarity(userVector, b.embedding)
-})).sort((a, b) => b.score - a.score);
-```
-
-###  Performance Impact
-
-| Metric | Traditional Search | Semantic Search |
-|--------|-------------------|-----------------|
-| **Relevance Accuracy** | 45% | **87%** ✅ |
-| **User Engagement** | 1.2 min/session | **3.6 min/session** ✅ |
-| **Discovery Rate** | 10% of content | **35% of content** ✅ |
-| **Query Time** | 120ms | **95ms** ✅ |
-
-###  Why This Wins
-
-- ✅ **Google Gemini Integration** - Showcases advanced AI usage
-- ✅ **Production-Scale** - Handles 10K+ documents efficiently
-- ✅ **Real Business Impact** - 3x engagement improvement
-- ✅ **Technical Depth** - Vector math, ML algorithms, optimization
-
----
-
-## ⚡ Engineering Spotlights
-
-### **1.  Advanced Image Optimization**
-We treat images as first-class citizens for performance:
--  **Format Selection**: Automatically serves **AVIF** or **WebP** based on browser support (80% smaller).
--  **AI Compression**: Cloudinary's `quality: auto` balances visual fidelity and file size.
-- ⚡ **Lazy Loading**: Native `loading="lazy"` + Low-Quality Image Placeholders (LQIP).
-
-### **2. 📱 Dynamic Feed & Infinite Scroll**
-A modern, app-like experience on the web:
--  **Bento Grid Architecture**: A responsive masonry layout adapting content chunks to the viewport.
--  **O(1) Performance**: Cursor-based pagination ensures queries remain fast even with millions of posts.
-
-
-##  Tech Stack
-
-| Layer | Technology | Why? |
-|-------|-----------|------|
-| **Backend** | Node.js + Express | Non-blocking I/O for real-time features |
-| **Database** | MongoDB + Mongoose | Flexible schema, native array support for vectors |
-| **AI/ML** | Google Gemini API | Cost-effective embeddings, high context window |
-| **Real-time** | Socket.IO | Bi-directional WebSocket communication |
-| **Rendering** | EJS (SSR) | Better SEO, faster FCP than SPAs |
-| **Cloud** | Cloudinary | Image optimization and CDN delivery |
-| **Logging** | Winston | Structured JSON logs for debugging |
-| **Hosting** | Vercel/Render | Automated CI/CD and deployment |
-
----
-
-##  Tech Stack: The Complete Arsenal
-
-We utilized a battle-tested stack to ensure performance, security, and scalability.
-
-###  Frontend & User Experience
-| Technology | Purpose |
-|:-----------|:--------|
-| **EJS (Embedded JS)** | Server-side rendering (SSR) for blazing fast FCP and SEO superiority. |
-| **Locomotive CSS** | Powers the premium inertia-based scrolling experience. |
-| **Socket.IO Client** | Real-time bi-directional communication for notifications. |
-
-<br>
-
-###  Backend & Architecture
-| Technology | Purpose |
-|:-----------|:--------|
-| **Node.js** | Event-driven runtime for handling concurrent I/O operations efficiently. |
-| **Express.js** | Minimalist web framework for robust routing and middleware pipelining. |
-| **Passport.js** | Enterprise-grade authentication middleware (Google OAuth Strategy). |
-| **Multer** | Multipart/form-data handler for secure file uploads. |
-| **Helmet** | Secures HTTP headers to prevent simplistic attacks (XSS, Clickjacking). |
-
-<br>
-
-###  AI & Data Intelligence
-| Technology | Purpose |
-|:-----------|:--------|
-| **Google Gemini Flash** | High-speed LLM for content generation, rewriting, and summarization. |
-| **Text Embedding 004** | Generates 768-dim vectors for the RAG / Semantic Search engine. |
-| **MongoDB Atlas** | Distributed document database. Handles unstructured data and vector arrays. |
-| **Mongoose** | ODM for strict schema validation and query building. |
-| **Axios** | Promise-based HTTP client for external API communication. |
-
-<br>
-
-###  Infrastructure & Tools
-| Technology | Purpose |
-|:-----------|:--------|
-| **Docker** | Containerization ensuring "Write once, run anywhere" consistency. |
-| **Cloudinary** | AI-driven media management (Auto-cropping, Format optimization AVIF/WebP). |
-| **Git & GitHub** | Distributed version control with CI/CD readiness. |
-| **Dotenv** | Environment variable management for 12-Factor App compliance. |
-
-
-##  Quick Start
-
-
+## Quick Start
 
 ### Prerequisites
-```bash
-Node.js >= 20.0.0
-MongoDB >= 6.0
-Google Gemini API Key
-Cloudinary API Key (for image uploads)
-```
+- Node.js 22
+- MongoDB 6.0+ (Atlas recommended; needed for vector search)
+- A Google Gemini API key (optional but recommended — search by meaning, recommendations and topics need embeddings)
+- A Cloudinary account (for image uploads)
 
 ### Installation
 
-1. **Clone the repo**
+1. **Clone and install**
    ```bash
-   git clone https://github.com/MayankParashar28/BlogiFy.git
-   cd BlogiFy
-   ```
-
-2. **Install dependencies**
-   ```bash
+   git clone https://github.com/MayankParashar28/Lumina.git
+   cd Lumina
    npm install
    ```
 
-3. **Setup `.env`**
+2. **Create `.env`** (see [Configuration](#configuration) for everything else)
    ```env
-   # Database
    MONGODB_URL=mongodb://localhost:27017/lumina
-   
-   # AI
-   GOOGLE_GEMINI_API_KEY=your_api_key
-   # Optional: embedding model (default gemini-embedding-001, 768 dims)
-   # GOOGLE_EMBEDDING_MODEL=gemini-embedding-001
-   
-   # Cloud Storage
-   CLOUDINARY_NAME=your_cloud_name
+   JWT_SECRET=a-long-random-string
+   SESSION_SECRET=another-long-random-string
+
+   GOOGLE_GEMINI_API_KEY=your_gemini_key
+
+   CLOUDINARY_CLOUD_NAME=your_cloud_name
    CLOUDINARY_API_KEY=your_api_key
    CLOUDINARY_API_SECRET=your_api_secret
-   
-   # Auth
-   SESSION_SECRET=your_complex_secret
-   
-   # Server
-   PORT=8000
-   NODE_ENV=development
+
+   BASE_URL=http://localhost:8000
    ```
 
-4. **Embeddings and topics** (first run, or after changing the embedding model)
+3. **Run**
    ```bash
-   node scripts/generate-embeddings.js --stale   # embed posts missing or using an old model
-   node scripts/build-topics.js                  # build topics now (otherwise done daily)
+   npm run dev     # development (auto-restart)
+   npm start       # production
    ```
 
-5. **Run the app**
+4. **Embeddings and topics** (existing data, or after changing the embedding model)
    ```bash
-   npm run dev     # Development
-   npm start       # Production
+   node scripts/generate-embeddings.js --stale
+   node scripts/build-topics.js
    ```
 
-6. **Access**
-   - Frontend: `http://localhost:8000`
-   - Admin: `http://localhost:8000/admin`
+5. **Open** `http://localhost:8000` — admin at `/admin` (sign up, then make yourself admin with `node scripts/make_admin.js you@example.com`).
 
 ---
 
-## 📊 Performance
+## Configuration
 
-### 📈 Core Web Vitals
-| Metric | Target | Achieved |
-|--------|--------|----------|
-| **LCP** | < 2.5s | ✅ 1.8s |
-| **FID** | < 100ms | ✅ 45ms |
-| **CLS** | < 0.1 | ✅ 0.05 |
-| **TTFB** | < 600ms | ✅ 420ms |
+**Required:** `MONGODB_URL`, `JWT_SECRET`, `SESSION_SECRET`.
 
-### ⚡ Optimizations
-- ✅ Brotli compression (70% reduction)
-- ✅ Image optimization via Cloudinary
-- ✅ Database indexing for fast queries
-- ✅ Client-side lazy loading
-- ✅ Static asset caching
-
----
-
-##  Security
-
-###  Authentication
-- SHA-256 password hashing with unique salts
-- Session-based auth with secure cookies
-- Rate limiting on sensitive endpoints
-
-###  Rate Limits
-| Endpoint | Limit | Window |
-|----------|-------|--------|
-| Login/Signup | 5 req | 15 min |
-| AI Generation | 10 req | 1 hour |
-| Blog Creation | 1 req | 30 min |
-| Comments | 1 req | 5 min |
-
-###  Security Headers (Helmet.js)
-- ✅ Content Security Policy (CSP)
-- ✅ HSTS (HTTP Strict Transport Security)
-- ✅ X-Frame-Options (Clickjacking protection)
-- ✅ X-Content-Type-Options (MIME sniffing)
+| Variable | Purpose |
+|---|---|
+| `BASE_URL` | Public site URL, no trailing slash (links in emails, canonical tags, embeds) |
+| `GOOGLE_GEMINI_API_KEY` | Gemini text + embeddings |
+| `GOOGLE_GEMINI_KEY_LIGHT` | Optional second key for lighter AI calls |
+| `GOOGLE_GEMINI_MODEL` | Text model (default `gemini-2.5-flash`) |
+| `GOOGLE_EMBEDDING_MODEL` / `GOOGLE_EMBEDDING_DIMS` | Embedding model (default `gemini-embedding-001`) and size (default `768`) |
+| `GOOGLE_EMBEDDING_API_KEY` | Separate key for embeddings (defaults to the Gemini key) |
+| `VECTOR_INDEX_NAME` | Atlas Vector Search index name (default `blog_vector_index`) |
+| `CLOUDINARY_CLOUD_NAME` / `_API_KEY` / `_API_SECRET` | Image uploads |
+| `RESEND_API_KEY`, `EMAIL_FROM` | Email via Resend (recommended on hosts that block SMTP) |
+| `EMAIL_USER` / `EMAIL_PASS` | Email via SMTP instead |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_CALLBACK_URL` | "Sign in with Google" (hidden when unset) |
+| `REDIS_URL` | Shared cache, rate limits, sessions, Socket.IO adapter and job queue |
+| `REDIS_DISABLED`, `QUEUE_DISABLED` | Turn Redis / the queue off and use in-process fallbacks |
+| `QUEUE_WORKER_INLINE=false` | Run background jobs only in a separate `npm run worker` process |
+| `SOCKET_URL` | Separate real-time host, if Socket.IO runs elsewhere |
+| `GIPHY_API_KEY` | GIF covers in the editor |
+| `CRON_SECRET`, `METRICS_TOKEN` | Protect `/cron/publish-scheduled` and `/metrics` |
+| `NEWSLETTER_COOLDOWN_DAYS`, `MAX_NEWSLETTER_RECIPIENTS`, `MAX_FOLLOWER_EMAILS`, `FOLLOW_BURST_LIMIT` | Limits for follower emails and following |
 
 ---
 
-##  Testing
+## Scripts & Operations
 
-```bash
-npm test              # Unit tests
-npm run test:integration  # Integration tests
-npm run test:e2e      # End-to-end tests
+| Command | What it does |
+|---|---|
+| `npm run dev` / `npm start` | Run the web app |
+| `npm run worker` | Run background jobs in their own process (with `REDIS_URL`) |
+| `npm test` | Run the test suite |
+| `node scripts/generate-embeddings.js [--stale]` | Embed posts that have no embedding (`--stale`: also re-embed posts made with an older model) |
+| `node scripts/build-topics.js [--no-ai]` | Rebuild topics now (otherwise rebuilt daily; also from Admin > Moderation) |
+| `node scripts/make_admin.js <email>` | Give a user the admin role |
+| `node scripts/backfill-slugs.js` | Give older posts readable URLs |
+| `node scripts/sanitize-existing-posts.js` | Re-sanitise stored post bodies |
+
+**Background work** (embeddings, notification fan-out, follower emails, newsletters, weekly digests, scheduled publishing) runs through BullMQ when Redis is available, and inline otherwise. Topics are rebuilt daily by the web process.
+
+**After changing the embedding model**, run `generate-embeddings.js --stale`: vectors from different models can't be compared. Admin > Moderation shows how many posts still need it.
+
+---
+
+## Project Structure
+
+```
+index.js                 app setup, middleware, home feed, sockets, timers
+worker.js                standalone background worker
+routes/                  blog, user, topics, writerTools, highlights, notifications,
+                         signals, publicApi, admin, ai, static
+services/
+  ml/                    search, forYou, topics, kmeans, trends, tagger, risk, text, ...
+  ai.js                  Gemini embeddings + JSON helper
+  jobs.js, queue.js      background jobs (BullMQ or inline)
+  emailService.js        all outgoing email
+  redis.js               cache, rate limits, circuit breaker
+models/                  Mongoose schemas (blog, user, comment, readEvent, topic, ...)
+views/                   EJS pages and partials
+public/
+  javascript/            client scripts (live search, highlights, writer tools, ...)
+  css/, images/
+  sw.js                  service worker (installable app, offline reading)
+  embed/author.js        embeddable author card for other websites
+scripts/                 maintenance scripts
+tests/                   node:test suites
 ```
 
 ---
 
-##  Contributing
+## Security
 
-We welcome contributions! Follow these steps:
+- **Passwords** hashed with **scrypt** and a per-user salt (older hashes upgrade on next sign-in).
+- **CSRF** protection on every form and write request.
+- **Content Security Policy** with per-request nonces — no inline event handlers.
+- **Sanitising**: post bodies cleaned on the server (and again by DOMPurify in the browser).
+- **Email links** to unsubscribe are HMAC-signed, so they can't be forged or reused for other users.
+- **Private data stays private**: highlights, notes, drafts, versions and reading history are only visible to their owner; the public API returns only what a profile already shows.
 
-1. Fork the repo
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Commit: `git commit -m 'feat: add amazing feature'`
-4. Push: `git push origin feature/amazing-feature`
-5. Open a Pull Request
+### Rate limits
 
-###  Commit Convention
-Follow [Conventional Commits](https://www.conventionalcommits.org/):
-- `feat:` New feature
-- `fix:` Bug fix
-- `docs:` Documentation
-- `refactor:` Code refactoring
-- `test:` Adding tests
+| What | Limit |
+|---|---|
+| Sign-in / sign-up | 10 per 15 min per IP |
+| Verification / password-reset emails | 5 per hour per IP |
+| New posts | 5 per hour per IP, and 30 min between posts |
+| Comments | 30 per 15 min per IP, and 5 min between comments |
+| AI writing helpers | 1 per minute per user |
+| Writer tools (tags, review, originality, best time) | 4–20 per minute per user |
+| Live search | 60 per minute per IP |
+| Public author API | 120 per minute per IP |
+| Following | 60 accounts per hour per user |
 
 ---
 
-##  Roadmap
+## Testing
 
-- [ ] Hybrid search (Vector + Keyword)
-- [ ] Redis caching layer
-- [ ] GraphQL API
-- [ ] Mobile app (React Native)
-- [ ] Background jobs (BullMQ)
-- [ ] Advanced analytics
+```bash
+npm test
+```
+
+Tests use Node's built-in runner, Supertest, and an in-memory MongoDB (downloaded on first run). The pure ML modules have their own unit tests in `tests/ml-unit.test.js`, which need no database.
+
+---
+
+## Roadmap
+
+- [x] Hybrid search (vector + keyword)
+- [x] Redis caching layer
+- [x] Background jobs (BullMQ)
+- [x] Personalised feed from reading behaviour
+- [x] Automatic topics and trend detection
+- [x] Installable app with offline reading
+- [ ] Series (multi-part posts)
+- [ ] Dark mode
+- [ ] Ask a post (questions answered from its text)
 - [ ] Multi-language support (i18n)
 
 ---
 
-##  License
+## Contributing
 
-MIT License - see [LICENSE](https://github.com/MayankParashar28/BlogiFy/blob/main/LICENSE)
+1. Fork the repo
+2. Create a branch: `git checkout -b feature/your-feature`
+3. Commit using [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`)
+4. Run `npm test`
+5. Open a pull request
 
 ---
 
-##  Author
+## License
+
+ISC
+
+---
+
+## Author
 
 **Mayank Parashar**
 
 - GitHub: [@MayankParashar28](https://github.com/MayankParashar28)
 - LinkedIn: [Mayank Parashar](https://linkedin.com/in/mayankparashar)
-
----
-
-**Built with ❤️ focusing on Performance, Clean Code, and Scalability**
