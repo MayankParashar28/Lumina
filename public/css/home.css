@@ -1,15 +1,14 @@
 /* High-End Home Feed Styles */
 
+/* No overflow on <body>: global.css clips overflow-x on <html>, and any
+   overflow value here would make <body> a scroll container, which breaks
+   position: sticky and hides horizontal overflow instead of fixing it. */
 body {
     background-color: var(--bg-color);
-    overflow-x: hidden;
 }
 
-/* Mobile Scrolling Fix */
 @media (max-width: 768px) {
     body {
-        overflow-y: auto !important;
-        -webkit-overflow-scrolling: touch;
         height: auto;
     }
 

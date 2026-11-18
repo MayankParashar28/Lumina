@@ -5,9 +5,6 @@
 body {
     background-color: var(--bg-color);
     color: var(--text-color);
-    /* global.css gives body width: 100%; with the UA default 8px margin on
-       top, the page was 8px wider than the viewport and scrolled sideways. */
-    margin: 0;
 }
 
 .blog-container {
@@ -995,7 +992,10 @@ body {
 @media (max-width: 1024px) {
     .content-wrapper {
         display: grid !important;
-        grid-template-columns: 1fr auto !important;
+        /* minmax(0, ...) not plain 1fr: a 1fr track never shrinks below its
+           content's min-content width, so one unwrappable code line widened
+           the whole post (and the page) far past the screen. */
+        grid-template-columns: minmax(0, 1fr) auto !important;
         max-width: 100% !important;
         gap: 0.5rem !important;
         /* Small gap between text and bar */
