@@ -5,6 +5,9 @@
 body {
     background-color: var(--bg-color);
     color: var(--text-color);
+    /* global.css gives body width: 100%; with the UA default 8px margin on
+       top, the page was 8px wider than the viewport and scrolled sideways. */
+    margin: 0;
 }
 
 .blog-container {
@@ -18,8 +21,9 @@ body {
     position: fixed;
     top: 0;
     left: 0;
-    width: 100vw;
-    /* Use viewport width strictly */
+    right: 0;
+    /* Not 100vw: that includes the scrollbar width on platforms with classic
+       scrollbars and pushes the page into horizontal scroll. */
     height: 3px;
     z-index: 1001;
     background: transparent;
@@ -975,6 +979,9 @@ body {
     line-height: 1.5;
     color: #333;
     margin: 0;
+    /* Pasted URLs and other long unbroken strings otherwise run past the
+       right edge of the comment card on phones. */
+    overflow-wrap: anywhere;
 }
 
 .no-comments {
@@ -1794,6 +1801,9 @@ body {
         margin: 3rem 0.5rem !important;
         padding: 1rem 0 !important;
         max-width: 100% !important;
+        /* The base rule's width: 100% plus these side margins overflowed the
+           viewport by 1rem; auto lets the margins come out of the width. */
+        width: auto !important;
     }
 
     .comments-section .comment-card {
