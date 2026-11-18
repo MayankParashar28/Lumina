@@ -5,6 +5,9 @@
     <%- include('./partials/header') %>
         <style>
             .bookmarks-container {
+                /* Fill the line; as a flex item with auto margins it shrank
+                   to (and grew with) its content. */
+                width: 100%;
                 max-width: 900px;
                 margin: 8rem auto 4rem;
                 padding: 0 1.5rem;
@@ -26,8 +29,11 @@
 
             .bookmark-grid {
                 display: grid;
+                grid-template-columns: minmax(0, 1fr);
                 gap: 1.5rem;
             }
+
+            .bookmark-meta > * { min-width: 0; overflow-wrap: anywhere; }
 
             .bookmark-card {
                 background: #fff;
@@ -73,6 +79,7 @@
                 display: flex;
                 align-items: center;
                 gap: 0.5rem;
+                flex-wrap: wrap;
             }
 
             .remove-btn {

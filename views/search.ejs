@@ -4,7 +4,10 @@
 <head>
     <%- include('./partials/header') %>
     <style>
-        .search-container { max-width: 1000px; margin: 8rem auto 4rem; padding: 0 1.5rem; }
+        .search-container { width: 100%; max-width: 1000px; margin: 8rem auto 4rem; padding: 0 1.5rem; }
+        /* min-width: 0 lets the input shrink below its default width (about
+           20 characters); without it the form was wider than a phone. */
+        .search-form input { min-width: 0; }
         .search-form { display: flex; gap: 0.6rem; margin-bottom: 0.75rem; }
         .search-form input {
             flex: 1; padding: 0.9rem 1.2rem; font-size: 1rem; border: 1.5px solid var(--border-color);
