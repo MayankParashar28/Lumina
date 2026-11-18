@@ -35,7 +35,13 @@ async function findMine(req) {
   if (req.user) {
     const byUser = await EarnWaitlist.findOne({ userId: req.user._id }).lean();
     if (byUser) return byUser;
-    return EarnWaitlist.findOne({ email: normalizeEmail(req.user.email) }).lean();
+    // Joined by email before signing up: the account owns that (verified)
+    // address, so attach the entry to it.
+    const byEmail = await EarnWaitlist.findOne({ email: normalizeEmail(req.user.email) }).lean();
+    if (byEmail && !byEmail.userId) {
+      await EarnWaitlist.updateOne({ _id: byEmail._id, userId: { $exists: false } }, { $set: { userId: req.user._id } });
+    }
+    return byEmail;
   }
   const token = req.cookies && req.cookies.earn_token;
   if (!TOKEN_RE.test(String(token || ""))) return null;
@@ -102,7 +108,7 @@ router.get("/", async (req, res) => {
 
 const joinLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
-  max: 10,
+  max: 30, // per IP; colleges and offices share one
   standardHeaders: true,
   legacyHeaders: false,
   store: makeRateLimitStore("rl:earn-join:"),
@@ -137,10 +143,16 @@ router.post("/join", joinLimiter, async (req, res) => {
       req.user ? { $or: [{ userId: req.user._id }, { email: normalized }] } : { email: normalized }
     ).select("+token").lean();
     if (existing) {
-      if (!req.user) res.cookie("earn_token", existing.token, { ...COOKIE, maxAge: 365 * 864e5 });
+      // Signed in: it's theirs (their account's verified email) — link it.
+      if (req.user && !existing.userId) {
+        await EarnWaitlist.updateOne({ _id: existing._id }, { $set: { userId: req.user._id } });
+      }
+      // Signed out, we can't know the person typing owns that address, so this
+      // never "logs them in" to the entry (no cookie): otherwise anyone could
+      // type someone else's email and see their spot and invite link.
       if (wantsJson(req)) return res.json({ ok: true, already: true });
-      req.flash("success", "You're already on the list.");
-      return res.redirect("/earn#you");
+      req.flash("success", "That email is already on the waitlist.");
+      return res.redirect(req.user ? "/earn#you" : "/earn#join");
     }
 
     // Who invited them — never themselves.
