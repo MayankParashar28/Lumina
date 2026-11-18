@@ -23,7 +23,8 @@ body {
     background-color: var(--bg-color);
     color: var(--text-color);
     font-family: 'Inter', system-ui, sans-serif;
-    overflow-x: hidden;
+    /* overflow-x is clipped on <html> in global.css, not here: overflow on
+       <body> makes it a scroll container and breaks position: sticky. */
     cursor: none;
     /* Custom cursor */
 }

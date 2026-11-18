@@ -169,6 +169,64 @@
     .wa-drawer { top: auto; left: 8px; right: 8px; bottom: 8px; width: auto; max-height: 75vh; }
 }
 
+/* With the drawer open on a wide screen, the editor moves left to make room
+   for it rather than disappearing under it. 392px = drawer (360) + its 16px
+   inset + a 16px gap. Below 1024px there is no room, so it overlays as before. */
+@media (min-width: 1024px) {
+    .editor-container { transition: margin 0.2s ease; }
+
+    body.wa-open .editor-container {
+        width: auto;
+        margin-left: max(16px, calc((100vw - 392px - 800px) / 2));
+        margin-right: 392px;
+    }
+}
+
+/* "Find in post" on a quoted issue */
+.wa-find {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-height: 32px;
+    margin-top: 0.15rem;
+    padding: 0 0.6rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #fff;
+    color: #374151;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.wa-find:hover { border-color: #6366f1; color: #4338ca; }
+.wa-find:focus-visible { outline: 2px solid #4f46e5; outline-offset: 2px; }
+
+/* The button that opens the assistant: labelled, so writers can find it. */
+.btn-mini-preview.btn-assistant {
+    gap: 0.45rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #374151;
+}
+
+.btn-mini-preview.btn-assistant i { color: #6366f1; }
+.btn-mini-preview.btn-assistant[aria-expanded="true"] { border-color: #6366f1; background: #eef2ff; color: #3730a3; }
+
+/* Title suggestions under the title (editor-ai.js) */
+.title-suggestions { display: none; }
+
+.title-suggestions--open {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin: 0.25rem 0 1.25rem;
+}
+
+.title-suggestion { max-width: 100%; text-align: left; white-space: normal; padding-top: 0.35rem; padding-bottom: 0.35rem; }
+
 @media (prefers-reduced-motion: reduce) {
     .wa-meter__fill { transition: none; }
+    .editor-container { transition: none; }
 }

@@ -762,7 +762,7 @@ body {
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 0.55rem;
+    font-size: 0.82rem;
     z-index: 1;
     /* Reset z-index */
     transition: all 0.2s;

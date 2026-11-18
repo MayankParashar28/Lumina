@@ -18,8 +18,9 @@ body {
     position: fixed;
     top: 0;
     left: 0;
-    width: 100vw;
-    /* Use viewport width strictly */
+    right: 0;
+    /* Not 100vw: that includes the scrollbar width on platforms with classic
+       scrollbars and pushes the page into horizontal scroll. */
     height: 3px;
     z-index: 1001;
     background: transparent;
@@ -975,6 +976,9 @@ body {
     line-height: 1.5;
     color: #333;
     margin: 0;
+    /* Pasted URLs and other long unbroken strings otherwise run past the
+       right edge of the comment card on phones. */
+    overflow-wrap: anywhere;
 }
 
 .no-comments {
@@ -988,7 +992,10 @@ body {
 @media (max-width: 1024px) {
     .content-wrapper {
         display: grid !important;
-        grid-template-columns: 1fr auto !important;
+        /* minmax(0, ...) not plain 1fr: a 1fr track never shrinks below its
+           content's min-content width, so one unwrappable code line widened
+           the whole post (and the page) far past the screen. */
+        grid-template-columns: minmax(0, 1fr) auto !important;
         max-width: 100% !important;
         gap: 0.5rem !important;
         /* Small gap between text and bar */
@@ -1794,6 +1801,9 @@ body {
         margin: 3rem 0.5rem !important;
         padding: 1rem 0 !important;
         max-width: 100% !important;
+        /* The base rule's width: 100% plus these side margins overflowed the
+           viewport by 1rem; auto lets the margins come out of the width. */
+        width: auto !important;
     }
 
     .comments-section .comment-card {

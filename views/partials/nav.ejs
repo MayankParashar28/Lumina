@@ -115,10 +115,12 @@
 
     if (nav.classList.contains('nav-open')) {
       btnIcon.classList.replace('bi-list', 'bi-x-lg');
-      document.body.style.overflow = 'hidden'; // Prevent scroll
+      // Lock <html>, not <body>: global.css clips overflow-x on <html>, so
+      // <body>'s overflow never reaches the viewport and locking it did nothing.
+      document.documentElement.style.overflow = 'hidden'; // Prevent scroll
     } else {
       btnIcon.classList.replace('bi-x-lg', 'bi-list');
-      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
     }
   }
 </script>
