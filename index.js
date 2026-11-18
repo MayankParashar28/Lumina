@@ -922,6 +922,7 @@ app.use("/admin", adminRoute); // 🛡️ Mount Admin Route
 app.use("/notifications", notificationsRoute);
 app.use("/highlights", highlightsRoute);
 app.use("/topics", require("./routes/topics"));
+app.use("/earn", require("./routes/earn"));
 app.use("/writer", require("./routes/writerTools"));
 app.use("/ai", aiRoute);
 
