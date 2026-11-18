@@ -102,6 +102,9 @@ body {
     letter-spacing: -0.03em;
     margin-bottom: 2rem;
     color: var(--text-color);
+    /* A long unbroken word or pasted URL in a title made the whole page
+       ~1100px wide on phones. */
+    overflow-wrap: anywhere;
 }
 
 .blog-meta {

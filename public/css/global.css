@@ -32,6 +32,22 @@ body {
     /* Allow default browser behavior for safety */
 }
 
+/* Long unbroken words -- a pasted URL, a name with no spaces -- must wrap
+ * instead of widening the page. On a phone a single one made the whole page
+ * scroll sideways (bookmarks, profiles, search, post titles).
+ *
+ * break-word on body wraps them wherever text flows normally. Headings get
+ * `anywhere`, which also lets their grid or flex container shrink below the
+ * long word; break-word alone still lets a card title push its grid wider
+ * than the screen. */
+body {
+    overflow-wrap: break-word;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    overflow-wrap: anywhere;
+}
+
 /* Horizontal overflow is clipped on <html>, not on <body>.
  *
  * It used to be `overflow-x: hidden; overflow-y: auto` on <body>, which makes
