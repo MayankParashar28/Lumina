@@ -3,14 +3,18 @@
 
 <head>
     <%- include('./partials/header') %>
-    <link rel="stylesheet" href="/css/ml.css?v=1">
+    <link rel="stylesheet" href="/css/ml.css?v=2">
 </head>
 
 <body>
     <%- include('./partials/nav', { searchQuery: '' }) %>
 
     <main class="ml-page">
-        <nav class="ml-crumbs" aria-label="Breadcrumb"><a href="/topics">Topics</a> <span aria-hidden="true">/</span></nav>
+        <nav class="ml-crumbs" aria-label="Breadcrumb">
+            <a href="/topics">Topics</a>
+            <span aria-hidden="true">/</span>
+            <span aria-current="page"><%= topic.label %></span>
+        </nav>
         <header class="ml-page__head">
             <h1 class="ml-page__title">
                 <%= topic.label %>
@@ -26,7 +30,10 @@
         </header>
 
         <% if (!blogs.length) { %>
-            <div class="ml-empty"><p>No stories here yet.</p></div>
+            <div class="ml-empty">
+                <p><%= page > 1 ? 'There are no more stories in this topic.' : 'No stories here yet.' %></p>
+                <a class="ml-chip" href="<%= page > 1 ? '?page=1' : '/topics' %>"><%= page > 1 ? 'Back to the newest' : 'Browse all topics' %></a>
+            </div>
         <% } else { %>
             <ul class="ml-list">
                 <% blogs.forEach(function (b) { %>
@@ -41,17 +48,21 @@
                                 <% if (b.metaDescription) { %><span class="ml-list__desc"><%= b.metaDescription %></span><% } %>
                                 <span class="ml-list__meta">
                                     <% if (b.createdBy) { %><%= b.createdBy.fullName %> · <% } %>
-                                    <%= moment(b.createdAt).format('MMM D, YYYY') %> · <%= b.readTime || 1 %> min read
+                                    <span class="ml-nowrap"><%= moment(b.createdAt).format('MMM D, YYYY') %></span> · <span class="ml-nowrap"><%= b.readTime || 1 %> min read</span>
                                 </span>
                             </span>
                         </a>
                     </li>
                 <% }) %>
             </ul>
-            <nav class="ml-pager" aria-label="Pages">
-                <% if (page > 1) { %><a class="ml-chip" href="?page=<%= page - 1 %>">← Newer</a><% } %>
-                <% if (hasMore) { %><a class="ml-chip" href="?page=<%= page + 1 %>">Older →</a><% } %>
-            </nav>
+            <% const pageCount = Math.max(1, Math.ceil(total / pageSize)); %>
+            <% if (pageCount > 1) { %>
+                <nav class="ml-pager" aria-label="Pages">
+                    <% if (page > 1) { %><a class="ml-chip" href="?page=<%= page - 1 %>" rel="prev">← Newer</a><% } %>
+                    <span class="ml-pager__status">Page <%= page %> of <%= pageCount %></span>
+                    <% if (hasMore) { %><a class="ml-chip" href="?page=<%= page + 1 %>" rel="next">Older →</a><% } %>
+                </nav>
+            <% } %>
         <% } %>
     </main>
 

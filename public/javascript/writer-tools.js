@@ -88,6 +88,9 @@
     if (!drawer) buildDrawer();
     opener = btn || null;
     drawer.hidden = false;
+    // On wide screens the editor moves over to make room (writer-tools.css),
+    // so the drawer sits beside the story instead of on top of it.
+    document.body.classList.add("wa-open");
     if (opener) opener.setAttribute("aria-expanded", "true");
     refresh();
     drawer.querySelector(".wa-close").focus();
@@ -95,6 +98,7 @@
   function closeDrawer() {
     if (!drawer) return;
     drawer.hidden = true;
+    document.body.classList.remove("wa-open");
     if (opener) { opener.setAttribute("aria-expanded", "false"); opener.focus(); }
   }
 
@@ -113,6 +117,48 @@
     var num = el("span", "wa-meter__num", score + " · " + label);
     wrap.append(bar, num);
     return wrap;
+  }
+
+  // Selects a quoted phrase in the editor so the writer can fix it.
+  var squash = function (t) { return String(t || "").replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"').replace(/\s+/g, " ").toLowerCase(); };
+  function findInPost(quote) {
+    var q = quill();
+    if (!q || !quote) return false;
+    var text = q.getText();
+    var at = text.indexOf(quote);
+    var len = quote.length;
+    if (at < 0) {
+      // Same wording, different quotes, case or spacing: search a normalised
+      // copy, then map the hit back to editor positions character by character.
+      var needle = squash(quote).trim();
+      var map = [];
+      var flat = "";
+      for (var i = 0; i < text.length; i++) {
+        var ch = squash(text[i]);
+        if (ch === " " && flat.slice(-1) === " ") continue;
+        flat += ch;
+        map.push(i);
+      }
+      var hit = flat.indexOf(needle);
+      if (hit < 0) return false;
+      at = map[hit];
+      len = map[hit + needle.length - 1] - at + 1;
+    }
+    if (window.matchMedia("(max-width: 640px)").matches) closeDrawer();
+    q.setSelection(at, len, "user");
+    var bounds = q.getBounds(at, len);
+    var top = q.root.getBoundingClientRect().top + bounds.top;
+    window.scrollTo({ top: window.scrollY + top - window.innerHeight / 3, behavior: "smooth" });
+    return true;
+  }
+  function findButton(quote) {
+    var b = el("button", "wa-find");
+    b.type = "button";
+    b.innerHTML = '<i class="fas fa-location-crosshairs" aria-hidden="true"></i> Find in post';
+    b.addEventListener("click", function () {
+      if (!findInPost(quote)) toast("Couldn't find that wording. It may have changed since the review.");
+    });
+    return b;
   }
 
   function refresh() {
@@ -154,7 +200,10 @@
       a.issues.slice(0, 12).forEach(function (i) {
         var li = el("li", "wa-issue wa-issue--" + i.severity);
         li.appendChild(el("span", "wa-issue__msg", i.message));
-        if (i.quote) li.appendChild(el("span", "wa-issue__quote", "“" + i.quote + "”"));
+        if (i.quote) {
+          li.appendChild(el("span", "wa-issue__quote", "“" + i.quote + "”"));
+          li.appendChild(findButton(i.quote));
+        }
         parts.issues.appendChild(li);
       });
     }
@@ -184,12 +233,14 @@
       .then(function (d) {
         if (d.summary) parts.review.appendChild(el("p", "wa-summary", d.summary + (d.tone ? " Tone: " + d.tone + "." : "")));
         var ul = el("ul", "wa-issues");
+        d.issues = Array.isArray(d.issues) ? d.issues : [];
         if (!d.issues.length) ul.appendChild(el("li", "wa-ok", "No issues found."));
         d.issues.forEach(function (i) {
           var li = el("li", "wa-issue wa-issue--ai");
           li.appendChild(el("span", "wa-tag", i.type));
           li.appendChild(el("span", "wa-issue__quote", "“" + i.quote + "”"));
           li.appendChild(el("span", "wa-issue__msg", i.suggestion));
+          if (i.quote) li.appendChild(findButton(i.quote));
           ul.appendChild(li);
         });
         parts.review.appendChild(ul);
@@ -210,7 +261,7 @@
           copy: "Large parts of this match a post already on Lumina.",
         }[d.verdict];
         parts.orig.appendChild(el("p", "wa-verdict wa-verdict--" + d.verdict, text));
-        if (d.matches.length) {
+        if (Array.isArray(d.matches) && d.matches.length) {
           var ul = el("ul", "wa-matches");
           d.matches.forEach(function (m) {
             var li = el("li");

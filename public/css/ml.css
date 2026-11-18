@@ -1,6 +1,11 @@
 /* Styles for the ML features: topics, rising trends, live search, "for you" reasons. */
 
 .ml-page {
+    /* width: 100% matters: <body> is a flex column (global.css), and a flex
+       item with auto side margins shrinks to its content. Without it the
+       topics grid was 640px wide on a 1280px screen and every page came out
+       a different width depending on what was in it. */
+    width: 100%;
     max-width: 960px;
     margin: 8rem auto 4rem;
     padding: 0 16px;
@@ -35,7 +40,16 @@
     margin-bottom: 0.5rem;
 }
 
-.ml-crumbs a { color: inherit; }
+.ml-crumbs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.ml-crumbs a { color: inherit; text-decoration: none; }
+.ml-crumbs a:hover { color: var(--text-color); text-decoration: underline; }
+.ml-crumbs [aria-current] { color: #374151; font-weight: 600; }
 
 /* Chips */
 .ml-chips {
@@ -105,8 +119,13 @@
     padding: 1.1rem 1.15rem;
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.6rem;
+    min-width: 0;
+    transition: border-color 0.15s;
 }
+
+.ml-topic:hover { border-color: #9ca3af; }
+.ml-topic__link:focus-visible { outline: 2px solid #4f46e5; outline-offset: 2px; border-radius: 4px; }
 
 .ml-topic__link {
     display: flex;
@@ -128,7 +147,8 @@
     font-size: 0.88rem;
 }
 
-.ml-topic__samples li { padding: 0.2rem 0; }
+.ml-topic__samples li { padding: 0.25rem 0; border-top: 1px solid #f3f4f6; }
+.ml-topic__samples li:first-child { border-top: 0; }
 
 .ml-topic__samples a {
     color: inherit;
@@ -140,36 +160,64 @@
 }
 
 .ml-topic__samples a:hover { text-decoration: underline; }
-.ml-topic__meta { margin: auto 0 0; font-size: 0.78rem; color: #6b7280; }
+.ml-topic__meta { margin: auto 0 0; padding-top: 0.25rem; font-size: 0.78rem; color: #6b7280; }
 
 /* Post list (topic page) */
 .ml-list { list-style: none; margin: 0; padding: 0; }
 .ml-list__item { border-top: 1px solid var(--border-color); }
 
+/* Text first, thumbnail on the right: with the image on the left, posts with
+   and without a cover started their titles at different edges. */
 .ml-list__link {
     display: flex;
-    gap: 1rem;
-    padding: 1rem 0.25rem;
+    align-items: flex-start;
+    gap: 1.25rem;
+    padding: 1.25rem 0.25rem;
     color: inherit;
     text-decoration: none;
 }
 
+.ml-list__link:focus-visible { outline: 2px solid #4f46e5; outline-offset: 2px; border-radius: 8px; }
+
 .ml-list__link:hover .ml-list__title { text-decoration: underline; }
 
 .ml-list__img {
-    width: 120px;
-    height: 80px;
+    order: 2;
+    margin-left: auto;
+    width: 140px;
+    height: 94px;
     object-fit: cover;
     border-radius: 8px;
     flex-shrink: 0;
+    background: #f3f4f6;
 }
 
-.ml-list__text { display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; }
-.ml-list__title { font-weight: 700; font-size: 1.05rem; }
-.ml-list__desc { color: #4b5563; font-size: 0.9rem; }
-.ml-list__meta { color: #6b7280; font-size: 0.8rem; }
+.ml-list__text { display: flex; flex-direction: column; gap: 0.3rem; min-width: 0; flex: 1; }
+.ml-list__title { font-weight: 700; font-size: 1.1rem; line-height: 1.35; overflow-wrap: anywhere; }
 
-.ml-pager { display: flex; gap: 0.5rem; justify-content: center; margin-top: 1.5rem; }
+.ml-list__desc {
+    color: #4b5563;
+    font-size: 0.92rem;
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.ml-list__meta { color: #6b7280; font-size: 0.8rem; }
+.ml-nowrap { white-space: nowrap; }
+.ml-list__item:last-child { border-bottom: 1px solid var(--border-color); }
+
+.ml-pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    margin-top: 2rem;
+}
+
+.ml-pager__status { font-size: 0.85rem; color: #6b7280; }
 
 .ml-empty {
     text-align: center;
@@ -180,7 +228,9 @@
 .ml-empty i { font-size: 2rem; opacity: 0.35; margin-bottom: 1rem; }
 
 @media (max-width: 560px) {
-    .ml-list__img { width: 88px; height: 64px; }
+    .ml-list__link { gap: 0.9rem; }
+    .ml-list__img { width: 84px; height: 84px; }
+    .ml-list__title { font-size: 1rem; }
 }
 
 /* Home: "Rising this week" row */

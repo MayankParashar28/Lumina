@@ -72,6 +72,7 @@ router.get("/:slug", async (req, res, next) => {
       page,
       hasMore: page * PAGE_SIZE < total,
       total,
+      pageSize: PAGE_SIZE,
       moment,
       searchQuery: "",
     });
