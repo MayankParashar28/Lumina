@@ -113,6 +113,108 @@ router.post("/topics/rebuild", adminAuth, async (req, res) => {
     return res.redirect("/admin/moderation");
 });
 
+// 💸 Earn waitlist results: is there real interest in Creator Rewards?
+router.get("/earn", adminAuth, async (req, res) => {
+    try {
+        const { EarnWaitlist, EarnVisit } = require("../models/earnWaitlist");
+        const since = new Date(Date.now() - 30 * 864e5);
+        const sinceDay = since.toISOString().slice(0, 10);
+
+        const count = (field) => EarnWaitlist.aggregate([
+            { $match: { [`survey.${field}`]: { $ne: null } } },
+            { $group: { _id: `$survey.${field}`, n: { $sum: 1 } } },
+            { $sort: { n: -1 } },
+        ]);
+        const [
+            joins, visitTotals, visitsBySource, joinsBySource, writers, members, referred, answered,
+            motivation, frequency, invites, joinsByDay, visitsByDay, topInviters, recent,
+        ] = await Promise.all([
+            EarnWaitlist.countDocuments(),
+            EarnVisit.aggregate([{ $group: { _id: null, n: { $sum: "$visitors" } } }]),
+            EarnVisit.aggregate([{ $group: { _id: "$source", n: { $sum: "$visitors" } } }, { $sort: { n: -1 } }]),
+            EarnWaitlist.aggregate([{ $group: { _id: "$source", n: { $sum: 1 } } }, { $sort: { n: -1 } }]),
+            EarnWaitlist.countDocuments({ wasWriter: true }),
+            EarnWaitlist.countDocuments({ userId: { $type: "objectId" } }),
+            EarnWaitlist.countDocuments({ referredBy: { $ne: null } }),
+            EarnWaitlist.countDocuments({ "survey.answeredAt": { $exists: true } }),
+            count("motivation"),
+            count("frequency"),
+            count("invites"),
+            EarnWaitlist.aggregate([
+                { $match: { createdAt: { $gte: since } } },
+                { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } }, n: { $sum: 1 } } },
+            ]),
+            EarnVisit.aggregate([
+                { $match: { day: { $gte: sinceDay } } },
+                { $group: { _id: "$day", n: { $sum: "$visitors" } } },
+            ]),
+            EarnWaitlist.find({ referralCount: { $gt: 0 } }).sort({ referralCount: -1 }).limit(10).select("email name referralCount joinNumber").lean(),
+            EarnWaitlist.find().sort({ createdAt: -1 }).limit(50).lean(),
+        ]);
+
+        const visitors = visitTotals.length ? visitTotals[0].n : 0;
+        const joinsDay = new Map(joinsByDay.map((d) => [d._id, d.n]));
+        const visitsDay = new Map(visitsByDay.map((d) => [d._id, d.n]));
+        const days = [];
+        for (let i = 29; i >= 0; i--) {
+            const day = new Date(Date.now() - i * 864e5).toISOString().slice(0, 10);
+            days.push({ day, joins: joinsDay.get(day) || 0, visitors: visitsDay.get(day) || 0 });
+        }
+        const visitsBy = new Map(visitsBySource.map((v) => [v._id, v.n]));
+
+        res.render("admin/earn", {
+            user: req.user,
+            stats: {
+                visitors,
+                joins,
+                conversion: visitors ? Math.round((joins / visitors) * 1000) / 10 : null,
+                writers,
+                members,
+                referred,
+                answered,
+            },
+            sources: joinsBySource.map((j) => ({
+                source: j._id,
+                joins: j.n,
+                visitors: visitsBy.get(j._id) || 0,
+            })),
+            survey: { motivation, frequency, invites },
+            days,
+            maxDay: Math.max(1, ...days.map((d) => Math.max(d.joins, d.visitors))),
+            topInviters,
+            recent,
+        });
+    } catch (error) {
+        logger.error("Admin/Earn Error:", error);
+        res.status(500).render("error", { message: "Failed to load waitlist results" });
+    }
+});
+
+// The waitlist as CSV (for the launch email).
+router.get("/earn.csv", adminAuth, async (req, res) => {
+    try {
+        const { EarnWaitlist } = require("../models/earnWaitlist");
+        const rows = await EarnWaitlist.find().sort({ joinNumber: 1 }).lean();
+        const cell = (v) => {
+            const s = v == null ? "" : String(v);
+            // Quote, and stop spreadsheet formula injection (=, +, -, @).
+            return `"${(/^[=+\-@]/.test(s) ? "'" + s : s).replace(/"/g, '""')}"`;
+        };
+        const header = ["join_number", "email", "name", "source", "was_writer", "invited_by", "referrals", "motivation", "frequency", "invites", "joined_at"];
+        const lines = rows.map((r) => [
+            r.joinNumber, r.email, r.name, r.source, r.wasWriter, r.referredBy, r.referralCount,
+            r.survey && r.survey.motivation, r.survey && r.survey.frequency, r.survey && r.survey.invites,
+            new Date(r.createdAt).toISOString(),
+        ].map(cell).join(","));
+        res.set("Content-Type", "text/csv; charset=utf-8");
+        res.set("Content-Disposition", `attachment; filename="earn-waitlist-${new Date().toISOString().slice(0, 10)}.csv"`);
+        res.send([header.join(","), ...lines].join("\n"));
+    } catch (error) {
+        logger.error("Admin/Earn CSV Error:", error);
+        res.status(500).send("Export failed");
+    }
+});
+
 // 📊 Admin Dashboard
 router.get("/", async (req, res) => {
     try {

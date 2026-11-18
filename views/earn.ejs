@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <%- include('./partials/header') %>
+    <link rel="stylesheet" href="/css/earn.css?v=1">
+</head>
+
+<body>
+    <%- include('./partials/nav', { searchQuery: '' }) %>
+
+    <main class="earn">
+        <!-- Hero -->
+        <section class="earn-hero">
+            <p class="earn-kicker">Coming soon · Lumina Creator Rewards</p>
+            <h1 class="earn-title">Write. Share. Get rewarded.</h1>
+            <p class="earn-lead">
+                We're building a rewards program for the people who make Lumina worth reading.
+                Earn credits when readers finish your posts, when you bring friends, and when your writing gets featured.
+            </p>
+            <% if (!me) { %>
+                <a href="#join" class="earn-btn earn-btn--primary">Join the waitlist</a>
+                <% if (total) { %><p class="earn-count"><strong><%= total.toLocaleString('en-IN') %></strong> creators are already waiting</p><% } %>
+            <% } else { %>
+                <a href="#you" class="earn-btn earn-btn--primary">See your spot</a>
+            <% } %>
+        </section>
+
+        <!-- How it will work -->
+        <section class="earn-section" aria-labelledby="how-title">
+            <h2 class="earn-h2" id="how-title">How it will work</h2>
+            <ol class="earn-steps">
+                <li class="earn-step">
+                    <span class="earn-step__num">1</span>
+                    <h3>Write</h3>
+                    <p>Publish original stories. Quality counts more than quantity.</p>
+                </li>
+                <li class="earn-step">
+                    <span class="earn-step__num">2</span>
+                    <h3>Readers finish</h3>
+                    <p>Earn when real readers read your post to the end, come back, and follow you.</p>
+                </li>
+                <li class="earn-step">
+                    <span class="earn-step__num">3</span>
+                    <h3>Invite friends</h3>
+                    <p>Bring writers and readers to Lumina with your personal link.</p>
+                </li>
+                <li class="earn-step">
+                    <span class="earn-step__num">4</span>
+                    <h3>Get rewarded</h3>
+                    <p>Credits unlock badges, more reach, and rewards — details at launch.</p>
+                </li>
+            </ol>
+        </section>
+
+        <!-- Founding creators -->
+        <section class="earn-founding" aria-labelledby="founding-title">
+            <i class="fas fa-crown" aria-hidden="true"></i>
+            <div>
+                <h2 class="earn-h2" id="founding-title">Be a Founding Creator</h2>
+                <p>The first 100 creators on the list get a permanent <strong>Founding Creator</strong> badge and a head start when rewards launch.</p>
+            </div>
+        </section>
+
+        <!-- Join / your spot -->
+        <% if (!me) { %>
+            <section class="earn-card" id="join" aria-labelledby="join-title">
+                <h2 class="earn-h2" id="join-title">Join the waitlist</h2>
+                <% if (user) { %>
+                    <p class="earn-muted">One click — we'll use <strong><%= user.email %></strong>.</p>
+                    <form method="POST" action="/earn/join" class="earn-form">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                        <input type="hidden" name="src" value="direct" data-earn-src>
+                        <button type="submit" class="earn-btn earn-btn--primary">I'm interested</button>
+                    </form>
+                <% } else { %>
+                    <form method="POST" action="/earn/join" class="earn-form earn-form--email" novalidate>
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                        <input type="hidden" name="src" value="direct" data-earn-src>
+                        <label for="earn-email">Email</label>
+                        <div class="earn-form__row">
+                            <input id="earn-email" type="email" name="email" required autocomplete="email" placeholder="you@example.com">
+                            <button type="submit" class="earn-btn earn-btn--primary">I'm interested</button>
+                        </div>
+                        <p class="earn-muted earn-small">Or <a href="/user/signup">create an account</a> and start writing now.</p>
+                    </form>
+                <% } %>
+            </section>
+        <% } else { %>
+            <section class="earn-card earn-you" id="you" aria-labelledby="you-title">
+                <% if (justJoined) { %><p class="earn-success" role="status">You're on the list.</p><% } %>
+                <h2 class="earn-h2" id="you-title">You're #<%= me.spot %> in line</h2>
+                <% if (me.founding) { %>
+                    <p class="earn-badge"><i class="fas fa-crown" aria-hidden="true"></i> Founding Creator — you were one of the first 100</p>
+                <% } %>
+                <p class="earn-muted">
+                    Every friend who joins with your link moves you up <%= spotsPerInvite %> spots.
+                    <% if (me.referralCount) { %><strong><%= me.referralCount %></strong> joined through you so far.<% } %>
+                </p>
+                <div class="earn-invite">
+                    <label for="earn-invite-url">Your invite link</label>
+                    <div class="earn-form__row">
+                        <input id="earn-invite-url" type="text" readonly value="<%= me.inviteUrl %>">
+                        <button type="button" class="earn-btn" data-copy-target="#earn-invite-url">
+                            <i class="far fa-copy" aria-hidden="true"></i> Copy
+                        </button>
+                        <button type="button" class="earn-btn" data-share data-share-title="Creator Rewards are coming to Lumina — join me" data-share-url="<%= me.inviteUrl %>">
+                            <i class="fas fa-share-nodes" aria-hidden="true"></i> Share
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <% if (!me.answered && !surveyDone) { %>
+                <section class="earn-card" id="survey" aria-labelledby="survey-title">
+                    <h2 class="earn-h2" id="survey-title">Help us shape it <span class="earn-muted earn-small">· 3 quick questions</span></h2>
+                    <form method="POST" action="/earn/survey" class="earn-survey">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+                        <fieldset>
+                            <legend>What would motivate you most?</legend>
+                            <% [['money', 'Earning money'], ['readers', 'Getting more readers'], ['recognition', 'Recognition and badges'], ['learning', 'Getting better at writing']].forEach(function (o) { %>
+                                <label class="earn-choice"><input type="radio" name="motivation" value="<%= o[0] %>"> <%= o[1] %></label>
+                            <% }) %>
+                        </fieldset>
+
+                        <fieldset>
+                            <legend>How often would you write?</legend>
+                            <% [['weekly', 'Every week'], ['monthly', 'A few times a month'], ['occasionally', 'Now and then']].forEach(function (o) { %>
+                                <label class="earn-choice"><input type="radio" name="frequency" value="<%= o[0] %>"> <%= o[1] %></label>
+                            <% }) %>
+                        </fieldset>
+
+                        <fieldset>
+                            <legend>How many friends might you invite?</legend>
+                            <% [['0', 'None'], ['1-5', '1 to 5'], ['5+', 'More than 5']].forEach(function (o) { %>
+                                <label class="earn-choice"><input type="radio" name="invites" value="<%= o[0] %>"> <%= o[1] %></label>
+                            <% }) %>
+                        </fieldset>
+
+                        <button type="submit" class="earn-btn earn-btn--primary">Send answers</button>
+                    </form>
+                </section>
+            <% } else if (surveyDone) { %>
+                <p class="earn-success earn-center" role="status">Thanks — that really helps.</p>
+            <% } %>
+        <% } %>
+
+        <!-- FAQ -->
+        <section class="earn-section" aria-labelledby="faq-title">
+            <h2 class="earn-h2" id="faq-title">Questions</h2>
+            <details class="earn-faq">
+                <summary>Is this real money?</summary>
+                <p>Rewards may include credits, perks like badges and more reach, and future cash rewards. We'll publish the full details — including any cash value — before launch. Nothing is promised yet: this waitlist helps us decide what to build.</p>
+            </details>
+            <details class="earn-faq">
+                <summary>Who can join?</summary>
+                <p>Anyone. You don't need to have written anything yet — but writers who are already publishing will be first in line to try it.</p>
+            </details>
+            <details class="earn-faq">
+                <summary>How will you stop people from gaming it?</summary>
+                <p>Rewards will count real readers only — verified accounts reading to the end — and copied or spammy posts won't earn anything.</p>
+            </details>
+            <details class="earn-faq">
+                <summary>Will you email me?</summary>
+                <p>Only about Creator Rewards — once when it launches, and maybe once before to ask what you think.</p>
+            </details>
+        </section>
+    </main>
+
+    <%- include('./partials/footer') %>
+    <script defer src="/javascript/earn.js?v=1"></script>
+</body>
+
+</html>

@@ -112,6 +112,15 @@
        data-url="<%= locals.shareUrl %>"
        data-title="<%= blog.title %>"></div>
 <% } %>
+<% if (locals.justPublished) { %>
+  <!-- Right after publishing: the moment a writer is most likely to care. -->
+  <link rel="stylesheet" href="/css/earn.css?v=1">
+  <div class="earn-banner" style="max-width: 900px; margin: 6.5rem auto -5rem; position: relative; z-index: 5;">
+    <i class="fas fa-gift" aria-hidden="true"></i>
+    <span>Nice work. Creator Rewards are coming — writers may soon earn for posts like this one.</span>
+    <a class="earn-banner__cta" href="/earn?src=publish">Join the waitlist</a>
+  </div>
+<% } %>
     <%- include('./partials/nav', { searchQuery: searchQuery || '' }) %>
 
         <div id="progress-container">

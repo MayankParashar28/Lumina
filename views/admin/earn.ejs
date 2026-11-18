@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <%- include('../partials/header') %>
+    <style>
+        .ew-stat { background: #fff; border-radius: 14px; padding: 1rem 1.25rem; box-shadow: 0 2px 10px rgba(0,0,0,0.04); height: 100%; }
+        .ew-stat dt { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; font-weight: 600; }
+        .ew-stat dd { font-size: 1.6rem; font-weight: 800; margin: 0.15rem 0 0; }
+        .ew-stat small { color: #6b7280; font-size: 0.8rem; }
+        .ew-bars { display: grid; grid-template-columns: repeat(30, 1fr); gap: 3px; align-items: end; height: 140px; }
+        .ew-bar { position: relative; display: flex; flex-direction: column; justify-content: flex-end; height: 100%; }
+        .ew-bar__v { background: #d1fae5; border-radius: 3px 3px 0 0; }
+        .ew-bar__j { background: #059669; border-radius: 3px 3px 0 0; position: absolute; bottom: 0; left: 25%; right: 25%; }
+        .ew-legend span { display: inline-flex; align-items: center; gap: 0.35rem; margin-right: 1rem; font-size: 0.8rem; color: #4b5563; }
+        .ew-legend i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+        .ew-meter { height: 8px; border-radius: 999px; background: #f3f4f6; overflow: hidden; }
+        .ew-meter > div { height: 100%; background: #111827; }
+        .ew-verdict { border-radius: 14px; padding: 1rem 1.25rem; }
+    </style>
+</head>
+
+<body class="bg-light">
+    <%- include('../partials/nav', { searchQuery: '' }) %>
+
+    <div class="container py-5" style="margin-top: 60px;">
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+            <h1 class="h3 fw-bold mb-0">Earn waitlist</h1>
+            <div class="d-flex gap-2">
+                <a href="/earn" class="btn btn-outline-secondary btn-sm" target="_blank" rel="noopener">View page</a>
+                <a href="/admin/earn.csv" class="btn btn-dark btn-sm"><i class="fas fa-download me-1" aria-hidden="true"></i> Export CSV</a>
+                <a href="/admin" class="btn btn-outline-secondary btn-sm">Back to Dashboard</a>
+            </div>
+        </div>
+
+        <!-- Headline numbers -->
+        <dl class="row g-3 mb-4">
+            <div class="col-6 col-lg-3"><div class="ew-stat"><dt>Visitors</dt><dd><%= stats.visitors %></dd><small>unique per day</small></div></div>
+            <div class="col-6 col-lg-3"><div class="ew-stat"><dt>Joined</dt><dd><%= stats.joins %></dd><small><%= stats.members %> members · <%= stats.joins - stats.members %> by email</small></div></div>
+            <div class="col-6 col-lg-3"><div class="ew-stat"><dt>Conversion</dt><dd><%= stats.conversion == null ? '—' : stats.conversion + '%' %></dd><small>visitors who joined</small></div></div>
+            <div class="col-6 col-lg-3"><div class="ew-stat"><dt>Joined via invites</dt><dd><%= stats.referred %></dd><small><%= stats.writers %> were already writers</small></div></div>
+        </dl>
+
+        <!-- Plain-language reading of the numbers -->
+        <% const conv = stats.conversion; const enough = stats.visitors >= 100; %>
+        <div class="ew-verdict mb-4 <%= !enough ? 'bg-white' : conv >= 20 ? 'bg-success-subtle' : conv >= 8 ? 'bg-warning-subtle' : 'bg-danger-subtle' %>">
+            <% if (!enough) { %>
+                <strong>Too early to tell.</strong> Wait for at least 100 visitors (now <%= stats.visitors %>) before judging interest.
+            <% } else if (conv >= 20) { %>
+                <strong>Strong interest.</strong> <%= conv %>% of visitors joined. Worth building the rewards program.
+            <% } else if (conv >= 8) { %>
+                <strong>Some interest.</strong> <%= conv %>% joined. Check what motivates them below before deciding what to build.
+            <% } else { %>
+                <strong>Low interest so far.</strong> Only <%= conv %>% joined. Try better placement or wording before investing more.
+            <% } %>
+        </div>
+
+        <!-- Daily chart -->
+        <section class="card border-0 shadow-sm rounded-4 mb-4">
+            <div class="card-body">
+                <h2 class="h6 fw-bold">Last 30 days</h2>
+                <p class="ew-legend mb-2"><span><i style="background:#d1fae5"></i> Visitors</span><span><i style="background:#059669"></i> Joined</span></p>
+                <div class="ew-bars" role="img" aria-label="Visitors and joins per day for the last 30 days">
+                    <% days.forEach(function (d) { %>
+                        <div class="ew-bar" title="<%= d.day %>: <%= d.visitors %> visitors, <%= d.joins %> joined">
+                            <div class="ew-bar__v" style="height: <%= Math.round((d.visitors / maxDay) * 100) %>%"></div>
+                            <div class="ew-bar__j" style="height: <%= Math.round((d.joins / maxDay) * 100) %>%"></div>
+                        </div>
+                    <% }) %>
+                </div>
+            </div>
+        </section>
+
+        <div class="row g-4 mb-4">
+            <!-- Where they came from -->
+            <div class="col-lg-6">
+                <section class="card border-0 shadow-sm rounded-4 h-100">
+                    <div class="card-body">
+                        <h2 class="h6 fw-bold">Where joins came from</h2>
+                        <% if (!sources.length) { %><p class="text-muted mb-0">No joins yet.</p><% } %>
+                        <table class="table table-sm mb-0">
+                            <% if (sources.length) { %><thead class="small text-muted"><tr><th>Entry point</th><th class="text-end">Visitors</th><th class="text-end">Joined</th><th class="text-end">Rate</th></tr></thead><% } %>
+                            <tbody>
+                                <% sources.forEach(function (s) { %>
+                                    <tr>
+                                        <td><%= ({ nav: 'Nav link', home: 'Home banner', publish: 'After publishing', ref: 'Invite link', email: 'Email', editor: 'Editor', direct: 'Direct / other' })[s.source] || s.source %></td>
+                                        <td class="text-end"><%= s.visitors %></td>
+                                        <td class="text-end"><%= s.joins %></td>
+                                        <td class="text-end"><%= s.visitors ? Math.round((s.joins / s.visitors) * 100) + '%' : '—' %></td>
+                                    </tr>
+                                <% }) %>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Survey -->
+            <div class="col-lg-6">
+                <section class="card border-0 shadow-sm rounded-4 h-100">
+                    <div class="card-body">
+                        <h2 class="h6 fw-bold">What they told us <span class="text-muted fw-normal small">(<%= stats.answered %> answered)</span></h2>
+                        <% const labels = {
+                            money: 'Earning money', readers: 'More readers', recognition: 'Recognition & badges', learning: 'Writing better',
+                            weekly: 'Every week', monthly: 'A few times a month', occasionally: 'Now and then',
+                            '0': 'None', '1-5': '1 to 5', '5+': 'More than 5' };
+                           const blocks = [['Motivation', survey.motivation], ['Would write', survey.frequency], ['Would invite', survey.invites]]; %>
+                        <% blocks.forEach(function (b) { const total = b[1].reduce(function (a, x) { return a + x.n; }, 0); %>
+                            <p class="small fw-bold mb-1 mt-3"><%= b[0] %></p>
+                            <% if (!total) { %><p class="small text-muted mb-0">No answers yet.</p><% } %>
+                            <% b[1].forEach(function (x) { const pct = Math.round((x.n / total) * 100); %>
+                                <div class="d-flex align-items-center gap-2 small mb-1">
+                                    <span style="width: 9.5rem"><%= labels[x._id] || x._id %></span>
+                                    <div class="ew-meter flex-grow-1"><div style="width: <%= pct %>%"></div></div>
+                                    <span class="text-muted" style="width: 4.5rem; text-align: right"><%= pct %>% (<%= x.n %>)</span>
+                                </div>
+                            <% }) %>
+                        <% }) %>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-lg-4">
+                <section class="card border-0 shadow-sm rounded-4 h-100">
+                    <div class="card-body">
+                        <h2 class="h6 fw-bold">Top inviters</h2>
+                        <% if (!topInviters.length) { %><p class="text-muted mb-0">Nobody has invited anyone yet.</p><% } %>
+                        <ol class="mb-0 ps-3">
+                            <% topInviters.forEach(function (t) { %>
+                                <li class="small"><%= t.name || t.email %> — <strong><%= t.referralCount %></strong></li>
+                            <% }) %>
+                        </ol>
+                    </div>
+                </section>
+            </div>
+            <div class="col-lg-8">
+                <section class="card border-0 shadow-sm rounded-4">
+                    <div class="card-body">
+                        <h2 class="h6 fw-bold">Latest joins</h2>
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle mb-0">
+                                <thead class="small text-muted"><tr><th>#</th><th>Who</th><th>From</th><th>Writer</th><th>Motivation</th><th>When</th></tr></thead>
+                                <tbody>
+                                    <% if (!recent.length) { %><tr><td colspan="6" class="text-muted">No one yet.</td></tr><% } %>
+                                    <% recent.forEach(function (r) { %>
+                                        <tr class="small">
+                                            <td><%= r.joinNumber %></td>
+                                            <td><%= r.name || r.email %></td>
+                                            <td><%= r.source %><%= r.referredBy ? ' (invited)' : '' %></td>
+                                            <td><%= r.wasWriter ? 'Yes' : '—' %></td>
+                                            <td><%= (r.survey && r.survey.motivation) || '—' %></td>
+                                            <td class="text-muted"><%= new Date(r.createdAt).toLocaleDateString() %></td>
+                                        </tr>
+                                    <% }) %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <%- include('../partials/footer') %>
+</body>
+
+</html>
