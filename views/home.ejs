@@ -56,29 +56,28 @@
                     <% }) %>
                 </div>
             <% } %>
+            <!-- Creator Rewards waitlist (dismissible; remembered in this browser) -->
+            <div class="earn-banner" id="earn-banner" hidden>
+                <i class="fas fa-gift" aria-hidden="true"></i>
+                <span>Creator Rewards are coming — earn for writing and inviting friends.</span>
+                <a class="earn-banner__cta" href="/earn?src=home">Join the waitlist</a>
+                <button type="button" class="earn-banner__close" aria-label="Dismiss" title="Dismiss" data-earn-dismiss>
+                    <i class="fas fa-xmark" aria-hidden="true"></i>
+                </button>
+            </div>
+            <script nonce="<%= cspNonce %>">
+                (function () {
+                    var b = document.getElementById('earn-banner');
+                    var KEY = 'lumina:earn-banner-dismissed';
+                    try { if (localStorage.getItem(KEY)) return; } catch (e) {}
+                    b.hidden = false;
+                    b.querySelector('[data-earn-dismiss]').addEventListener('click', function () {
+                        b.hidden = true;
+                        try { localStorage.setItem(KEY, '1'); } catch (e) {}
+                    });
+                })();
+            </script>
         </div>
-
-        <!-- Creator Rewards waitlist (dismissible; remembered in this browser) -->
-        <div class="earn-banner" id="earn-banner" hidden>
-            <i class="fas fa-gift" aria-hidden="true"></i>
-            <span>Creator Rewards are coming — earn for writing and inviting friends.</span>
-            <a class="earn-banner__cta" href="/earn?src=home">Join the waitlist</a>
-            <button type="button" class="earn-banner__close" aria-label="Dismiss" title="Dismiss" data-earn-dismiss>
-                <i class="fas fa-xmark" aria-hidden="true"></i>
-            </button>
-        </div>
-        <script nonce="<%= cspNonce %>">
-            (function () {
-                var b = document.getElementById('earn-banner');
-                var KEY = 'lumina:earn-banner-dismissed';
-                try { if (localStorage.getItem(KEY)) return; } catch (e) {}
-                b.hidden = false;
-                b.querySelector('[data-earn-dismiss]').addEventListener('click', function () {
-                    b.hidden = true;
-                    try { localStorage.setItem(KEY, '1'); } catch (e) {}
-                });
-            })();
-        </script>
 
         <div class="feed-divider"></div>
 

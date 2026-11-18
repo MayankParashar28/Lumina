@@ -64,6 +64,35 @@ test("a visitor joins by email, gets a spot and an invite link, and can answer t
   assert.equal(await EarnWaitlist.countDocuments({ email: "visitorone@gmail.com" }), 1, "one spot per inbox");
 });
 
+test("typing someone else's email never reveals their spot or lets you change their answers", async () => {
+  const { agent: owner, token: to } = await agentWithCsrf();
+  await owner.post("/earn/join").type("form").send({ _csrf: to, email: "owner@example.com" });
+  const entry = await EarnWaitlist.findOne({ email: "owner@example.com" }).lean();
+
+  const { agent: stranger, token: ts } = await agentWithCsrf();
+  const res = await stranger.post("/earn/join").type("form").send({ _csrf: ts, email: "owner@example.com" });
+  assert.equal(res.status, 302);
+  assert.ok(!(res.headers["set-cookie"] || []).some((c) => c.startsWith("earn_token=")), "no cookie for someone else's entry");
+
+  const page = await stranger.get("/earn");
+  assert.ok(!page.text.includes(entry.refCode), "their invite link isn't shown");
+  assert.doesNotMatch(page.text, /You're #\d+ in line/);
+
+  await stranger.post("/earn/survey").type("form").send({ _csrf: ts, motivation: "money" });
+  const after = await EarnWaitlist.findById(entry._id).lean();
+  assert.notEqual(after.survey && after.survey.motivation, "money");
+});
+
+test("an email-only entry is linked to the account when its owner signs in", async () => {
+  const { agent, token } = await agentWithCsrf();
+  const member = await makeUser();
+  await agent.post("/earn/join").type("form").send({ _csrf: token, email: member.email });
+  const page = await request(ctx.app).get("/earn").set("Cookie", authCookie(member));
+  assert.match(page.text, /You're #\d+ in line/);
+  const entry = await EarnWaitlist.findOne({ email: member.email.toLowerCase() }).lean();
+  assert.equal(String(entry.userId), String(member._id));
+});
+
 test("throwaway and invalid emails can't join", async () => {
   const { agent, token } = await agentWithCsrf();
   await agent.post("/earn/join").type("form").send({ _csrf: token, email: "x@mailinator.com" });

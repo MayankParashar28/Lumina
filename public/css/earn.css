@@ -224,6 +224,15 @@
 
 .earn-banner[hidden] { display: none; }
 
+/* On the post page right after publishing, above the post header. */
+.earn-banner--publish {
+    width: min(900px, calc(100% - 32px));
+    margin: 6.5rem auto -5rem;
+    position: relative;
+    z-index: 5;
+    box-sizing: border-box;
+}
+
 .earn-banner a.earn-banner__cta { font-weight: 700; color: #065f46; }
 .earn-banner__close {
     margin-left: auto;
@@ -242,4 +251,11 @@
     .earn { margin-top: 6rem; }
     .earn-card { padding: 1.25rem; }
     .earn-form__row .earn-btn { flex: 1 1 auto; }
+}
+
+/* In the home feed header (a wrapping flex row): a full line of its own. */
+.feed-hero .earn-banner,
+.feed-hero .feed-rising {
+    flex: 1 0 100%;
+    box-sizing: border-box;
 }
