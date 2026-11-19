@@ -29,6 +29,7 @@ const { sanitizePostBody } = require("../utils/sanitize");
 const { cleanTags } = require("../services/ml/tagger");
 const { hybridSearch } = require("../services/ml/search");
 const { assessComment, logDecision } = require("../services/ml/moderation");
+const { bust: bustUnlocks } = require("../services/unlocks");
 const { isObjectIdParam, isSlugParam } = require("../utils/slug");
 
 const router = Router();
@@ -1370,6 +1371,7 @@ router.post("/edit/:id", upload.single("coverImage"), async (req, res) => {
 
     // Edited content is cached under its page (and may show on the landing) — drop both.
     pageCache.bustBlog(blog._id.toString(), blog.slug);
+    bustUnlocks(blog.createdBy); // posts/drafts changed: re-check unlocks now
 
     if (wentLive) {
       // Only now that the post is actually saved and live. Same job, and so the
@@ -1433,6 +1435,7 @@ router.post("/publish/:id", async (req, res) => {
     await blog.save();
 
     pageCache.bustBlog(blog._id.toString(), blog.slug);
+    bustUnlocks(blog.createdBy); // posts/drafts changed: re-check unlocks now
 
     // Only after the save: a failed write must not leave followers with a
     // notification pointing at a post that never went live.
@@ -1656,6 +1659,7 @@ router.post("/", blogLimiter, upload.single("coverImage"), async (req, res) => {
     // A new post changes the landing feed — drop the cached landing page.
     // Both keys: the post is reachable at its slug and at its ObjectId.
     pageCache.bustBlog(blog._id.toString(), blog.slug);
+    bustUnlocks(blog.createdBy); // posts/drafts changed: re-check unlocks now
 
     // ⚡ Phase-4: embedding generation runs as a background job (off the request
     // path, retried, rate-limit-friendly) instead of a fire-and-forget promise.

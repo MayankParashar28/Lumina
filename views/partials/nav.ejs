@@ -85,15 +85,48 @@
             </div>
             <% if (locals.user.role==='ADMIN' ) { %>
               <a href="/admin" class="dropdown-item fw-bold text-primary">Admin Panel</a>
-              <% } %>
-                <a href="/blog/drafts" class="dropdown-item">My Drafts</a>
-                <a href="/user/newsletter" class="dropdown-item">Email Followers</a>
-                <a href="/user/reading-history" class="dropdown-item">Recently Read</a>
-                <a href="/highlights" class="dropdown-item">Highlights</a>
-                <a href="/user/vibe" class="dropdown-item">Your Vibe</a>
-                <a href="/user/analytics" class="dropdown-item">Analytics</a>
-                <a href="/user/profile" class="dropdown-item">Profile</a>
-                <a href="/user/logout" class="dropdown-item danger">Log Out</a>
+            <% } %>
+            <%
+              // 🔓 Items appear once they're useful or earned (services/unlockRules.js).
+              const U = locals.unlocks || { has: () => true, isNew: () => false, next: [], checklist: [] };
+              const item = (key, href, label) => ({ key, href, label, show: !key || U.has(key), fresh: key && U.isNew(key) });
+              const groups = [
+                ['Write', [item(null, '/blog/add-new', 'Write a story'), item('drafts', '/blog/drafts', 'My Drafts'),
+                           item('analytics', '/user/analytics', 'Analytics'), item('newsletter', '/user/newsletter', 'Email Followers')]],
+                ['Read', [item(null, '/user/bookmarks', 'Bookmarks'), item('highlights', '/highlights', 'Highlights'),
+                          item('history', '/user/reading-history', 'Recently Read'), item('vibe', '/user/vibe', 'Your Vibe')]],
+                ['Account', [item(null, '/user/profile', 'Profile'), item(null, '/user/email-preferences', 'Email settings')]],
+              ];
+            %>
+            <% if (U.checklist.length) { %>
+              <div class="um-start">
+                <p class="um-start__title">Getting started</p>
+                <% U.checklist.forEach(function (c) { %>
+                  <a href="<%= c.href %>" class="um-start__item <%= c.done ? 'is-done' : '' %>">
+                    <i class="fas <%= c.done ? 'fa-circle-check' : 'fa-circle' %>" aria-hidden="true"></i>
+                    <span><%= c.label %></span><% if (c.done) { %><span class="visually-hidden"> (done)</span><% } %>
+                  </a>
+                <% }) %>
+              </div>
+            <% } %>
+            <% groups.forEach(function (g) { const shown = g[1].filter(i => i.show); if (!shown.length) return; %>
+              <p class="um-group"><%= g[0] %></p>
+              <% shown.forEach(function (i) { %>
+                <a href="<%= i.href %>" class="dropdown-item"><%= i.label %><% if (i.fresh) { %> <span class="um-new">New</span><% } %></a>
+              <% }) %>
+            <% }) %>
+            <% if (U.next.length) { %>
+              <p class="um-group">Unlock more <a class="um-all" href="/user/unlocks">See all</a></p>
+              <% U.next.forEach(function (n) { %>
+                <a href="/user/unlocks#<%= n.key %>" class="um-lock" title="<%= n.pitch || '' %>">
+                  <span class="um-lock__top"><i class="fas fa-lock" aria-hidden="true"></i> <%= n.label %></span>
+                  <span class="um-lock__hint"><%= n.hint.charAt(0).toUpperCase() + n.hint.slice(1) %></span>
+                  <span class="um-lock__bar" aria-hidden="true"><span style="width: <%= n.progress %>%"></span></span>
+                </a>
+              <% }) %>
+            <% } %>
+            <div class="um-sep"></div>
+            <a href="/user/logout" class="dropdown-item danger">Log Out</a>
           </div>
         </div>
 

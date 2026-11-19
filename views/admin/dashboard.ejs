@@ -448,8 +448,16 @@
                                                 <%= new Date(u.createdAt).toLocaleDateString() %>
                                             </td>
                                             <td data-label="Actions">
-                                                <% if (u.role !=='ADMIN' ) { %>
-                                                    <form action="/admin/user/delete/<%= u._id %>" method="POST"
+                                                <% if (u.role !=='ADMIN' ) { const granted = u.featureGrants && u.featureGrants.length; %>
+                                                    <form action="/admin/user/unlocks/<%= u._id %>" method="POST" class="d-inline me-2"
+                                                        data-confirm="<%= granted ? 'Remove the features you granted to this member?' : 'Unlock every feature for this member?' %>">
+                                                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                                        <button class="btn btn-link p-0 border-0 small <%= granted ? 'text-success' : 'text-secondary' %>"
+                                                            title="<%= granted ? 'All features granted — click to remove' : 'Unlock all features' %>"
+                                                            aria-label="<%= granted ? 'Remove granted features' : 'Unlock all features' %>">
+                                                            <i class="fas <%= granted ? 'fa-lock-open' : 'fa-lock' %>" aria-hidden="true"></i></button>
+                                                    </form>
+                                                    <form action="/admin/user/delete/<%= u._id %>" method="POST" class="d-inline"
                                                         data-confirm="Delete this user permanently?">
                                                         <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                                                         <button class="btn btn-link text-danger p-0 border-0 small"><i

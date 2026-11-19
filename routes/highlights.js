@@ -114,6 +114,7 @@ router.post("/", async (req, res) => {
       suffix: str(req.body.suffix, 64),
       note: str(req.body.note, 2000).trim(),
     });
+    require("../services/unlocks").bust(req.user._id); // "Highlights" can appear in the menu now
     res.status(201).json({ success: true, highlight: toJson(h) });
   } catch (err) {
     logger.error("❌ Create highlight error:", err);

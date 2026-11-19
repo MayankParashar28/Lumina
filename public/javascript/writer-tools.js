@@ -76,6 +76,16 @@
     drawer.querySelector(".wa-close").addEventListener("click", closeDrawer);
     drawer.querySelector('[data-wa="review"]').addEventListener("click", runReview);
     drawer.querySelector('[data-wa="originality"]').addEventListener("click", runOriginality);
+    // Locked until AI helpers are unlocked: say what unlocks them instead.
+    if (cfg.dataset.aiLocked) {
+      ["review", "originality"].forEach(function (k) {
+        var btn = drawer.querySelector('[data-wa="' + k + '"]');
+        var note = el("p", "wa-note wa-locked");
+        note.innerHTML = '<i class="fas fa-lock" aria-hidden="true"></i> ';
+        note.appendChild(document.createTextNode(cfg.dataset.aiLocked));
+        btn.replaceWith(note);
+      });
+    }
     // On the document, not the drawer: a button that disables itself while
     // working drops focus out of the drawer, and Escape must still close it.
     document.addEventListener("keydown", function (e) {
@@ -377,6 +387,12 @@
     var box = el("div", "wa-best");
     box.appendChild(el("div", "wa-best__title", "Best times for your readers"));
     var list = el("div", "wa-best__list");
+    if (cfg.dataset.bestTimeLocked) {
+      list.appendChild(el("span", "wa-note", cfg.dataset.bestTimeLocked));
+      box.appendChild(list);
+      schedulePanel.appendChild(box);
+      return;
+    }
     list.appendChild(el("span", "wa-note", "Working it out…"));
     box.appendChild(list);
     schedulePanel.appendChild(box);

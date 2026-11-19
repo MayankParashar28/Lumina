@@ -179,10 +179,15 @@ test("For you recommends what's close to what the reader engaged with, with a re
 
 // --- writer tools --------------------------------------------------------------
 
-test("writer tools need a sign-in and work without an AI key", async () => {
-  const writer = await makeUser();
+test("writer tools need a sign-in, are locked for new writers, and work without an AI key", async () => {
+  const newbie = await makeUser();
   assert.equal((await as(null, "get", "/writer/best-time?tz=-330")).status, 401);
+  const locked = await as(newbie, "get", "/writer/best-time?tz=-330");
+  assert.equal(locked.status, 403);
+  assert.equal(locked.body.locked, true);
+  assert.equal((await as(newbie, "post", "/writer/review", { title: "x", body: "y" })).status, 403);
 
+  const writer = await makeUser({ featureGrants: ["bestTime", "ai"] });
   const best = await as(writer, "get", "/writer/best-time?tz=-330");
   assert.equal(best.status, 200);
   assert.ok(["audience", "site", "none"].includes(best.body.source));

@@ -64,8 +64,24 @@
     if (el) el.dispatchEvent(new Event(type || "input", { bubbles: true }));
   }
 
-  function guard(fn) {
+  // AI helpers that cost money per call unlock after a verified email and a
+  // first post (services/unlockRules.js). The server enforces it; this just
+  // says why up front instead of after a round trip.
+  var aiLocked = cfg && cfg.dataset.aiLocked;
+  if (aiLocked) {
+    ["generateTitles", "generateWithAI"].forEach(function (action) {
+      var btn = buttonFor(action);
+      if (!btn) return;
+      btn.classList.add("is-locked");
+      btn.setAttribute("aria-disabled", "true");
+      btn.title = aiLocked;
+      btn.insertAdjacentHTML("afterbegin", '<i class="fas fa-lock" aria-hidden="true"></i> ');
+    });
+  }
+
+  function guard(fn, needsUnlock) {
     return function () {
+      if (needsUnlock && aiLocked) { toast(aiLocked); return; }
       if (working) { toast("One moment, the AI is still working on your last request."); return; }
       working = true;
       return Promise.resolve()
@@ -125,7 +141,7 @@
         box.appendChild(dismiss);
       })
       .finally(function () { setBusy(btn, false); });
-  });
+  }, true); // needs AI unlocked
 
   // ---------------------------------------------------------------------
   // Continue writing
@@ -178,7 +194,7 @@
         });
       })
       .finally(function () { setBusy(btn, false); });
-  });
+  }, true); // needs AI unlocked
 
   // ---------------------------------------------------------------------
   // AI cover image

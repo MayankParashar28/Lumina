@@ -561,6 +561,10 @@ app.use((req, res, next) => {
   next();
 });
 
+// 🔓 Which features this member has unlocked (services/unlocks.js): drives the
+// profile menu, and route guards read req.unlocks. Signed-in requests only.
+app.use(require("./services/unlocks").attach);
+
 
 
 app.get('/user/edit-profile', (req, res) => {

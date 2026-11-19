@@ -19,6 +19,7 @@ const { voteFromNeighbours, cleanTags, tagKey } = require("../services/ml/tagger
 const { stripHtml, shingles, containment } = require("../services/ml/text");
 const { bestPublishTimes } = require("../services/ml/bestTime");
 const { getTaxonomy } = require("../services/taxonomy");
+const { requireFeature } = require("../services/unlocks");
 
 const router = express.Router();
 const OBJECT_ID = /^[a-f\d]{24}$/i;
@@ -68,7 +69,8 @@ router.post("/suggest-tags", perUser(12, "rl:writer-tags:"), async (req, res) =>
 
     // 2) AI, told to prefer the site's existing categories and tags.
     let ai = null;
-    if (aiEnabled()) {
+    // The AI half only once AI helpers are unlocked; similar posts always vote.
+    if (aiEnabled() && (!req.unlocks || req.unlocks.has("ai"))) {
       ai = await generateJson(
         "You tag blog posts. Choose ONE category from this list (exact spelling): " +
           JSON.stringify(categories.slice(0, 40)) +
@@ -108,7 +110,7 @@ router.post("/suggest-tags", perUser(12, "rl:writer-tags:"), async (req, res) =>
 // ---------------------------------------------------------------------------
 // AI writing review
 // ---------------------------------------------------------------------------
-router.post("/review", perUser(4, "rl:writer-review:"), async (req, res) => {
+router.post("/review", requireFeature("ai"), perUser(4, "rl:writer-review:"), async (req, res) => {
   if (!aiEnabled()) return res.status(503).json({ error: "AI review isn't configured on this site." });
   const { title, plain } = draftText(req);
   if (plain.split(/\s+/).length < 40) return res.status(400).json({ error: "Write at least a paragraph or two first." });
@@ -150,7 +152,7 @@ router.post("/review", perUser(4, "rl:writer-review:"), async (req, res) => {
 // ---------------------------------------------------------------------------
 // Originality
 // ---------------------------------------------------------------------------
-router.post("/originality", perUser(10, "rl:writer-orig:"), async (req, res) => {
+router.post("/originality", requireFeature("ai"), perUser(10, "rl:writer-orig:"), async (req, res) => {
   const { plain, text } = draftText(req);
   if (plain.split(/\s+/).length < 30) return res.status(400).json({ error: "Write a bit more first." });
   try {
@@ -202,7 +204,7 @@ router.post("/originality", perUser(10, "rl:writer-orig:"), async (req, res) => 
 // ---------------------------------------------------------------------------
 const MIN_SAMPLE = 30;
 
-router.get("/best-time", perUser(20, "rl:writer-time:"), async (req, res) => {
+router.get("/best-time", requireFeature("bestTime"), perUser(20, "rl:writer-time:"), async (req, res) => {
   const tz = Math.max(-840, Math.min(840, parseInt(req.query.tz, 10) || 0));
   const key = `besttime:${req.user._id}:${tz}`;
   try {

@@ -50,6 +50,15 @@ const userSchema = new Schema(
       emailOnNewsletter: { type: Boolean, default: true },
     },
 
+    // 🔓 Feature unlocks (services/unlockRules.js). Earned features are kept
+    // forever; grants are features an admin switched on for this member.
+    unlocks: {
+      type: [{ key: { type: String, required: true }, at: { type: Date, default: Date.now }, _id: false }],
+      default: undefined,
+    },
+    featureGrants: { type: [String], default: undefined },
+    unlocksInitializedAt: { type: Date },
+
     // When this author was last sent a weekly digest. Also the watermark the
     // next one measures from, so a late or skipped run reports the whole gap
     // rather than silently losing a week.

@@ -312,6 +312,30 @@ router.get("/", async (req, res) => {
 });
 
 // 👑 Update User Role (Promote/Demote)
+// 🔓 Unlock every earned feature for one member (e.g. a writer you invited),
+// or take the grant back. Features they earned themselves are never removed.
+router.post("/user/unlocks/:id", async (req, res) => {
+    try {
+        const { FEATURES } = require("../services/unlockRules");
+        const user = await User.findById(req.params.id).select("featureGrants fullName");
+        if (!user) {
+            req.flash("error", "User not found.");
+            return res.redirect("/admin");
+        }
+        const granting = !(user.featureGrants && user.featureGrants.length);
+        user.featureGrants = granting ? FEATURES.filter((f) => f.kind === "earned").map((f) => f.key) : [];
+        await user.save();
+        require("../services/unlocks").bust(user._id);
+        logger.info("🔓 Admin %s %s all features for %s", String(req.user._id), granting ? "granted" : "revoked", String(user._id));
+        req.flash("success", granting ? `All features unlocked for ${user.fullName}.` : `Granted features removed for ${user.fullName}.`);
+        res.redirect("/admin");
+    } catch (error) {
+        logger.error("Unlock grant error:", error);
+        req.flash("error", "Failed to update features.");
+        res.redirect("/admin");
+    }
+});
+
 router.post("/user/role/:id", async (req, res) => {
     try {
         if (req.user._id.toString() === req.params.id) {

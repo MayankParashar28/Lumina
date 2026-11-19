@@ -249,9 +249,20 @@ test("Mentions & replies shows conversation notifications only", async () => {
 
 // --- Newsletter --------------------------------------------------------------
 
+test("email followers is locked for a new writer and says what unlocks it", async () => {
+  const author = await makeUser();
+  const res = await page(author, "/user/newsletter");
+  assert.equal(res.status, 403);
+  assert.match(res.text, /Email Followers isn't unlocked yet/);
+  assert.match(res.text, /reach 10 followers/i);
+  const post = await as(author, "post", "/user/newsletter", { subject: "x", body: "y".repeat(40), action: "send" });
+  assert.equal(post.status, 403);
+});
+
 test("a newsletter reaches verified followers who haven't opted out, once a week at most", async () => {
   sent = [];
-  const author = await makeUser({ fullName: "Octavia Butler" });
+  // Granted, as an admin would: the unlock requirements are tested separately.
+  const author = await makeUser({ fullName: "Octavia Butler", featureGrants: ["newsletter"] });
   const fan = await makeUser();
   const unverified = await makeUser({ isVerified: false });
   const optedOut = await makeUser({ notificationPreferences: { emailOnNewsletter: false } });
@@ -296,7 +307,7 @@ test("a newsletter reaches verified followers who haven't opted out, once a week
 
 test("a newsletter test goes only to the author and is not recorded", async () => {
   sent = [];
-  const author = await makeUser();
+  const author = await makeUser({ featureGrants: ["newsletter"] });
   const fan = await makeUser();
   await follow(fan, author);
 

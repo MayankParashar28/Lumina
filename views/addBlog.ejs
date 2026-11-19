@@ -97,7 +97,13 @@
           <div class="editor-actions" style="margin-top: 30px; justify-content: flex-end; flex-wrap: wrap; gap: 10px;">
             <span id="word-count" class="word-counter" style="margin-right: 4px;">0 words</span>
             <span data-autosave-status class="autosave-status" style="margin-right: auto;"></span>
-            <div id="writer-tools-config" hidden data-csrf="<%= csrfToken %>"></div>
+            <% const lockHint = (key, what) => {
+                 if (!locals.unlocks || unlocks.has(key)) return '';
+                 const missing = unlocks.check(key).needs.filter(n => !n.met).map(n => n.label);
+                 return what + ' unlock when you ' + missing.join(' and ') + '.';
+               }; %>
+            <div id="writer-tools-config" hidden data-csrf="<%= csrfToken %>"
+                data-ai-locked="<%= lockHint('ai', 'AI writing helpers') %>" data-best-time-locked="<%= lockHint('bestTime', 'Best-time suggestions') %>"></div>
             <button type="button" class="btn-mini-preview btn-assistant" id="open-assistant" title="Writing assistant"
                 aria-controls="writing-assistant" aria-expanded="false">
                 <i class="fas fa-spell-check" aria-hidden="true"></i>

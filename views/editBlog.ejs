@@ -111,7 +111,13 @@
                             aria-haspopup="dialog">
                             <i class="fas fa-clock-rotate-left" aria-hidden="true"></i>
                         </button>
-                        <div id="writer-tools-config" hidden data-csrf="<%= csrfToken %>" data-blog-id="<%= blog._id %>"></div>
+                        <% const lockHint = (key, what) => {
+                 if (!locals.unlocks || unlocks.has(key)) return '';
+                 const missing = unlocks.check(key).needs.filter(n => !n.met).map(n => n.label);
+                 return what + ' unlock when you ' + missing.join(' and ') + '.';
+               }; %>
+            <div id="writer-tools-config" hidden data-csrf="<%= csrfToken %>" data-blog-id="<%= blog._id %>"
+                data-ai-locked="<%= lockHint('ai', 'AI writing helpers') %>" data-best-time-locked="<%= lockHint('bestTime', 'Best-time suggestions') %>"></div>
                         <button type="button" class="btn-mini-preview btn-assistant" id="open-assistant" title="Writing assistant"
                             aria-controls="writing-assistant" aria-expanded="false">
                             <i class="fas fa-spell-check" aria-hidden="true"></i>
