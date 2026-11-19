@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <%- include('./partials/header') %>
+</head>
+
+<body>
+    <%- include('./partials/nav', { searchQuery: '' }) %>
+
+    <main class="locked">
+        <div class="locked__icon" aria-hidden="true"><i class="fas fa-lock"></i></div>
+        <h1 class="locked__title"><%= feature.label %> isn't unlocked yet</h1>
+        <% if (feature.pitch) { %><p class="locked__pitch"><%= feature.pitch %></p><% } %>
+
+        <h2 class="locked__h2">To unlock it</h2>
+        <ul class="locked__needs">
+            <% needs.forEach(function (n) { const pct = Math.round((n.current / n.target) * 100); %>
+                <li class="locked__need <%= n.met ? 'is-met' : '' %>">
+                    <span class="locked__check" aria-hidden="true"><i class="fas <%= n.met ? 'fa-circle-check' : 'fa-circle' %>"></i></span>
+                    <span class="locked__label">
+                        <span><%= n.label.charAt(0).toUpperCase() + n.label.slice(1) %></span>
+                        <% if (n.target > 1) { %>
+                            <span class="locked__bar" role="progressbar" aria-valuemin="0" aria-valuemax="<%= n.target %>" aria-valuenow="<%= n.current %>" aria-label="<%= n.label %>">
+                                <span style="width: <%= pct %>%"></span>
+                            </span>
+                        <% } %>
+                    </span>
+                    <span class="locked__count"><%= n.met ? 'Done' : n.current + ' / ' + n.target %></span>
+                </li>
+            <% }) %>
+        </ul>
+
+        <p class="locked__note">It unlocks automatically, and stays unlocked once you have it.</p>
+        <div class="locked__actions">
+            <a class="locked__btn locked__btn--primary" href="/blog/add-new">Write a post</a>
+            <a class="locked__btn" href="/user/unlocks">See all your progress</a>
+        </div>
+    </main>
+
+    <%- include('./partials/footer') %>
+</body>
+
+</html>

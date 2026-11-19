@@ -53,7 +53,12 @@ const stripFences = (text) =>
     .replace(/\s*```\s*$/, "")
     .trim();
 
-router.post("/generate-blog", perUser(4, "rl:ai-blog:"), async (req, res) => {
+// AI helpers unlock after a verified email and a first post (they cost real
+// money per call, so throwaway accounts shouldn't be able to burn them).
+const { requireFeature } = require("../services/unlocks");
+const aiUnlocked = requireFeature("ai");
+
+router.post("/generate-blog", aiUnlocked, perUser(4, "rl:ai-blog:"), async (req, res) => {
   const title = String(req.body.title || "").trim().slice(0, 300);
   // The story so far, as plain text. "Continue writing" sends it so the AI
   // carries on from where the writer stopped instead of starting over.
@@ -116,7 +121,7 @@ router.post("/generate-blog", perUser(4, "rl:ai-blog:"), async (req, res) => {
   }
 });
 
-router.post("/generate-tags", perUser(6, "rl:ai-tags:"), async (req, res) => {
+router.post("/generate-tags", aiUnlocked, perUser(6, "rl:ai-tags:"), async (req, res) => {
   const { title, body } = req.body;
 
 
@@ -144,7 +149,7 @@ router.post("/generate-tags", perUser(6, "rl:ai-tags:"), async (req, res) => {
 });
 
 // Generate Smart Titles
-router.post("/generate-title", perUser(6, "rl:ai-title:"), async (req, res) => {
+router.post("/generate-title", aiUnlocked, perUser(6, "rl:ai-title:"), async (req, res) => {
   const body = String(req.body.body || "").trim();
   const tone = String(req.body.tone || "Professional").slice(0, 40);
 

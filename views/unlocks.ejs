@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <%- include('./partials/header') %>
+</head>
+
+<body>
+    <%- include('./partials/nav', { searchQuery: '' }) %>
+
+    <main class="locked locked--wide">
+        <h1 class="locked__title">Your progress</h1>
+        <p class="locked__pitch">Some tools unlock as you write and grow your audience. Once unlocked, they stay unlocked.</p>
+
+        <% if (checklist.length) { %>
+            <section class="up-card">
+                <h2 class="locked__h2">Getting started</h2>
+                <ul class="locked__needs">
+                    <% checklist.forEach(function (c) { %>
+                        <li class="locked__need <%= c.done ? 'is-met' : '' %>">
+                            <span class="locked__check" aria-hidden="true"><i class="fas <%= c.done ? 'fa-circle-check' : 'fa-circle' %>"></i></span>
+                            <span class="locked__label"><a href="<%= c.href %>"><%= c.label %></a></span>
+                            <span class="locked__count"><%= c.done ? 'Done' : '' %></span>
+                        </li>
+                    <% }) %>
+                </ul>
+            </section>
+        <% } %>
+
+        <% features.forEach(function (f) { %>
+            <section class="up-card <%= f.unlocked ? 'is-unlocked' : '' %>" id="<%= f.key %>">
+                <div class="up-card__head">
+                    <h2 class="up-card__title">
+                        <i class="fas <%= f.unlocked ? 'fa-lock-open' : 'fa-lock' %>" aria-hidden="true"></i>
+                        <%= f.label %>
+                        <% if (f.fresh) { %><span class="um-new">New</span><% } %>
+                    </h2>
+                    <% if (f.unlocked) { %><a class="locked__btn" href="<%= f.href %>">Open</a><% } %>
+                </div>
+                <% if (f.pitch) { %><p class="up-card__pitch"><%= f.pitch %></p><% } %>
+                <% if (!f.unlocked) { %>
+                    <ul class="locked__needs">
+                        <% f.needs.forEach(function (n) { const pct = Math.round((n.current / n.target) * 100); %>
+                            <li class="locked__need <%= n.met ? 'is-met' : '' %>">
+                                <span class="locked__check" aria-hidden="true"><i class="fas <%= n.met ? 'fa-circle-check' : 'fa-circle' %>"></i></span>
+                                <span class="locked__label">
+                                    <span><%= n.label.charAt(0).toUpperCase() + n.label.slice(1) %></span>
+                                    <% if (n.target > 1) { %>
+                                        <span class="locked__bar" role="progressbar" aria-valuemin="0" aria-valuemax="<%= n.target %>" aria-valuenow="<%= n.current %>" aria-label="<%= n.label %>"><span style="width: <%= pct %>%"></span></span>
+                                    <% } %>
+                                </span>
+                                <span class="locked__count"><%= n.met ? 'Done' : n.current + ' / ' + n.target %></span>
+                            </li>
+                        <% }) %>
+                    </ul>
+                <% } %>
+            </section>
+        <% }) %>
+    </main>
+
+    <%- include('./partials/footer') %>
+</body>
+
+</html>

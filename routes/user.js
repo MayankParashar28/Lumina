@@ -250,7 +250,20 @@ router.get("/reading-history", async (req, res) => {
 });
 
 // 📊 Author analytics dashboard
-router.get("/analytics", async (req, res) => {
+// 🔓 Your progress: every feature that unlocks, what it needs, and how close you are.
+router.get("/unlocks", (req, res) => {
+  if (!req.user) return res.redirect("/user/signin");
+  const { FEATURES } = require("../services/unlockRules");
+  const u = req.unlocks;
+  const features = FEATURES.filter((f) => f.kind === "earned").map((f) => {
+    const c = u.check(f.key);
+    return { key: f.key, label: f.label, pitch: f.pitch, href: f.href, unlocked: u.has(f.key), fresh: u.isNew(f.key), needs: c.needs };
+  });
+  features.sort((a, b) => Number(a.unlocked) - Number(b.unlocked));
+  return res.render("unlocks", { title: "Your progress - Lumina", features, checklist: u.checklist, searchQuery: "" });
+});
+
+router.get("/analytics", require("../services/unlocks").requireFeature("analytics"), async (req, res) => {
   if (!req.user) return res.redirect("/user/signin");
 
   try {
@@ -822,6 +835,10 @@ router.post("/follow/:userId", async (req, res) => {
       }
       following = true;
     }
+    // Follower/following counts changed for both people.
+    const { bust } = require("../services/unlocks");
+    bust(meId);
+    bust(targetId);
 
     const [target] = await User.aggregate([
       { $match: { _id: new mongoose.Types.ObjectId(String(targetId)) } },
@@ -1336,7 +1353,7 @@ async function newsletterState(userId) {
   };
 }
 
-router.get("/newsletter", asyncRoute(async (req, res) => {
+router.get("/newsletter", require("../services/unlocks").requireFeature("newsletter"), asyncRoute(async (req, res) => {
   if (!req.user) return res.redirect("/user/signin");
   const state = await newsletterState(req.user._id);
   if (!state) return res.redirect("/user/signin");
@@ -1349,7 +1366,7 @@ router.get("/newsletter", asyncRoute(async (req, res) => {
   });
 }));
 
-router.post("/newsletter", asyncRoute(async (req, res) => {
+router.post("/newsletter", require("../services/unlocks").requireFeature("newsletter"), asyncRoute(async (req, res) => {
   if (!req.user) return res.redirect("/user/signin");
   const subject = String(req.body.subject || "").trim().slice(0, 150);
   const body = String(req.body.body || "").trim().slice(0, 10000);

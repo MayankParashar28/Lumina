@@ -165,6 +165,7 @@
                     <!-- 🌐 Embed: show your latest posts on another website -->
                     <% const EMBED_ORIGIN = (process.env.BASE_URL || process.env.RENDER_EXTERNAL_URL || locals.requestOrigin || '').replace(/\/+$/, ''); %>
                     <div class="content-divider"></div>
+                    <% if (!locals.unlocks || unlocks.has('embed')) { %>
                     <section class="content-section embed-section" aria-labelledby="embed-title">
                         <h3 class="section-title" id="embed-title">Show your posts on your website</h3>
                         <p class="embed-help">
@@ -188,6 +189,12 @@
                         </div>
                         <script async src="/embed/author.js?v=1"></script>
                     </section>
+                    <% } else { %>
+                    <section class="content-section embed-section" aria-labelledby="embed-title">
+                        <h3 class="section-title" id="embed-title">Show your posts on your website</h3>
+                        <p class="embed-help"><i class="fas fa-lock" aria-hidden="true"></i> Unlocks when you publish your first post.</p>
+                    </section>
+                    <% } %>
                     <style>
                         .embed-help { color: #6b7280; font-size: 0.9rem; margin: 0 0 1rem; }
                         .embed-help--small { font-size: 0.8rem; margin-top: 0.75rem; }

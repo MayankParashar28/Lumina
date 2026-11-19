@@ -55,7 +55,14 @@
         <!-- ⏰ When your audience reads (services/ml/bestTime.js), in your time zone. -->
         <div class="an-panel">
             <h3>When your readers read</h3>
-            <div id="audience-heatmap" class="hm" aria-live="polite"><p class="hm-note">Loading…</p></div>
+            <% if (!locals.unlocks || unlocks.has('bestTime')) { %>
+                <div id="audience-heatmap" class="hm" aria-live="polite"><p class="hm-note">Loading…</p></div>
+            <% } else { %>
+                <% const bt = unlocks.check('bestTime'); %>
+                <p class="hm-note"><i class="fas fa-lock" aria-hidden="true"></i>
+                    Unlocks when you <%= bt.needs.filter(n => !n.met).map(n => n.label + ' (' + n.current + '/' + n.target + ')').join(' and ') %>.
+                    Then you'll see when your readers are most active and the best times to publish.</p>
+            <% } %>
         </div>
 
         <div class="an-panel">
