@@ -34,7 +34,9 @@ const makePost = (author, over = {}) =>
 const menuOf = async (user) => {
   const res = await request(ctx.app).get("/about").set("Cookie", authCookie(user));
   const start = res.text.indexOf('class="dropdown-menu-custom"');
-  return res.text.slice(start, res.text.indexOf("Log Out", start));
+  // The menu runs from its container to the Log out link at the bottom.
+  const end = res.text.indexOf("</a>", res.text.indexOf("am-foot__link--out", start));
+  return res.text.slice(start, end);
 };
 
 // Stats are cached for two minutes; tests change data directly, so clear it.
@@ -43,7 +45,7 @@ const bust = (user) => require("../services/unlocks").bust(user._id);
 test("a new member's menu: basics, a checklist and the next locks — nothing empty", async () => {
   const fresh = await makeUser();
   const menu = await menuOf(fresh);
-  for (const label of ["Write a story", "Bookmarks", "Profile", "Email settings", "Getting started", "Unlock more"]) {
+  for (const label of ["Write a story", "Bookmarks", "View profile", "Settings", "Log out", "Getting started", "Unlock more"]) {
     assert.ok(menu.includes(label), `shows ${label}`);
   }
   for (const label of [">My Drafts", ">Highlights", ">Recently Read", ">Your Vibe", ">Analytics", ">Email Followers"]) {
@@ -77,7 +79,7 @@ test("publishing a first post unlocks analytics, with one notification", async (
 
   const menu = await menuOf(writer);
   assert.ok(menu.includes(">Analytics"));
-  assert.match(menu, /Analytics\s*<span class="um-new">New<\/span>/);
+  assert.match(menu, /<span>Analytics<\/span>\s*<span class="am-new">New<\/span>/);
   assert.equal((await request(ctx.app).get("/user/analytics").set("Cookie", authCookie(writer))).status, 200);
 
   bust(writer);
