@@ -19,8 +19,16 @@
                 Earn credits when readers finish your posts, when you bring friends, and when your writing gets featured.
             </p>
             <% if (!me) { %>
-                <a href="#join" class="earn-btn earn-btn--primary">Join the waitlist</a>
-                <% if (total) { %><p class="earn-count"><strong><%= total.toLocaleString('en-IN') %></strong> creators are already waiting</p><% } %>
+                <% if (user) { %>
+                    <form method="POST" action="/earn/join" class="earn-hero__form">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                        <input type="hidden" name="src" value="direct" data-earn-src>
+                        <button type="submit" class="earn-btn earn-btn--primary">Join the waitlist</button>
+                    </form>
+                <% } else { %>
+                    <a href="#join" class="earn-btn earn-btn--primary">Join the waitlist</a>
+                <% } %>
+                <% if (total) { %><p class="earn-count"><strong><%= total.toLocaleString('en-IN') %></strong> people are on the waitlist</p><% } %>
             <% } else { %>
                 <a href="#you" class="earn-btn earn-btn--primary">See your spot</a>
             <% } %>
@@ -82,6 +90,7 @@
                             <input id="earn-email" type="email" name="email" required autocomplete="email" placeholder="you@example.com">
                             <button type="submit" class="earn-btn earn-btn--primary">I'm interested</button>
                         </div>
+                        <p class="earn-muted earn-small">We'll only email you about Creator Rewards. See our <a href="/privacy">privacy policy</a>.</p>
                         <p class="earn-muted earn-small">Or <a href="/user/signup">create an account</a> and start writing now.</p>
                     </form>
                 <% } %>
