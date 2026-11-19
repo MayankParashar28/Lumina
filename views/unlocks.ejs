@@ -33,7 +33,7 @@
                     <h2 class="up-card__title">
                         <i class="fas <%= f.unlocked ? 'fa-lock-open' : 'fa-lock' %>" aria-hidden="true"></i>
                         <%= f.label %>
-                        <% if (f.fresh) { %><span class="um-new">New</span><% } %>
+                        <% if (f.fresh) { %><span class="am-new" style="margin-left:0">New</span><% } %>
                     </h2>
                     <% if (f.unlocked) { %><a class="locked__btn" href="<%= f.href %>">Open</a><% } %>
                 </div>

@@ -69,7 +69,8 @@
 
         <!-- Profile Dropdown (Simplified) -->
         <div class="profile-dropdown">
-          <button class="profile-trigger" style="padding: 0; border: none; background: transparent;">
+          <button class="profile-trigger" type="button" style="padding: 0; border: none; background: transparent;"
+            aria-label="Account menu" aria-haspopup="true" aria-expanded="false" aria-controls="account-menu">
             <% if (locals.user && locals.user.profilePic) { %>
               <img loading="lazy" src="<%= typeof optimizeImage === 'function' ? optimizeImage(locals.user.profilePic, { width: 40, height: 40, crop: 'fill' }) : locals.user.profilePic %>" 
                    alt="<%= locals.user.fullName %>" 
@@ -79,54 +80,79 @@
               <i class="far fa-circle-user" style="font-size: 1.5rem;"></i>
             <% } %>
           </button>
-          <div class="dropdown-menu-custom">
-            <div class="dropdown-header">
-              <%= locals.user.fullName || locals.user.email %>
-            </div>
-            <% if (locals.user.role==='ADMIN' ) { %>
-              <a href="/admin" class="dropdown-item fw-bold text-primary">Admin Panel</a>
+          <%
+            // 🔓 Items appear once they're useful or earned (services/unlockRules.js).
+            const U = locals.unlocks || { has: () => true, isNew: () => false, next: [], checklist: [] };
+            const me = locals.user;
+            const links = [
+              ['drafts', '/blog/drafts', 'My Drafts', 'fa-regular fa-file-lines'],
+              ['analytics', '/user/analytics', 'Analytics', 'fa-solid fa-chart-simple'],
+              ['newsletter', '/user/newsletter', 'Email Followers', 'fa-regular fa-envelope'],
+              null, // divider between writing and reading
+              [null, '/user/bookmarks', 'Bookmarks', 'fa-regular fa-bookmark'],
+              ['highlights', '/highlights', 'Highlights', 'fa-solid fa-highlighter'],
+              ['history', '/user/reading-history', 'Recently Read', 'fa-regular fa-clock'],
+              ['vibe', '/user/vibe', 'Your Vibe', 'fa-solid fa-wand-magic-sparkles'],
+            ].filter((l) => l === null || !l[0] || U.has(l[0]));
+            // No divider at the start, end, or twice in a row.
+            const rows = links.filter((l, i, a) => l !== null || (i > 0 && i < a.length - 1 && a[i - 1] !== null));
+            const done = U.checklist.filter((c) => c.done).length;
+            const nextStep = U.checklist.find((c) => !c.done);
+          %>
+          <div class="dropdown-menu-custom account-menu" id="account-menu" data-lenis-prevent>
+            <a href="/user/profile" class="am-head">
+              <img src="<%= typeof optimizeImage === 'function' && me.profilePic ? optimizeImage(me.profilePic, { width: 80, height: 80, crop: 'fill' }) : (me.profilePic || '/images/default-avatar.png') %>"
+                   alt="" class="am-head__avatar" width="40" height="40" loading="lazy" data-fallback="/images/default-avatar.png">
+              <span class="am-head__text">
+                <span class="am-head__name"><%= me.fullName || 'Your profile' %></span>
+                <span class="am-head__sub">View profile</span>
+              </span>
+              <% if (me.role === 'ADMIN') { %><span class="am-badge">Admin</span><% } %>
+            </a>
+
+            <% if (nextStep) { %>
+              <a href="<%= nextStep.href %>" class="am-start">
+                <span class="am-start__row">
+                  <span class="am-start__title">Getting started</span>
+                  <span class="am-start__count"><%= done %> of <%= U.checklist.length %></span>
+                </span>
+                <span class="am-bar" aria-hidden="true"><span style="width: <%= Math.round((done / U.checklist.length) * 100) %>%"></span></span>
+                <span class="am-start__next">Next: <%= nextStep.label %> <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></span>
+              </a>
             <% } %>
-            <%
-              // 🔓 Items appear once they're useful or earned (services/unlockRules.js).
-              const U = locals.unlocks || { has: () => true, isNew: () => false, next: [], checklist: [] };
-              const item = (key, href, label) => ({ key, href, label, show: !key || U.has(key), fresh: key && U.isNew(key) });
-              const groups = [
-                ['Write', [item(null, '/blog/add-new', 'Write a story'), item('drafts', '/blog/drafts', 'My Drafts'),
-                           item('analytics', '/user/analytics', 'Analytics'), item('newsletter', '/user/newsletter', 'Email Followers')]],
-                ['Read', [item(null, '/user/bookmarks', 'Bookmarks'), item('highlights', '/highlights', 'Highlights'),
-                          item('history', '/user/reading-history', 'Recently Read'), item('vibe', '/user/vibe', 'Your Vibe')]],
-                ['Account', [item(null, '/user/profile', 'Profile'), item(null, '/user/email-preferences', 'Email settings')]],
-              ];
-            %>
-            <% if (U.checklist.length) { %>
-              <div class="um-start">
-                <p class="um-start__title">Getting started</p>
-                <% U.checklist.forEach(function (c) { %>
-                  <a href="<%= c.href %>" class="um-start__item <%= c.done ? 'is-done' : '' %>">
-                    <i class="fas <%= c.done ? 'fa-circle-check' : 'fa-circle' %>" aria-hidden="true"></i>
-                    <span><%= c.label %></span><% if (c.done) { %><span class="visually-hidden"> (done)</span><% } %>
-                  </a>
-                <% }) %>
-              </div>
-            <% } %>
-            <% groups.forEach(function (g) { const shown = g[1].filter(i => i.show); if (!shown.length) return; %>
-              <p class="um-group"><%= g[0] %></p>
-              <% shown.forEach(function (i) { %>
-                <a href="<%= i.href %>" class="dropdown-item"><%= i.label %><% if (i.fresh) { %> <span class="um-new">New</span><% } %></a>
-              <% }) %>
-            <% }) %>
-            <% if (U.next.length) { %>
-              <p class="um-group">Unlock more <a class="um-all" href="/user/unlocks">See all</a></p>
-              <% U.next.forEach(function (n) { %>
-                <a href="/user/unlocks#<%= n.key %>" class="um-lock" title="<%= n.pitch || '' %>">
-                  <span class="um-lock__top"><i class="fas fa-lock" aria-hidden="true"></i> <%= n.label %></span>
-                  <span class="um-lock__hint"><%= n.hint.charAt(0).toUpperCase() + n.hint.slice(1) %></span>
-                  <span class="um-lock__bar" aria-hidden="true"><span style="width: <%= n.progress %>%"></span></span>
+
+            <a href="/blog/add-new" class="am-write"><i class="fa-solid fa-pen-nib" aria-hidden="true"></i> Write a story</a>
+
+            <nav class="am-list" aria-label="Your account">
+              <% rows.forEach(function (l) { if (l === null) { %>
+                <span class="am-divider" role="separator"></span>
+              <% return; } %>
+                <a href="<%= l[1] %>" class="am-item">
+                  <i class="<%= l[3] %>" aria-hidden="true"></i>
+                  <span><%= l[2] %></span>
+                  <% if (l[0] && U.isNew(l[0])) { %><span class="am-new">New</span><% } %>
                 </a>
               <% }) %>
+            </nav>
+
+            <% if (U.next.length) { %>
+              <a href="/user/unlocks" class="am-unlock">
+                <i class="fa-solid fa-lock" aria-hidden="true"></i>
+                <span class="am-unlock__text">
+                  <span class="am-unlock__title">Unlock more</span>
+                  <span class="am-unlock__hint">Next: <%= U.next[0].label %></span>
+                </span>
+                <i class="fa-solid fa-chevron-right am-chev" aria-hidden="true"></i>
+              </a>
             <% } %>
-            <div class="um-sep"></div>
-            <a href="/user/logout" class="dropdown-item danger">Log Out</a>
+
+            <div class="am-foot">
+              <% if (me.role === 'ADMIN') { %>
+                <a href="/admin" class="am-foot__link"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Admin</a>
+              <% } %>
+              <a href="/user/email-preferences" class="am-foot__link"><i class="fa-solid fa-gear" aria-hidden="true"></i> Settings</a>
+              <a href="/user/logout" class="am-foot__link am-foot__link--out"><i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i> Log out</a>
+            </div>
           </div>
         </div>
 
@@ -282,14 +308,26 @@
       const profileTrigger = document.querySelector('.profile-trigger');
       const dropdownMenu = document.querySelector('.dropdown-menu-custom');
 
+      const setMenu = (open) => {
+        if (!dropdownMenu) return;
+        dropdownMenu.classList.toggle('active', open);
+        profileTrigger?.setAttribute('aria-expanded', String(open));
+      };
+
       profileTrigger?.addEventListener('click', (e) => {
         e.stopPropagation();
-        dropdownMenu.classList.toggle('active');
+        setMenu(!dropdownMenu.classList.contains('active'));
       });
 
       document.addEventListener('click', (e) => {
-        if (dropdownMenu && !dropdownMenu.contains(e.target)) {
-          dropdownMenu.classList.remove('active');
+        if (dropdownMenu && !dropdownMenu.contains(e.target)) setMenu(false);
+      });
+
+      // Escape closes the menu and returns focus to the avatar button.
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && dropdownMenu?.classList.contains('active')) {
+          setMenu(false);
+          profileTrigger?.focus();
         }
       });
 
